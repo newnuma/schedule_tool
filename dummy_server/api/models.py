@@ -71,7 +71,7 @@ class Workload(models.Model):
     name = models.CharField(max_length=128)
     start_date = models.DateField()
     people = models.ForeignKey(Person, on_delete=models.CASCADE, blank=True)
-    hours = models.FloatField(max_digits=5, decimal_places=1)
+    hours = models.DecimalField(max_digits=5, decimal_places=1)
 
     def __str__(self):
         return f"{self.task.asset.phase.subproject.name} - {self.task.asset.phase.name} - {self.task.asset.name} - {self.task.name} - {self.name}"
