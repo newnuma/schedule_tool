@@ -173,7 +173,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 workloads,
                 addWorkloads,
                 people,
-                addPeople: setPeople,
+                addPeople,
                 selectedProjectId,
                 setSelectedProjectId,
                 selectedPersonList,

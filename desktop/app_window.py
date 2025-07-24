@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
-from .webchannel_bridge import DataBridge
+from webchannel_bridge import DataBridge
 
 class AppWindow(QMainWindow):
     def __init__(self):

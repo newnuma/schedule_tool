@@ -1,39 +1,48 @@
 import { useEffect } from "react";
 import { useAppContext } from "./context/AppContext";
+import * as bridgeApi from "./api/bridgeApi";
 
-// ダミーAPI（実際はbridgeApi.tsなどに置き換え）
-const fetchInitialData = async () => {
-  return {
-    projects: [
-      { id: 1, name: "プロジェクトA" },
-      { id: 2, name: "プロジェクトB" }
-    ],
-    tasks: [
-      { id: 101, name: "タスクA", project: 1 },
-      { id: 102, name: "タスクB", project: 2 }
-    ]
-  };
+const fetchInitialData = async (
+  addProjects: any,
+  addTasks: any,
+  addWorkloads: any,
+  addPeople: any,
+  setLoading: any
+) => {
+  setLoading(true);
+  try {
+    // 必要なデータをbridgeApi経由で取得
+    const [projects, tasks, workloads, people] = await Promise.all([
+      bridgeApi.fetchSubprojects(),
+      bridgeApi.fetchTasks(),
+      bridgeApi.fetchWorkloads(),
+      bridgeApi.fetchPeople(),
+    ]);
+    addProjects(projects);
+    addTasks(tasks);
+    addWorkloads(workloads);
+    addPeople(people);
+  } catch (e) {
+    // エラー処理は適宜
+    console.error(e);
+  } finally {
+    setLoading(false);
+  }
 };
 
 const Initializer = () => {
-  const { setState } = useAppContext();
+  const {
+    addProjects,
+    addTasks,
+    addWorkloads,
+    addPeople,
+    setLoading,
+  } = useAppContext();
 
   useEffect(() => {
-    (async () => {
-      setState(s => ({ ...s, loading: true }));
-      try {
-        const data = await fetchInitialData();
-        setState(s => ({
-          ...s,
-          projects: data.projects,
-          tasks: data.tasks,
-          loading: false,
-        }));
-      } catch (err) {
-        setState(s => ({ ...s, loading: false }));
-      }
-    })();
-  }, [setState]);
+    fetchInitialData(addProjects, addTasks, addWorkloads, addPeople, setLoading);
+    // eslint-disable-next-line
+  }, []);
 
   return null; // 画面には何も出さない
 };
