@@ -1,7 +1,12 @@
 // vis-timelineをラップしたガントチャート描画コンポーネント
 // 各ページで再利用可能
 import React, { useEffect, useRef } from "react";
-import { DataSet, Timeline, TimelineOptions, TimelineItem } from "vis-timeline/standalone"; // vis-timelineをimport
+import {
+  DataSet,
+  Timeline,
+  TimelineOptions,
+  TimelineItem,
+} from "vis-timeline/standalone"; // vis-timelineをimport
 import "vis-timeline/styles/vis-timeline-graph2d.min.css"; // 必要なCSSもimport
 
 // データ型定義（propsを型安全に！）
@@ -20,13 +25,18 @@ export interface GanttGroup {
 }
 
 export interface GanttChartProps {
-  items: GanttItem[];
+  items?: GanttItem[];
   groups?: GanttGroup[];
   options?: TimelineOptions;
   height?: string | number;
 }
 
-const GanttChart: React.FC<GanttChartProps> = ({ items, groups, options, height = 400 }) => {
+const GanttChart: React.FC<GanttChartProps> = ({
+  items = [],
+  groups,
+  options,
+  height = 400,
+}) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<Timeline | null>(null);
 
@@ -44,35 +54,54 @@ const GanttChart: React.FC<GanttChartProps> = ({ items, groups, options, height 
       groupSet = new DataSet(groups);
     }
 
-    timelineRef.current = groups
-      ? new Timeline(
-          containerRef.current,
-          dataSet,
-          groupSet,
-          {
+    if (items.length > 0) {
+      timelineRef.current = groups
+        ? new Timeline(containerRef.current, dataSet, groupSet, {
             stack: false,
             orientation: "top",
             ...options,
             height,
-          }
-        )
-      : new Timeline(
-          containerRef.current,
-          dataSet,
-          {
+          })
+        : new Timeline(containerRef.current, dataSet, {
             stack: false,
             orientation: "top",
             ...options,
             height,
-          }
-        );
+          });
+    }
     // クリーンアップ
     return () => {
       timelineRef.current?.destroy();
     };
-  }, [JSON.stringify(items), JSON.stringify(groups), JSON.stringify(options), height]); // データ・オプション変化で再描画
+  }, [
+    JSON.stringify(items),
+    JSON.stringify(groups),
+    JSON.stringify(options),
+    height,
+  ]); // データ・オプション変化で再描画
 
-  return <div ref={containerRef} style={{ width: "100%", height }} />;
+  return (
+    <div style={{ width: "100%", height, position: "relative" }}>
+      {items.length === 0 && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          No data
+        </div>
+      )}
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+    </div>
+  );
 };
 
 export default GanttChart;
