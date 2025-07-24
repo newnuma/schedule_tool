@@ -1,1 +1,1 @@
-export {};
+export type IPage = "Distribute" | "Project" | "Assignment";
