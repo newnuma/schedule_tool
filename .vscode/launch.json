@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: venv Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/desktop/app_window.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/venv/bin/python"
+            }
+        }
+    ]
+}
