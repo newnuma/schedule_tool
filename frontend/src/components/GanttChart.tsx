@@ -2,6 +2,11 @@
 // 各ページで再利用可能
 import React, { useEffect, useRef } from "react";
 import {
+  GanttContainer,
+  NoDataBox,
+  TimelineBox,
+} from "./StyledComponents";
+import {
   DataSet,
   Timeline,
   TimelineOptions,
@@ -81,26 +86,10 @@ const GanttChart: React.FC<GanttChartProps> = ({
   ]); // データ・オプション変化で再描画
 
   return (
-    <div style={{ width: "100%", height, position: "relative" }}>
-      {items.length === 0 && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-          }}
-        >
-          No data
-        </div>
-      )}
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-    </div>
+    <GanttContainer h={height}>
+      {items.length === 0 && <NoDataBox>No data</NoDataBox>}
+      <TimelineBox ref={containerRef} />
+    </GanttContainer>
   );
 };
 

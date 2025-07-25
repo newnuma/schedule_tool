@@ -1,4 +1,6 @@
 import React, { useMemo } from "react";
+import { Typography } from "@mui/material";
+import { Main } from "../components/StyledComponents";
 import { useAppContext } from "../context/AppContext";
 import GanttChart from "../components/GanttChart";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -25,12 +27,14 @@ const DistributePage: React.FC = () => {
   );
 
   return (
-    <main style={{ padding: 24 }}>
-      <h2>Distribute</h2>
+    <Main component="main">
+      <Typography variant="h4" gutterBottom>
+        Distribute
+      </Typography>
       <ErrorBoundary>
         <GanttChart items={items} groups={groups} />
       </ErrorBoundary>
-    </main>
+    </Main>
   );
 };
 
