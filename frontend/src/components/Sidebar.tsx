@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Drawer,
   List,
   ListItem,
   ListItemButton,
@@ -11,24 +10,13 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import FolderIcon from "@mui/icons-material/Folder";
 import AssignmentIndIcon from "@mui/icons-material/AssignmentInd";
 import { useAppContext } from "../context/AppContext";
-
-const drawerWidth = 180;
+import { SideDrawer } from "./StyledComponents";
 
 const Sidebar: React.FC = () => {
   const { currentPage, setCurrentPage } = useAppContext();
 
   return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        [`& .MuiDrawer-paper`]: {
-          width: drawerWidth,
-          boxSizing: "border-box",
-          pt: 4,
-        },
-      }}
-    >
+    <SideDrawer variant="permanent">
       <List>
         <ListItem disablePadding>
           <ListItemButton
@@ -64,7 +52,7 @@ const Sidebar: React.FC = () => {
           </ListItemButton>
         </ListItem>
       </List>
-    </Drawer>
+    </SideDrawer>
   );
 };
 

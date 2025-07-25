@@ -1,11 +1,10 @@
+import { AppBar, CircularProgress, Toolbar } from "@mui/material";
 import {
-  AppBar,
-  Backdrop,
-  Box,
-  CircularProgress,
-  Toolbar,
-  Typography,
-} from "@mui/material";
+  Layout,
+  Content,
+  HeaderTitle,
+  OverlayBackdrop,
+} from "./components/StyledComponents";
 import { useAppContext } from "./context/AppContext";
 import Sidebar from "./components/Sidebar";
 import DistributePage from "./pages/DistributePage";
@@ -16,27 +15,24 @@ const App = () => {
   const { currentPage, loading } = useAppContext();
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Layout>
       <Sidebar />
-      <Box sx={{ flexGrow: 1 }}>
+      <Content>
         <AppBar position="static">
           <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            <HeaderTitle variant="h6" component="div">
               共通ヘッダー
-            </Typography>
+            </HeaderTitle>
           </Toolbar>
         </AppBar>
         {currentPage === "Distribute" && <DistributePage />}
         {currentPage === "Project" && <ProjectPage />}
         {currentPage === "Assignment" && <AssignmentPage />}
-      </Box>
-      <Backdrop
-        open={loading}
-        sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      >
+      </Content>
+      <OverlayBackdrop open={loading}>
         <CircularProgress color="inherit" />
-      </Backdrop>
-    </Box>
+      </OverlayBackdrop>
+    </Layout>
   );
 };
 

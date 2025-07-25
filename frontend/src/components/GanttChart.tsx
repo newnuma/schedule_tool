@@ -1,7 +1,11 @@
 // vis-timelineをラップしたガントチャート描画コンポーネント
 // 各ページで再利用可能
 import React, { useEffect, useRef } from "react";
-import { Box } from "@mui/material";
+import {
+  GanttContainer,
+  NoDataBox,
+  TimelineBox,
+} from "./StyledComponents";
 import {
   DataSet,
   Timeline,
@@ -82,23 +86,10 @@ const GanttChart: React.FC<GanttChartProps> = ({
   ]); // データ・オプション変化で再描画
 
   return (
-    <Box sx={{ width: "100%", height, position: "relative" }}>
-      {items.length === 0 && (
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-          }}
-        >
-          No data
-        </Box>
-      )}
-      <Box ref={containerRef} sx={{ width: "100%", height: "100%" }} />
-    </Box>
+    <GanttContainer h={height}>
+      {items.length === 0 && <NoDataBox>No data</NoDataBox>}
+      <TimelineBox ref={containerRef} />
+    </GanttContainer>
   );
 };
 

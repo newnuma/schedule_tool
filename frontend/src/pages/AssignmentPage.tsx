@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import { Box, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
+import { Main } from "../components/StyledComponents";
 import { useAppContext } from "../context/AppContext";
 import GanttChart from "../components/GanttChart";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -26,14 +27,14 @@ const AssignmentPage: React.FC = () => {
   );
 
   return (
-    <Box component="main" sx={{ p: 3 }}>
+    <Main component="main">
       <Typography variant="h4" gutterBottom>
         Assignment
       </Typography>
       <ErrorBoundary>
         <GanttChart items={items} groups={groups} />
       </ErrorBoundary>
-    </Box>
+    </Main>
   );
 };
 
