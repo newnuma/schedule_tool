@@ -1,3 +1,11 @@
+import {
+  AppBar,
+  Backdrop,
+  Box,
+  CircularProgress,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 import { useAppContext } from "./context/AppContext";
 import Sidebar from "./components/Sidebar";
 import DistributePage from "./pages/DistributePage";
@@ -8,23 +16,27 @@ const App = () => {
   const { currentPage, loading } = useAppContext();
 
   return (
-    <div style={{ display: "flex" }}>
+    <Box sx={{ display: "flex" }}>
       <Sidebar />
-      <div style={{ flex: 1 }}>
-        <header>共通ヘッダー</header>
+      <Box sx={{ flexGrow: 1 }}>
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              共通ヘッダー
+            </Typography>
+          </Toolbar>
+        </AppBar>
         {currentPage === "Distribute" && <DistributePage />}
         {currentPage === "Project" && <ProjectPage />}
         {currentPage === "Assignment" && <AssignmentPage />}
-      </div>
-      {loading && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-          background: "rgba(255,255,255,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center"
-        }}>
-          <div>Loading...</div>
-        </div>
-      )}
-    </div>
+      </Box>
+      <Backdrop
+        open={loading}
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    </Box>
   );
 };
 
