@@ -1,72 +1,75 @@
-"""Simple HTTP client for the local Django dummy server."""
+"""Abstraction for accessing Flow-PT like entities.
 
-from typing import Any
+In development mode this uses :class:`dummy_server.fake_shotgun.FakeShotgun`.
+When ``USE_DUMMY_SHOTGUN`` is unset it falls back to ``shotgun_api3.Shotgun``.
+The exported helper functions keep the old interface used by the Qt bridge
+layer so the frontend does not need to change.
+"""
 
-import requests
+from typing import Any, List, Optional
+
+from shotgun_wrapper import ShotgunClient
 
 
-BASE_URL = "http://localhost:8000/api"
+sg = ShotgunClient()
 
 
-def _get_json(path: str) -> Any:
-    url = f"{BASE_URL}/{path}"
-    resp = requests.get(url)
-    resp.raise_for_status()
-    return resp.json()
+def _find(entity: str, filters: Optional[List] = None, fields: Optional[List[str]] = None) -> Any:
+    return sg.find(entity, filters or [], fields)
 
 
 def get_subprojects() -> Any:
-    return _get_json("subprojects/")
+    return _find("Subproject")
 
 
 def get_subproject(subproject_id: int) -> Any:
-    return _get_json(f"subprojects/{subproject_id}/")
+    return _find("Subproject", [["id", "is", subproject_id]])[0]
 
 
 def get_phases() -> Any:
-    return _get_json("phases/")
+    return _find("Phase")
 
 
 def get_phase(phase_id: int) -> Any:
-    return _get_json(f"phases/{phase_id}/")
+    return _find("Phase", [["id", "is", phase_id]])[0]
 
 
 def get_assets() -> Any:
-    return _get_json("assets/")
+    return _find("Asset")
 
 
 def get_asset(asset_id: int) -> Any:
-    return _get_json(f"assets/{asset_id}/")
+    return _find("Asset", [["id", "is", asset_id]])[0]
 
 
 def get_tasks() -> Any:
-    return _get_json("tasks/")
+    return _find("Task")
 
 
 def get_task(task_id: int) -> Any:
-    return _get_json(f"tasks/{task_id}/")
+    return _find("Task", [["id", "is", task_id]])[0]
 
 
 def get_workloads() -> Any:
-    return _get_json("workloads/")
+    return _find("Workload")
 
 
 def get_workload(workload_id: int) -> Any:
-    return _get_json(f"workloads/{workload_id}/")
+    return _find("Workload", [["id", "is", workload_id]])[0]
 
 
 def get_people() -> Any:
-    return _get_json("people/")
+    return _find("Person")
 
 
 def get_person(person_id: int) -> Any:
-    return _get_json(f"people/{person_id}/")
+    return _find("Person", [["id", "is", person_id]])[0]
 
 
 def get_workcategories() -> Any:
-    return _get_json("workcategories/")
+    return _find("WorkCategory")
 
 
 def get_workcategory(category_id: int) -> Any:
-    return _get_json(f"workcategories/{category_id}/")
+    return _find("WorkCategory", [["id", "is", category_id]])[0]
 
