@@ -4,6 +4,8 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional
 
+from django.apps import apps
+
 
 class ShotgunClient:
     """Provide Shotgun-like API backed by real or fake implementation."""
@@ -13,7 +15,15 @@ class ShotgunClient:
         if use_dummy is None:
             use_dummy = os.environ.get("USE_DUMMY_SHOTGUN", "1") == "1"
         if use_dummy:
-            from dummy_server.fake_shotgun import FakeShotgun
+            # When using the local dummy implementation, ensure the Django
+            # application registry is initialised before accessing any models.
+            import django
+            if not apps.ready:
+                django.setup()
+            try:
+                from dummy_server.fake_shotgun import FakeShotgun
+            except ImportError:
+                from fake_shotgun import FakeShotgun
             self._impl = FakeShotgun()
         else:
             import shotgun_api3
@@ -32,3 +42,9 @@ class ShotgunClient:
     def summarize(self, entity_type: str, filters: Optional[List] = None,
                   summary_fields: Optional[List[Dict[str, str]]] = None) -> Any:
         return self._impl.summarize(entity_type, filters or [], summary_fields or [])
+    
+    def find_one(self, entity_type: str, filters: Optional[List] = None,
+                 fields: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+        """Find a single entity matching the filters."""
+        results = self._impl.find(entity_type, filters or [], fields or None)
+        return results[0] if results else None

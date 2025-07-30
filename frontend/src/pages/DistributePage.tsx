@@ -7,6 +7,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 
 const DistributePage: React.FC = () => {
   const { subprojects, phases } = useAppContext();
+  console.log("phases", phases);
 
   // 例: projects, tasksからガント表示用データを組み立て
   const groups = useMemo(
@@ -29,7 +30,7 @@ const DistributePage: React.FC = () => {
   return (
     <Main component="main">
       <Typography variant="h4" gutterBottom>
-        Assignment
+        Distribute
       </Typography>
       <ErrorBoundary>
         <GanttChart items={items} groups={groups} />
