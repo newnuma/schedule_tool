@@ -11,8 +11,10 @@ from typing import Any, List, Optional
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dummy_server.dummy_server.settings')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+sys.path.append(os.path.join(BASE_DIR, "dummy_server"))
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dummy_server.settings')
 
 # import django
 # django.setup()

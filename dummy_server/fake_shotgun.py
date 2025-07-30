@@ -11,18 +11,26 @@ class FakeShotgun:
     """Simplified Shotgun API backed by local models."""
 
     def __init__(self) -> None:
-        self._model_map = {
-            "Person": apps.get_model("api", "Person"),
-            "Subproject": apps.get_model("api", "Subproject"),
-            "Phase": apps.get_model("api", "Phase"),
-            "Asset": apps.get_model("api", "Asset"),
-            "Task": apps.get_model("api", "Task"),
-            "Workload": apps.get_model("api", "Workload"),
-            "WorkCategory": apps.get_model("api", "WorkCategory"),
-        }
+        # Defer model lookup until Django has been fully initialised.
+        # ``_model_map`` will be populated on first access via ``_ensure_models``.
+        self._model_map = None
+
+    def _ensure_models(self) -> None:
+        """Populate model mapping lazily after ``django.setup``."""
+        if self._model_map is None:
+            self._model_map = {
+                "Person": apps.get_model("api", "Person"),
+                "Subproject": apps.get_model("api", "Subproject"),
+                "Phase": apps.get_model("api", "Phase"),
+                "Asset": apps.get_model("api", "Asset"),
+                "Task": apps.get_model("api", "Task"),
+                "Workload": apps.get_model("api", "Workload"),
+                "WorkCategory": apps.get_model("api", "WorkCategory"),
+            }
 
     # utility
     def _model(self, entity_type: str):
+        self._ensure_models()
         model = self._model_map.get(entity_type)
         if not model:
             raise ValueError(f"Unknown entity type: {entity_type}")
