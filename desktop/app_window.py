@@ -1,7 +1,3 @@
-# デスクトップアプリのメインウィンドウ制御ファイル
-# PySide6のQWebEngineViewでビルド済みReact(frontend/build/index.html)を表示し、
-# QtWebChannelを使いReactとPython側で双方向データ連携を行う
-
 import os
 import sys
 from PySide6.QtCore import QUrl
@@ -11,10 +7,13 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEnginePage
 from webchannel_bridge import DataBridge
 
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=0"
 class CustomWebEnginePage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
-        print(f"[JS:{level}] {message} (at {sourceID}:{lineNumber})")
-
+        level_map = {0: "Info", 1: "Warning", 2: "Error"}
+        level_str = level_map.get(level, str(level))
+        print(f"[JS:{level_str}] {message} (at {sourceID}:{lineNumber})")
+        
 class AppWindow(QMainWindow):
     def __init__(self):
         super().__init__()
