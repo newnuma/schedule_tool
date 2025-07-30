@@ -42,3 +42,9 @@ class ShotgunClient:
     def summarize(self, entity_type: str, filters: Optional[List] = None,
                   summary_fields: Optional[List[Dict[str, str]]] = None) -> Any:
         return self._impl.summarize(entity_type, filters or [], summary_fields or [])
+    
+    def find_one(self, entity_type: str, filters: Optional[List] = None,
+                 fields: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+        """Find a single entity matching the filters."""
+        results = self._impl.find(entity_type, filters or [], fields or None)
+        return results[0] if results else None

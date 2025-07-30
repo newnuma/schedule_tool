@@ -70,7 +70,7 @@ def fetch_project_details(project_id: int) -> Any:
     workloads = get_entities("Workload", [["task", "in", task_ids]]) if task_ids else []
 
     # Person取得（プロジェクトに紐づく全員）
-    person = get_entities("Person", [["subproject", "is", subproject["id"]]])
+    person = get_entities("Person")
 
     return {
         "subproject": subproject,
@@ -83,8 +83,8 @@ def fetch_project_details(project_id: int) -> Any:
 
 # メンバーリストにあるpersonに関連する情報を取得
 def fetch_people_details(person_list : List[int]) -> Any:
-    workloads = get_entities("Workload", [["person", "in", person_list]])
-    tasks = get_entities("Task", [["person", "in", person_list]])   
+    workloads = get_entities("Workload", [["people", "in", person_list]])
+    tasks = get_entities("Task", [["people", "in", person_list]])   
     return {
         "workloads": workloads,
         "tasks": tasks,

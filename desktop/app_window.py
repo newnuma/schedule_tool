@@ -8,8 +8,12 @@ from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
-
+from PySide6.QtWebEngineCore import QWebEnginePage
 from webchannel_bridge import DataBridge
+
+class CustomWebEnginePage(QWebEnginePage):
+    def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
+        print(f"[JS:{level}] {message} (at {sourceID}:{lineNumber})")
 
 class AppWindow(QMainWindow):
     def __init__(self):
@@ -17,6 +21,9 @@ class AppWindow(QMainWindow):
         self.setWindowTitle("Desktop Gantt App (PySide6)")
         self.resize(1280, 720)
         self.view = QWebEngineView(self)
+
+        # カスタムページをセット
+        self.view.setPage(CustomWebEnginePage(self.view))
         self.setCentralWidget(self.view)
 
         # QWebChannelセットアップ
@@ -30,6 +37,9 @@ class AppWindow(QMainWindow):
             os.path.join(os.path.dirname(__file__), "../frontend/build/index.html")
         )
         self.view.load(QUrl.fromLocalFile(build_path))
+
+    def handle_js_console_message(self, level, message, lineNumber, sourceID):
+        print(f"[JS:{level}] {message} (at {sourceID}:{lineNumber})")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
