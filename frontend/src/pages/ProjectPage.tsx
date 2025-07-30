@@ -6,30 +6,30 @@ import GanttChart from "../components/GanttChart";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 const ProjectPage: React.FC = () => {
-  const { projects, tasks } = useAppContext();
+  const { subprojects, phases } = useAppContext();
 
   // 例: projects, tasksからガント表示用データを組み立て
   const groups = useMemo(
-    () => (projects ?? []).map((p) => ({ id: p.id, content: p.name })),
-    [projects],
+    () => (subprojects ?? []).map((p) => ({ id: p.id, content: p.name })),
+    [subprojects],
   );
 
   const items = useMemo(
     () =>
-      (tasks ?? []).map((t) => ({
+      (phases?? []).map((t) => ({
         id: t.id,
-        group: t.project,
+        group: t.subproject,
         content: t.name,
         start: t.start_date,
         end: t.end_date,
       })),
-    [tasks],
+    [phases],
   );
 
   return (
     <Main component="main">
       <Typography variant="h4" gutterBottom>
-        Project
+        Assignment
       </Typography>
       <ErrorBoundary>
         <GanttChart items={items} groups={groups} />
