@@ -7,83 +7,120 @@ import React, {
 } from "react";
 import type { IPage } from "../types";
 
+// 親子関係に合わせた型定義
+export interface ISubproject {
+    id: number;
+    name: string;
+    start_date: string; // ISO日付文字列
+    end_date: string;   // ISO日付文字列
+    people: number[];   // PersonのID配列
+    is_edding: boolean;
+}
+
+export interface IPhase {
+    id: number;
+    name: string;
+    subproject: number; // 親SubprojectのID
+    start_date: string;
+    end_date: string;
+}
+
+export interface IAsset {
+    id: number;
+    name: string;
+    phase: number; // 親PhaseのID
+    start_date: string;
+    end_date: string;
+    type: "EXT" | "INT" | "Common";
+    work_category?: number | null; // WorkCategoryのID
+    status: "waiting" | "In Progress" | "Completed" | "Not Started";
+}
+
+export interface ITask {
+    id: number;
+    name: string;
+    asset: number; // 親AssetのID
+    start_date: string;
+    end_date: string;
+    people: number[]; // PersonのID配列
+    status: "waiting" | "In Progress" | "Completed" | "Not Started";
+}
+
+export interface IWorkload {
+    id: number;
+    task: number; // 親TaskのID
+    name: string;
+    start_date: string;
+    people: number; // PersonのID
+    hours: number;
+}
+
 export interface IPerson {
     id: number;
     name: string;
     email?: string;
 }
 
-export interface IProject {
+export interface IWorkCategory {
     id: number;
     name: string;
-    start_date: string;
-    end_date: string;
-    people: number[]; // Person ID配列
-}
-
-export interface ITask {
-    id: number;
-    name: string;
-    project: number; // Project ID
-    people: number[]; // Person ID配列
-    start_date: string;
-    end_date: string;
-    status: string;
-}
-
-export interface IWorkload {
-    id: number;
-    task: number; // Task ID
-    person: number; // Person ID
-    hours: number;
+    description?: string;
 }
 
 export interface IAppContext {
-    projects: IProject[];
-    addProjects: (projects: IProject[]) => void;
+    subprojects: ISubproject[];
+    addSubprojects: (subprojects: ISubproject[]) => void;
 
-    tasks: ITask[];            // 同上
-    addTasks: (tasks: ITask[]) => void; // 追加・マージ
+    phases: IPhase[];
+    addPhases: (phases: IPhase[]) => void;
 
-    workloads: IWorkload[];    // 同上
-    addWorkloads: (workloads: IWorkload[]) => void; // 追加・マージ
+    assets: IAsset[];
+    addAssets: (assets: IAsset[]) => void;
 
-    people: IPerson[];         // 同上
-    addPeople: (people: IPerson[]) => void; // 追加・マージ
+    tasks: ITask[];
+    addTasks: (tasks: ITask[]) => void;
 
-    selectedProjectId?: number;
-    setSelectedProjectId: (projectId?: number) => void;
+    workloads: IWorkload[];
+    addWorkloads: (workloads: IWorkload[]) => void;
+
+    people: IPerson[];
+    addPeople: (people: IPerson[]) => void;
+
+    selectedSubprojectId?: number;
+    setSelectedSubprojectId: (id?: number) => void;
 
     selectedPersonList: number[];
-    setSelectedPersonList: (personIds: number[]) => void;
+    setSelectedPersonList: (ids: number[]) => void;
 
     loading: boolean;
     setLoading: (loading: boolean) => void;
 
-    currentPage: IPage; // 現在のページ名
+    currentPage: IPage;
     setCurrentPage: (page: IPage) => void;
 }
 
 const defaultParams: IAppContext = {
-    projects: [],
-    addProjects: () => { },
+    subprojects: [],
+    addSubprojects: () => { },
+    phases: [],
+    addPhases: () => { },
+    assets: [],
+    addAssets: () => { },
     tasks: [],
     addTasks: () => { },
     workloads: [],
     addWorkloads: () => { },
     people: [],
     addPeople: () => { },
-    selectedProjectId: undefined,
-    setSelectedProjectId: () => { },
+    selectedSubprojectId: undefined,
+    setSelectedSubprojectId: () => { },
     selectedPersonList: [],
     setSelectedPersonList: () => { },
     loading: false,
     setLoading: () => { },
-    currentPage: "Distribute" 
-, // Make sure "Distribute" is a valid IPage value
+    currentPage: "Distribute",
     setCurrentPage: () => { },
 };
-
 
 const AppContext = createContext<IAppContext>({
     ...defaultParams,
@@ -92,90 +129,102 @@ const AppContext = createContext<IAppContext>({
 export const useAppContext = () => useContext(AppContext);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-    const [projects, setProjects] = useState<IProject[]>(defaultParams.projects);
-    const [tasks, setTasks] = useState<ITask[]>(defaultParams.tasks);   
-    const [workloads, setWorkloads] = useState<IWorkload[]>(defaultParams.workloads);
-    const [people, setPeople] = useState<IPerson[]>(defaultParams.people);
-    const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(defaultParams.selectedProjectId);
-    const [selectedPersonList, setSelectedPersonList] = useState<number[]>(defaultParams.selectedPersonList);
-    const [loading, setLoading] = useState<boolean>(defaultParams.loading);     
-    const [currentPage, setCurrentPage] = useState<IPage>(defaultParams.currentPage);  
+    const [subprojects, setSubprojects] = useState<ISubproject[]>([]);
+    const [phases, setPhases] = useState<IPhase[]>([]);
+    const [assets, setAssets] = useState<IAsset[]>([]);
+    const [tasks, setTasks] = useState<ITask[]>([]);
+    const [workloads, setWorkloads] = useState<IWorkload[]>([]);
+    const [people, setPeople] = useState<IPerson[]>([]);
+    const [selectedSubprojectId, setSelectedSubprojectId] = useState<number | undefined>(undefined);
+    const [selectedPersonList, setSelectedPersonList] = useState<number[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [currentPage, setCurrentPage] = useState<IPage>("Distribute");
 
     // 追加・マージ（ID一意）
-    const addProjects = useCallback((newProjects: IProject[]) => {
-        setProjects((prevProjects) => {
-            const merged = [...prevProjects];
-            newProjects.forEach((p) => {
-                const idx = merged.findIndex((e) => e.id === p.id);
-                if (idx !== -1) {
-                    merged[idx] = p;
-                } else {
-                    merged.push(p);
-                }
+    const addSubprojects = useCallback((newItems: ISubproject[]) => {
+        setSubprojects((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addPhases = useCallback((newItems: IPhase[]) => {
+        setPhases((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addAssets = useCallback((newItems: IAsset[]) => {
+        setAssets((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addTasks = useCallback((newItems: ITask[]) => {
+        setTasks((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addWorkloads = useCallback((newItems: IWorkload[]) => {
+        setWorkloads((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addPeople = useCallback((newItems: IPerson[]) => {
+        setPeople((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
             });
             return merged;
         });
     }, []);
 
-    const addTasks = useCallback((newTasks: ITask[]) => {
-        setTasks((prevTasks) => {
-            const merged = [...prevTasks];
-            newTasks.forEach((t) => {
-                const idx = merged.findIndex((e) => e.id === t.id);
-                if (idx !== -1) {
-                    merged[idx] = t;
-                } else {
-                    merged.push(t);
-                }
-            });
-            return merged;
-        });
-    }, []);
-
-    const addWorkloads = useCallback((newWorkloads: IWorkload[]) => {
-        setWorkloads((prevWorkloads) => {
-            const merged = [...prevWorkloads];
-            newWorkloads.forEach((w) => {
-                const idx = merged.findIndex((e) => e.id === w.id);
-                if (idx !== -1) {
-                    merged[idx] = w;
-                } else {
-                    merged.push(w);
-                }
-            });
-            return merged;
-        });
-    }, []);
-
-    const addPeople = useCallback((newPeople: IPerson[]) => {
-        setPeople((prevPeople) => {
-            const merged = [...prevPeople];
-            newPeople.forEach((p) => {
-                const idx = merged.findIndex((e) => e.id === p.id);
-                if (idx !== -1) {
-                    merged[idx] = p;
-                } else {
-                    merged.push(p);
-                }
-            });
-            return merged;
-        });
-    }, []);
-
-    // ---------- Context本体 ----------
     return (
         <AppContext.Provider
             value={{
-                projects,
-                addProjects,
+                subprojects,
+                addSubprojects,
+                phases,
+                addPhases,
+                assets,
+                addAssets,
                 tasks,
                 addTasks,
                 workloads,
                 addWorkloads,
                 people,
                 addPeople,
-                selectedProjectId,
-                setSelectedProjectId,
+                selectedSubprojectId,
+                setSelectedSubprojectId,
                 selectedPersonList,
                 setSelectedPersonList,
                 loading,

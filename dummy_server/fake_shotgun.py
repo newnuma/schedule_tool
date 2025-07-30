@@ -1,0 +1,86 @@
+"""Fake Shotgun API using Django ORM models."""
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional
+
+from django.apps import apps
+from django.db.models import Count, Sum
+
+
+class FakeShotgun:
+    """Simplified Shotgun API backed by local models."""
+
+    def __init__(self) -> None:
+        self._model_map = {
+            "Person": apps.get_model("api", "Person"),
+            "Subproject": apps.get_model("api", "Subproject"),
+            "Phase": apps.get_model("api", "Phase"),
+            "Asset": apps.get_model("api", "Asset"),
+            "Task": apps.get_model("api", "Task"),
+            "Workload": apps.get_model("api", "Workload"),
+            "WorkCategory": apps.get_model("api", "WorkCategory"),
+        }
+
+    # utility
+    def _model(self, entity_type: str):
+        model = self._model_map.get(entity_type)
+        if not model:
+            raise ValueError(f"Unknown entity type: {entity_type}")
+        return model
+
+    def _serialize(self, obj: Any, fields: Optional[List[str]] = None) -> Dict[str, Any]:
+        if fields:
+            return {f: getattr(obj, f) for f in fields}
+        return {f.name: getattr(obj, f.name) for f in obj._meta.fields}
+
+    def _apply_filters(self, qs, filters: List) :
+        for filt in filters:
+            if len(filt) == 3:
+                field, op, value = filt
+            else:
+                field, value = filt
+                op = "is"
+            if op in ("is", "equals", "=="):
+                qs = qs.filter(**{field: value})
+            elif op == "in":
+                qs = qs.filter(**{f"{field}__in": value})
+            else:
+                raise NotImplementedError(f"Operator {op} not supported")
+        return qs
+
+    # API methods
+    def find(self, entity_type: str, filters: Optional[List] = None,
+             fields: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        Model = self._model(entity_type)
+        qs = Model.objects.all()
+        if filters:
+            qs = self._apply_filters(qs, filters)
+        return [self._serialize(obj, fields) for obj in qs]
+
+    def create(self, entity_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        Model = self._model(entity_type)
+        obj = Model.objects.create(**data)
+        return self._serialize(obj)
+
+    def update(self, entity_type: str, entity_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        Model = self._model(entity_type)
+        Model.objects.filter(id=entity_id).update(**data)
+        obj = Model.objects.get(id=entity_id)
+        return self._serialize(obj)
+
+    def summarize(self, entity_type: str, filters: Optional[List] = None,
+                  summary_fields: Optional[List[Dict[str, str]]] = None) -> Any:
+        Model = self._model(entity_type)
+        qs = Model.objects.all()
+        if filters:
+            qs = self._apply_filters(qs, filters)
+        summary_fields = summary_fields or []
+        results = {}
+        for field in summary_fields:
+            column = field.get("column")
+            op = field.get("type", "count")
+            if op == "count":
+                results[column] = qs.aggregate(v=Count(column))["v"]
+            elif op == "sum":
+                results[column] = qs.aggregate(v=Sum(column))["v"]
+        return results

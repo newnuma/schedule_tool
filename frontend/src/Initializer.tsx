@@ -3,7 +3,9 @@ import { useAppContext } from "./context/AppContext";
 import * as bridgeApi from "./api/bridgeApi";
 
 const fetchInitialData = async (
-  addProjects: any,
+  addSubprojects: any,
+  addPhases: any,
+  addAssets: any,
   addTasks: any,
   addWorkloads: any,
   addPeople: any,
@@ -11,19 +13,14 @@ const fetchInitialData = async (
 ) => {
   setLoading(true);
   try {
-    // 必要なデータをbridgeApi経由で取得
-    const [projects, tasks, workloads, people] = await Promise.all([
-      bridgeApi.fetchSubprojects(),
-      bridgeApi.fetchTasks(),
-      bridgeApi.fetchWorkloads(),
-      bridgeApi.fetchPeople(),
-    ]);
-    addProjects(projects);
-    addTasks(tasks);
-    addWorkloads(workloads);
-    addPeople(people);
+    const result = await bridgeApi.fetchAll();
+    addSubprojects(result.subproject || []);
+    addPhases(result.phases || []);
+    addAssets(result.assets || []);
+    addTasks(result.tasks || []);
+    addWorkloads(result.workloads || []);
+    addPeople(result.person || []);
   } catch (e) {
-    // エラー処理は適宜
     console.error(e);
   } finally {
     setLoading(false);
@@ -32,7 +29,9 @@ const fetchInitialData = async (
 
 const Initializer = () => {
   const {
-    addProjects,
+    addSubprojects,
+    addPhases,
+    addAssets,
     addTasks,
     addWorkloads,
     addPeople,
@@ -40,11 +39,19 @@ const Initializer = () => {
   } = useAppContext();
 
   useEffect(() => {
-    fetchInitialData(addProjects, addTasks, addWorkloads, addPeople, setLoading);
+    fetchInitialData(
+      addSubprojects,
+      addPhases,
+      addAssets,
+      addTasks,
+      addWorkloads,
+      addPeople,
+      setLoading
+    );
     // eslint-disable-next-line
   }, []);
 
-  return null; // 画面には何も出さない
+  return null;
 };
 
 export default Initializer;
