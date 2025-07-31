@@ -41,15 +41,18 @@ const Initializer = () => {
   } = useAppContext();
 
   useEffect(() => {
-    fetchInitialData(
-      addSubprojects,
-      addPhases,
-      addAssets,
-      addTasks,
-      addWorkloads,
-      addPeople,
-      setLoading
-    );
+    (async () => {
+      await bridgeApi.channelReady;
+      await fetchInitialData(
+        addSubprojects,
+        addPhases,
+        addAssets,
+        addTasks,
+        addWorkloads,
+        addPeople,
+        setLoading
+      );
+    })();
     // eslint-disable-next-line
   }, []);
 

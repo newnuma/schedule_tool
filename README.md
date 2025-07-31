@@ -113,3 +113,14 @@ the dev server.
   specify the same port via `REACT_APP_WEBCHANNEL_URL` so the frontend can
   connect to the backend.
 
+### WebChannel usage
+
+`bridgeApi.channelReady` resolves when the Qt `QWebChannel` and `dataBridge`
+object are available. Always await this promise before invoking any API
+method:
+
+```ts
+await bridgeApi.channelReady;
+const data = await bridgeApi.fetchAll();
+```
+
