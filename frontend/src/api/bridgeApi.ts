@@ -8,9 +8,17 @@ function getBridge(): Promise<BridgeObject> {
   if (!bridgePromise) {
     bridgePromise = new Promise((resolve) => {
       const w = window as any;
+      const webChannelUrl = process.env.REACT_APP_WEBCHANNEL_URL;
       if (w.qt && w.qt.webChannelTransport) {
         new (w as any).QWebChannel(w.qt.webChannelTransport, (channel: any) => {
           resolve(channel.objects.dataBridge);
+        });
+      } else if (webChannelUrl) {
+        const socket = new WebSocket(webChannelUrl);
+        socket.addEventListener("open", () => {
+          new (w as any).QWebChannel(socket, (channel: any) => {
+            resolve(channel.objects.dataBridge);
+          });
         });
       } else {
         // If not running inside the desktop shell, resolve to null
