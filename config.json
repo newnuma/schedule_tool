@@ -1,0 +1,6 @@
+{
+  "mode": "web_debug",
+  "react_url": "http://localhost:3000",
+  "build_path": "./frontend/build/index.html",
+  "webchannel_port": 12345
+}

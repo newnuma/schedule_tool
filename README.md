@@ -90,3 +90,26 @@ python app_window.py
 
 Flow Production Tracking等の実API連携もdesktop/api_client.pyを拡張する形で実現可
 
+## Configuration
+
+`config.json` in the project root controls how the desktop backend and
+frontend connect during development and production.  Example:
+
+```json
+{
+  "mode": "desktop",          // "desktop" or "web_debug"
+  "react_url": "http://localhost:3000",
+  "build_path": "./frontend/build/index.html",
+  "webchannel_port": 12345
+}
+```
+
+A `.env.example` in `frontend/` shows how to set `REACT_APP_WEBCHANNEL_URL` for
+the dev server.
+
+- **desktop**: loads the built React assets into `QWebEngineView`.
+- **web_debug**: starts a WebSocket based `QWebChannel` on the given port and
+  opens `react_url` in your browser. The running dev server (`npm start`) should
+  specify the same port via `REACT_APP_WEBCHANNEL_URL` so the frontend can
+  connect to the backend.
+

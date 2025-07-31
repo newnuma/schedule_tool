@@ -12,8 +12,10 @@ const fetchInitialData = async (
   setLoading: any
 ) => {
   setLoading(true);
+  console.log("Fetching initial data...");
   try {
     const result = await bridgeApi.fetchAll();
+    console.log("res",result);
     addSubprojects(result.subproject || []);
     addPhases(result.phases || []);
     addAssets(result.assets || []);
