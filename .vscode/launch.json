@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: venv Debug",
+            "name": "Python Debug Mode",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/desktop/app_window.py",
@@ -10,6 +10,37 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/venv/bin/python"
             }
+        },
+        {
+            "name": "DesktopApp (web_debug mode)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/desktop/app_window.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/venv/bin/python",
+                "APP_MODE": "web_debug"  // または config.json で mode: web_debug にする場合は不要
+            }
+        },
+        {
+            "name": "React: npm start",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/frontend",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "start"
+            ],
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Debug: Desktop + React (web_debug)",
+            "configurations": [
+                "React: npm start",
+                "DesktopApp (web_debug mode)"
+            ]
         }
     ]
 }

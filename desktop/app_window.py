@@ -48,10 +48,7 @@ class AppWindow(QMainWindow):
         self.view.page().setWebChannel(self.channel)
 
         build_path = os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                self.config.get("build_path", "../frontend/build/index.html"),
-            )
+            os.path.join(os.path.dirname(__file__), "../frontend/build/index.html")
         )
         self.view.load(QUrl.fromLocalFile(build_path))
 
