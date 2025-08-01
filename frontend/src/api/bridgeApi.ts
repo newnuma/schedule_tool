@@ -15,11 +15,18 @@ export const channelReady: Promise<void> = new Promise((resolve) => {
   readyResolve = resolve;
 });
 
+// `REACT_APP_WEBCHANNEL_URL` or `REACT_APP_QT_WEBSOCKET_URL` can be defined at
+// build/runtime to point to the backend WebSocket. If not set, it defaults to
+// ws://localhost:12345 for development.
 function getBridge(): Promise<BridgeObject | null> {
   if (!bridgePromise) {
     bridgePromise = new Promise((resolve) => {
       const w = window as any;
-      const webChannelUrl = "ws://localhost:12345";
+      const envUrl =
+        process.env.REACT_APP_QT_WEBSOCKET_URL ||
+        process.env.REACT_APP_WEBCHANNEL_URL;
+      const webChannelUrl = envUrl || "ws://localhost:12345";
+      console.log(`Connecting to Qt WebChannel at: ${webChannelUrl}`);
       if (w.qt && w.qt.webChannelTransport) {
         new (w as any).QWebChannel(w.qt.webChannelTransport, (channel: any) => {
           readyResolve && readyResolve();

@@ -104,14 +104,15 @@ frontend connect during development and production.  Example:
 }
 ```
 
-A `.env.example` in `frontend/` shows how to set `REACT_APP_WEBCHANNEL_URL` for
-the dev server.
+A `.env.example` in `frontend/` shows how to set `REACT_APP_WEBCHANNEL_URL` (or
+`REACT_APP_QT_WEBSOCKET_URL`) for the dev server. The frontend reads these
+variables to determine the WebSocket URL for the Qt `QWebChannel`.
 
 - **desktop**: loads the built React assets into `QWebEngineView`.
 - **web_debug**: starts a WebSocket based `QWebChannel` on the given port and
   opens `react_url` in your browser. The running dev server (`npm start`) should
-  specify the same port via `REACT_APP_WEBCHANNEL_URL` so the frontend can
-  connect to the backend.
+  specify the same port via `REACT_APP_WEBCHANNEL_URL` (or
+  `REACT_APP_QT_WEBSOCKET_URL`) so the frontend can connect to the backend.
 
 ### WebChannel usage
 

@@ -31,7 +31,10 @@
             "runtimeArgs": [
                 "start"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "env": {
+                "REACT_APP_WEBCHANNEL_URL": "ws://localhost:12345"
+            }
         }
     ],
     "compounds": [
