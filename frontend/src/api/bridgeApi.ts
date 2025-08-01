@@ -1,32 +1,41 @@
-import { useEffect } from "react";
-import { useAppContext } from "../context/AppContext";
+// Utilities for accessing the Qt WebChannel dataBridge object.
+// Always `await channelReady` before calling any bridge API.
+
 type BridgeObject = any;
 
-let bridgePromise: Promise<BridgeObject> | null = null;
+let bridgePromise: Promise<BridgeObject | null> | null = null;
+let readyResolve: (() => void) | null = null;
 
-function getBridge(): Promise<BridgeObject> {
+/**
+ * Resolves once the QWebChannel connection has been established and
+ * the `dataBridge` object is available. Components must `await` this
+ * before invoking any bridge API method.
+ */
+export const channelReady: Promise<void> = new Promise((resolve) => {
+  readyResolve = resolve;
+});
+
+function getBridge(): Promise<BridgeObject | null> {
   if (!bridgePromise) {
     bridgePromise = new Promise((resolve) => {
       const w = window as any;
-      const webChannelUrl = "ws://localhost:12345"
-      // process.env.REACT_APP_WEBCHANNEL_URL;
-      console.log("bridgePromise1",window)
+      const webChannelUrl = "ws://localhost:12345";
       if (w.qt && w.qt.webChannelTransport) {
-        console.log("bridgePromise qt")
         new (w as any).QWebChannel(w.qt.webChannelTransport, (channel: any) => {
+          readyResolve && readyResolve();
           resolve(channel.objects.dataBridge);
         });
       } else if (webChannelUrl) {
         const socket = new WebSocket(webChannelUrl);
-        console.log("bridgePromise2")
         socket.addEventListener("open", () => {
           new (w as any).QWebChannel(socket, (channel: any) => {
+            readyResolve && readyResolve();
             resolve(channel.objects.dataBridge);
           });
         });
       } else {
-        // If not running inside the desktop shell, resolve to null
-        console.log("bridgePromise nll")
+        // Not running inside the desktop shell
+        readyResolve && readyResolve();
         resolve(null);
       }
     });
@@ -35,9 +44,10 @@ function getBridge(): Promise<BridgeObject> {
 }
 
 async function callBridge(method: string, ...args: any[]): Promise<any> {
+  await channelReady;
   const bridge = await getBridge();
-  if (!bridge || typeof bridge[method] !== 'function') {
-    throw new Error('Bridge not available');
+  if (!bridge || typeof bridge[method] !== "function") {
+    throw new Error("Bridge not available");
   }
   return bridge[method](...args);
 }
