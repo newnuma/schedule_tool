@@ -3,8 +3,14 @@ import sys
 import webbrowser
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import QApplication, QMainWindow
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebEngineCore import QWebEnginePage
+
+# Import WebEngine modules lazily to avoid heavy Qt dependencies
+try:
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWebEngineCore import QWebEnginePage
+except Exception:  # pragma: no cover - optional desktop dependencies
+    QWebEngineView = None  # type: ignore
+    QWebEnginePage = object  # type: ignore
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebSockets import QWebSocketServer
 from PySide6.QtNetwork import QHostAddress
@@ -17,6 +23,8 @@ os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=0"
 
 
 class CustomWebEnginePage(QWebEnginePage):
+    """Custom page that forwards console messages to stdout."""
+
     def javaScriptConsoleMessage(self, level, message, lineNumber, sourceID):
         level_map = {0: "Info", 1: "Warning", 2: "Error"}
         level_str = level_map.get(level, str(level))
