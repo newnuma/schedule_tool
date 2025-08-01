@@ -13,13 +13,15 @@ let readyResolve: (() => void) | null = null;
  */
 export const channelReady: Promise<void> = new Promise((resolve) => {
   readyResolve = resolve;
+  getBridge()
 });
 
 function getBridge(): Promise<BridgeObject | null> {
   if (!bridgePromise) {
     bridgePromise = new Promise((resolve) => {
       const w = window as any;
-      const webChannelUrl = "ws://localhost:12345";
+      const webChannelUrl =
+        process.env.REACT_APP_WEBCHANNEL_URL || "ws://localhost:12345";
       if (w.qt && w.qt.webChannelTransport) {
         new (w as any).QWebChannel(w.qt.webChannelTransport, (channel: any) => {
           readyResolve && readyResolve();
@@ -28,10 +30,21 @@ function getBridge(): Promise<BridgeObject | null> {
       } else if (webChannelUrl) {
         const socket = new WebSocket(webChannelUrl);
         socket.addEventListener("open", () => {
+          console.log("WebSocket opened", webChannelUrl);
           new (w as any).QWebChannel(socket, (channel: any) => {
+            console.log("QWebChannel initialized");
             readyResolve && readyResolve();
             resolve(channel.objects.dataBridge);
           });
+        });
+        socket.addEventListener("message", (ev) => {
+          console.log("WS message", ev.data);
+        });
+        socket.addEventListener("error", (err) => {
+          console.error("WebSocket error", err);
+        });
+        socket.addEventListener("close", () => {
+          console.log("WebSocket closed");
         });
       } else {
         // Not running inside the desktop shell
@@ -53,6 +66,7 @@ async function callBridge(method: string, ...args: any[]): Promise<any> {
 }
 
 export function fetchAll() {
+  console.log("call fetchAll");
   return callBridge('fetchAll');
 }
 
