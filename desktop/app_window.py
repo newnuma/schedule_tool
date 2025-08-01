@@ -47,6 +47,7 @@ class AppWindow(QMainWindow):
         self.channel = QWebChannel(self.view.page())
         self.channel.registerObject("dataBridge", self.data_bridge)
         self.view.page().setWebChannel(self.channel)
+        print("[QWebChannel] Objects:", self.channel.registeredObjects())
 
         build_path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../frontend/build/index.html")
@@ -62,6 +63,7 @@ class AppWindow(QMainWindow):
         self.channel = QWebChannel()
         self.channel.registerObject("dataBridge", self.data_bridge)
         self.server.newConnection.connect(self._on_new_connection)
+        print("[QWebChannel] Objects:", self.channel.registeredObjects())
 
         react_url = self.config.get("react_url", "http://localhost:3000")
         webbrowser.open(react_url)
@@ -70,12 +72,31 @@ class AppWindow(QMainWindow):
         )
 
     def _on_new_connection(self) -> None:
+        # socket = self.server.nextPendingConnection()
+        # if socket is None:
+        #     return
+        # transport = WebSocketTransport(socket)
+        # self.transports.append(transport)
+        # print("[AppWindow] New WebSocket connection")
+        # self.channel.connectTo(transport)
+        # print("[DEBUG] connectTo() called for", transport)
+        # 既存のコネクションをクローズ＆クリーンアップ
+        for t in self.transports:
+            try:
+                t._socket.close()
+                t.deleteLater()
+            except Exception as e:
+                print("[DEBUG] cleanup error", e)
+        self.transports.clear()
+
+        # 新しいコネクションを受け付ける
         socket = self.server.nextPendingConnection()
         if socket is None:
             return
         transport = WebSocketTransport(socket)
         self.transports.append(transport)
         print("[AppWindow] New WebSocket connection")
+        print("[DEBUG] connectTo() called for", transport)
         self.channel.connectTo(transport)
 
 

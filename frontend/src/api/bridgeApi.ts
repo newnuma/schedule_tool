@@ -13,6 +13,7 @@ let readyResolve: (() => void) | null = null;
  */
 export const channelReady: Promise<void> = new Promise((resolve) => {
   readyResolve = resolve;
+  getBridge()
 });
 
 function getBridge(): Promise<BridgeObject | null> {
@@ -65,6 +66,7 @@ async function callBridge(method: string, ...args: any[]): Promise<any> {
 }
 
 export function fetchAll() {
+  console.log("call fetchAll");
   return callBridge('fetchAll');
 }
 

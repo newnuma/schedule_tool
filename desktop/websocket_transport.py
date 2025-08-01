@@ -28,4 +28,8 @@ class WebSocketTransport(QWebChannelAbstractTransport):
         self.messageReceived.emit(decoded)
 
     def sendMessage(self, message: str) -> None:  # type: ignore[override]
-        self._socket.sendTextMessage(message)
+        print("[WebSocketTransport] send message", message)
+        try:
+         self._socket.sendTextMessage(message)
+        except Exception as e:
+         print("[WebSocketTransport] sendMessage ERROR:", e)
