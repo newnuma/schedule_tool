@@ -107,6 +107,10 @@ frontend connect during development and production.  Example:
 A `.env.example` in `frontend/` shows how to set `REACT_APP_WEBCHANNEL_URL` for
 the dev server.
 
+The frontend loads `public/qtwebchannel.js` which should match the
+`qwebchannel.js` bundled with your installed PySide6 version. If the file is
+missing, copy it from `site-packages/PySide6/Qt/resources/qtwebchannel/`.
+
 - **desktop**: loads the built React assets into `QWebEngineView`.
 - **web_debug**: starts a WebSocket based `QWebChannel` on the given port and
   opens `react_url` in your browser. The running dev server (`npm start`) should

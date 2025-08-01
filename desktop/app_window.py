@@ -28,6 +28,7 @@ class AppWindow(QMainWindow):
         super().__init__()
         self.config = load_config()
         self.data_bridge = DataBridge()
+        self.transports = []
 
         mode = self.config.get("mode", "desktop")
         if mode == "desktop":
@@ -73,6 +74,8 @@ class AppWindow(QMainWindow):
         if socket is None:
             return
         transport = WebSocketTransport(socket)
+        self.transports.append(transport)
+        print("[AppWindow] New WebSocket connection")
         self.channel.connectTo(transport)
 
 
