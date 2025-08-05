@@ -25,6 +25,7 @@ function getBridge(): Promise<BridgeObject | null> {
       if (w.qt && w.qt.webChannelTransport) {
         new (w as any).QWebChannel(w.qt.webChannelTransport, (channel: any) => {
           readyResolve && readyResolve();
+          console.log("QWebChannel initialized");
           resolve(channel.objects.dataBridge);
         });
       } else if (webChannelUrl) {

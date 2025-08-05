@@ -7,7 +7,12 @@ import React, {
 } from "react";
 import type { IPage } from "../types";
 
-// 親子関係に合わせた型定義
+export interface IForignKey {
+    type: "subproject" | "phase" | "asset" | "task" | "workload" | "person" | "workCategory";
+    id: number;
+    name: string;
+}
+
 export interface ISubproject {
     id: number;
     name: string;
@@ -20,7 +25,7 @@ export interface ISubproject {
 export interface IPhase {
     id: number;
     name: string;
-    subproject: number; // 親SubprojectのID
+    subproject: IForignKey; 
     start_date: string;
     end_date: string;
 }
@@ -28,7 +33,7 @@ export interface IPhase {
 export interface IAsset {
     id: number;
     name: string;
-    phase: number; // 親PhaseのID
+    phase: IForignKey; // 親PhaseのID
     start_date: string;
     end_date: string;
     type: "EXT" | "INT" | "Common";
@@ -39,16 +44,16 @@ export interface IAsset {
 export interface ITask {
     id: number;
     name: string;
-    asset: number; // 親AssetのID
+    asset: IForignKey; // 親AssetのID
     start_date: string;
     end_date: string;
-    people: number[]; // PersonのID配列
+    people: IForignKey[]; 
     status: "waiting" | "In Progress" | "Completed" | "Not Started";
 }
 
 export interface IWorkload {
     id: number;
-    task: number; // 親TaskのID
+    task: IForignKey; // 親TaskのID
     name: string;
     start_date: string;
     people: number; // PersonのID

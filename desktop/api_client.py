@@ -25,19 +25,65 @@ from shotgun_wrapper import ShotgunClient
 sg = ShotgunClient()
 
 
+
+import datetime
+
+# 共通整形関数
+def _format_value(value):
+    # datetime.datetime または datetime.date を文字列に変換
+    if isinstance(value, (datetime.datetime, datetime.date)):
+        return value.strftime('%Y-%m-%d')
+    
+    # Django model オブジェクト（外部キー）の場合
+    if hasattr(value, '_meta') and hasattr(value, 'id') and hasattr(value, 'name'):
+        model_name = value._meta.model_name.lower()
+        return {
+            'type': model_name,
+            'id': value.id,
+            'name': str(value)  # __str__ メソッドでProject Alphaのような文字列を取得
+        }
+    
+    # 辞書形式の外部キー
+    if isinstance(value, dict) and 'id' in value and 'name' in value:
+        return {'id': value['id'], 'name': value['name']}
+    
+    return value
+
+def _format_dict(d):
+    if not isinstance(d, dict):
+        return d
+    result = {}
+    for k, v in d.items():
+        if isinstance(v, list):
+            result[k] = [_format_dict(i) if isinstance(i, dict) else _format_value(i) for i in v]
+        elif isinstance(v, dict):
+            # 外部キーはid,nameのみ抽出
+            if 'id' in v and 'name' in v and len(v) <= 3:
+                result[k] = {'id': v['id'], 'name': v['name']}
+            else:
+                result[k] = _format_dict(v)
+        else:
+            result[k] = _format_value(v)
+    return result
+
+def _format_list(lst):
+    return [_format_dict(item) if isinstance(item, dict) else item for item in lst]
+
 def get_entities(entity: str, filters: Optional[List] = None, fields: Optional[List[str]] = None) -> Any:
-    return sg.find(entity, filters or [], fields)
+    data = sg.find(entity, filters or [], fields)
+    return _format_list(data)
 
 def get_entity(entity: str, entity_id: int, fields: Optional[List[str]] = None) -> Any:
     filters = [["id", "is", entity_id]]
-    return sg.find_one(entity, filters, fields)
+    data = sg.find_one(entity, filters, fields)
+    return _format_dict(data) if data else data
 
 def fetch_distribute() -> Any:
     # ProjectとPhaseを取得
     subproject = get_entities("Subproject")
     phases = get_entities("Phase")
     return {
-        "projects": subproject ,
+        "subprojects": subproject,
         "phases": phases,
     }
 
@@ -84,7 +130,7 @@ def fetch_project_details(project_id: int) -> Any:
 # メンバーリストにあるpersonに関連する情報を取得
 def fetch_people_details(person_list : List[int]) -> Any:
     workloads = get_entities("Workload", [["people", "in", person_list]])
-    tasks = get_entities("Task", [["people", "in", person_list]])   
+    tasks = get_entities("Task", [["people", "in", person_list]])
     return {
         "workloads": workloads,
         "tasks": tasks,
@@ -107,7 +153,7 @@ def fetch_all(project_id: int, person_list: List[int]) -> Any:
         return list(merged.values())
 
     return {
-        "subproject": merge_by_id(distribute.get("subproject", []), [project_details.get("subproject")] if project_details.get("subproject") else []),
+        "subproject": merge_by_id(distribute.get("subprojects", []), [project_details.get("subproject")] if project_details.get("subproject") else []),
         "phases": merge_by_id(distribute.get("phases", []), project_details.get("phases", [])),
         "assets": merge_by_id(project_details.get("assets", [])),
         "tasks": merge_by_id(project_details.get("tasks", []), people_details.get("tasks", [])),

@@ -6,25 +6,42 @@ import GanttChart from "../components/GanttChart";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 const AssignmentPage: React.FC = () => {
-  const { subprojects, phases } = useAppContext();
+  const { people, tasks } = useAppContext();
 
-  // 例: projects, tasksからガント表示用データを組み立て
+  // People毎にグループを作成
   const groups = useMemo(
-    () => (subprojects ?? []).map((p) => ({ id: p.id, content: p.name })),
-    [subprojects],
+    () => (people ?? []).map((person) => ({ 
+      id: person.id, 
+      content: person.name 
+    })),
+    [people],
   );
 
-  const items = useMemo(
-    () =>
-      (phases?? []).map((t) => ({
-        id: t.id,
-        group: t.subproject,
-        content: t.name,
-        start: t.start_date,
-        end: t.end_date,
-      })),
-    [phases],
-  );
+  // 各タスクを、アサインされているpeople毎にアイテムとして展開
+  const items = useMemo(() => {
+    const taskItems: Array<{
+      id: string;
+      group: number;
+      content: string;
+      start: string;
+      end: string;
+    }> = [];
+
+    (tasks ?? []).forEach((task) => {
+      // タスクにアサインされている各personに対してアイテムを作成
+      (task.people ?? []).forEach((person) => {
+        taskItems.push({
+          id: `${task.id}-${person.id}`, // タスクID-PersonIDで一意性を保つ
+          group: person.id,
+          content: task.name,
+          start: task.start_date,
+          end: task.end_date,
+        });
+      });
+    });
+
+    return taskItems;
+  }, [tasks]);
 
   return (
     <Main component="main">
