@@ -1,5 +1,8 @@
+# python manage.py shell → exec(open('dummy_server/api/sample_data.py', encoding="utf-8").read())
+
 from api.models import Person, Subproject, Phase, Asset, Task, Workload, WorkCategory
 from datetime import date, timedelta
+import random
 
 # 既存データ削除
 Person.objects.all().delete()
@@ -10,78 +13,160 @@ Task.objects.all().delete()
 Workload.objects.all().delete()
 WorkCategory.objects.all().delete()
 
-# 1. Person
-alice = Person.objects.create(name="Alice", email="alice@example.com")
-bob = Person.objects.create(name="Bob", email="bob@example.com")
-carol = Person.objects.create(name="Carol", email="carol@example.com")
-dave = Person.objects.create(name="Dave", email="dave@example.com")
-eve = Person.objects.create(name="Eve", email="eve@example.com")
+# 1. Person (25人に増加)
+people = []
+person_names = [
+    "Alice", "Bob", "Carol", "Dave", "Eve", "Frank", "Grace", "Henry", "Ivy", "Jack",
+    "Kate", "Liam", "Maya", "Noah", "Olivia", "Paul", "Quinn", "Ruby", "Sam", "Tina",
+    "Uma", "Victor", "Wendy", "Xavier", "Yuki"
+]
 
-# 2. WorkCategory
-cat_mod = WorkCategory.objects.create(name="Modeling", description="3Dモデリング")
-cat_anim = WorkCategory.objects.create(name="Animation", description="アニメーション")
-cat_comp = WorkCategory.objects.create(name="Compositing", description="合成")
-cat_rig = WorkCategory.objects.create(name="Rigging", description="リギング")
+for i, name in enumerate(person_names):
+    person = Person.objects.create(name=name, email=f"{name.lower()}@example.com")
+    people.append(person)
 
-# 3. Subproject
-sp1 = Subproject.objects.create(
-    name="Project Alpha",
-    start_date=date.today(),
-    end_date=date.today() + timedelta(days=60),
-    is_edding=False
-)
-sp1.people.set([alice, bob, dave])
+# 2. WorkCategory (10個に増加)
+categories = []
+category_data = [
+    ("Modeling", "3Dモデリング"),
+    ("Animation", "アニメーション"), 
+    ("Compositing", "合成"),
+    ("Rigging", "リギング"),
+    ("Texturing", "テクスチャリング"),
+    ("Lighting", "ライティング"),
+    ("Rendering", "レンダリング"),
+    ("Effects", "エフェクト"),
+    ("Layout", "レイアウト"),
+    ("Concept", "コンセプトアート")
+]
 
-sp2 = Subproject.objects.create(
-    name="Project Beta",
-    start_date=date.today(),
-    end_date=date.today() + timedelta(days=90),
-    is_edding=True
-)
-sp2.people.set([carol, eve])
+for name, desc in category_data:
+    cat = WorkCategory.objects.create(name=name, description=desc)
+    categories.append(cat)
 
-sp3 = Subproject.objects.create(
-    name="Project Gamma",
-    start_date=date.today(),
-    end_date=date.today() + timedelta(days=120),
-    is_edding=False
-)
-sp3.people.set([alice, eve])
+# 3. Subproject (15個に増加)
+subprojects = []
+project_names = [
+    "Project Alpha", "Project Beta", "Project Gamma", "Project Delta", "Project Epsilon",
+    "Project Zeta", "Project Eta", "Project Theta", "Project Iota", "Project Kappa",
+    "Project Lambda", "Project Mu", "Project Nu", "Project Xi", "Project Omicron"
+]
 
-# 4. Phase
-ph1 = Phase.objects.create(subproject=sp1, name="Phase 1", start_date=date.today(), end_date=date.today() + timedelta(days=30))
-ph2 = Phase.objects.create(subproject=sp1, name="Phase 2", start_date=date.today() + timedelta(days=31), end_date=date.today() + timedelta(days=60))
-ph3 = Phase.objects.create(subproject=sp2, name="Phase 1", start_date=date.today(), end_date=date.today() + timedelta(days=45))
-ph4 = Phase.objects.create(subproject=sp3, name="Phase 1", start_date=date.today(), end_date=date.today() + timedelta(days=60))
-ph5 = Phase.objects.create(subproject=sp3, name="Phase 2", start_date=date.today() + timedelta(days=61), end_date=date.today() + timedelta(days=120))
+for i, name in enumerate(project_names):
+    start_date = date.today() + timedelta(days=i*10)
+    end_date = start_date + timedelta(days=60 + i*5)
+    is_edding = random.choice([True, False])
+    
+    sp = Subproject.objects.create(
+        name=name,
+        start_date=start_date,
+        end_date=end_date,
+        is_edding=is_edding
+    )
+    # ランダムに3-8人をアサイン
+    assigned_people = random.sample(people, random.randint(3, 8))
+    sp.people.set(assigned_people)
+    subprojects.append(sp)
 
-# 5. Asset
-as1 = Asset.objects.create(phase=ph1, name="Asset_A1", start_date=ph1.start_date, end_date=ph1.end_date, type="EXT", work_category=cat_mod, status="waiting")
-as2 = Asset.objects.create(phase=ph2, name="Asset_A2", start_date=ph2.start_date, end_date=ph2.end_date, type="INT", work_category=cat_anim, status="In Progress")
-as3 = Asset.objects.create(phase=ph3, name="Asset_B1", start_date=ph3.start_date, end_date=ph3.end_date, type="Common", work_category=cat_comp, status="Completed")
-as4 = Asset.objects.create(phase=ph4, name="Asset_C1", start_date=ph4.start_date, end_date=ph4.end_date, type="EXT", work_category=cat_rig, status="waiting")
-as5 = Asset.objects.create(phase=ph5, name="Asset_C2", start_date=ph5.start_date, end_date=ph5.end_date, type="INT", work_category=cat_mod, status="In Progress")
+# 4. Phase (各プロジェクトに2-4個のPhase、合計約45個)
+phases = []
+for sp in subprojects:
+    num_phases = random.randint(2, 4)
+    phase_duration = (sp.end_date - sp.start_date).days // num_phases
+    
+    for i in range(num_phases):
+        phase_start = sp.start_date + timedelta(days=i * phase_duration)
+        phase_end = phase_start + timedelta(days=phase_duration - 1)
+        if i == num_phases - 1:  # 最後のフェーズは終了日を合わせる
+            phase_end = sp.end_date
+        
+        phase = Phase.objects.create(
+            subproject=sp,
+            name=f"Phase {i+1}",
+            start_date=phase_start,
+            end_date=phase_end
+        )
+        phases.append(phase)
 
-# 6. Task
-tk1 = Task.objects.create(asset=as1, name="Task_A1-1", start_date=as1.start_date, end_date=as1.end_date, status="waiting")
-tk1.people.set([alice, bob])
-tk2 = Task.objects.create(asset=as2, name="Task_A2-1", start_date=as2.start_date, end_date=as2.end_date, status="In Progress")
-tk2.people.set([alice])
-tk3 = Task.objects.create(asset=as3, name="Task_B1-1", start_date=as3.start_date, end_date=as3.end_date, status="Completed")
-tk3.people.set([carol])
-tk4 = Task.objects.create(asset=as4, name="Task_C1-1", start_date=as4.start_date, end_date=as4.end_date, status="waiting")
-tk4.people.set([eve, dave])
-tk5 = Task.objects.create(asset=as5, name="Task_C2-1", start_date=as5.start_date, end_date=as5.end_date, status="In Progress")
-tk5.people.set([alice, eve])
+# 5. Asset (各Phaseに3-6個のAsset、合計約200個)
+assets = []
+for phase in phases:
+    num_assets = random.randint(3, 6)
+    asset_duration = (phase.end_date - phase.start_date).days // num_assets
+    
+    for i in range(num_assets):
+        asset_start = phase.start_date + timedelta(days=i * asset_duration)
+        asset_end = asset_start + timedelta(days=asset_duration - 1)
+        if i == num_assets - 1:  # 最後のアセットは終了日を合わせる
+            asset_end = phase.end_date
+        
+        asset = Asset.objects.create(
+            phase=phase,
+            name=f"Asset_{phase.subproject.name[-1]}{i+1}",
+            start_date=asset_start,
+            end_date=asset_end,
+            type=random.choice(['EXT', 'INT', 'Common']),
+            work_category=random.choice(categories),
+            status=random.choice(['waiting', 'In Progress', 'Completed'])
+        )
+        assets.append(asset)
 
-# 7. Workload
-wl1 = Workload.objects.create(task=tk1, name="Workload1", start_date=as1.start_date, people=alice, hours=12.0)
-wl2 = Workload.objects.create(task=tk1, name="Workload2", start_date=as1.start_date, people=bob, hours=8.5)
-wl3 = Workload.objects.create(task=tk2, name="Workload3", start_date=as2.start_date, people=alice, hours=15.0)
-wl4 = Workload.objects.create(task=tk3, name="Workload4", start_date=as3.start_date, people=carol, hours=10.0)
-wl5 = Workload.objects.create(task=tk4, name="Workload5", start_date=as4.start_date, people=eve, hours=9.0)
-wl6 = Workload.objects.create(task=tk4, name="Workload6", start_date=as4.start_date, people=dave, hours=7.5)
-wl7 = Workload.objects.create(task=tk5, name="Workload7", start_date=as5.start_date, people=alice, hours=11.0)
-wl8 = Workload.objects.create(task=tk5, name="Workload8", start_date=as5.start_date, people=eve, hours=13.0)
+# 6. Task (各Assetに2-4個のTask、合計約600個)
+tasks = []
+for asset in assets:
+    num_tasks = random.randint(2, 4)
+    task_duration = (asset.end_date - asset.start_date).days // num_tasks
+    
+    for i in range(num_tasks):
+        task_start = asset.start_date + timedelta(days=i * task_duration)
+        task_end = task_start + timedelta(days=task_duration - 1)
+        if i == num_tasks - 1:  # 最後のタスクは終了日を合わせる
+            task_end = asset.end_date
+        
+        task = Task.objects.create(
+            asset=asset,
+            name=f"Task_{asset.name}-{i+1}",
+            start_date=task_start,
+            end_date=task_end,
+            status=random.choice(['waiting', 'In Progress', 'Completed'])
+        )
+        
+        # ランダムに1-4人をタスクにアサイン
+        num_assigned = random.randint(1, 4)
+        assigned_people = random.sample(people, num_assigned)
+        task.people.set(assigned_people)
+        
+        tasks.append(task)
 
-print("Sample data inserted!")
+# 7. Workload (各Taskに1-3個のWorkload、合計約1200個)
+workloads = []
+for task in tasks:
+    task_people = list(task.people.all())
+    if not task_people:
+        continue
+    
+    num_workloads = random.randint(1, 3)
+    
+    for i in range(num_workloads):
+        # タスクにアサインされた人の中からランダムに選択
+        assigned_person = random.choice(task_people)
+        hours = round(random.uniform(4.0, 20.0), 1)
+        
+        workload = Workload.objects.create(
+            task=task,
+            name=f"Workload_{task.name}-{i+1}",
+            start_date=task.start_date + timedelta(days=random.randint(0, 3)),
+            people=assigned_person,
+            hours=hours
+        )
+        workloads.append(workload)
+
+print(f"Sample data inserted!")
+print(f"Created:")
+print(f"  - {len(people)} People")
+print(f"  - {len(categories)} Work Categories")
+print(f"  - {len(subprojects)} Subprojects")
+print(f"  - {len(phases)} Phases")
+print(f"  - {len(assets)} Assets")
+print(f"  - {len(tasks)} Tasks")
+print(f"  - {len(workloads)} Workloads")

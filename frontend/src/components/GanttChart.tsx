@@ -1,6 +1,6 @@
 // vis-timelineをラップしたガントチャート描画コンポーネント
 // 各ページで再利用可能
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import {
   GanttContainer,
   NoDataBox,
@@ -45,49 +45,66 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<Timeline | null>(null);
 
+  // データセットをメモ化して不要な再描画を防ぐ
+  const memoizedItems = useMemo(() => items, [JSON.stringify(items)]);
+  const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
+  const memoizedOptions = useMemo(() => options, [JSON.stringify(options)]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
     // 既にTimelineインスタンスがある場合はdestroyして再生成
     if (timelineRef.current) {
-      timelineRef.current.destroy();
+      try {
+        timelineRef.current.destroy();
+        timelineRef.current = null;
+      } catch (error) {
+        console.warn("Error destroying timeline:", error);
+        timelineRef.current = null;
+      }
     }
 
-    const dataSet = new DataSet(items);
-    let groupSet;
-    if (groups) {
-      groupSet = new DataSet(groups);
+    const dataSet = new DataSet(memoizedItems);
+    let groupSet: DataSet<GanttGroup> | undefined;
+    if (memoizedGroups) {
+      groupSet = new DataSet(memoizedGroups);
     }
 
-    if (items.length > 0) {
-      timelineRef.current = groups
-        ? new Timeline(containerRef.current, dataSet, groupSet, {
-            stack: false,
-            orientation: "top",
-            ...options,
-            height,
-          })
-        : new Timeline(containerRef.current, dataSet, {
-            stack: false,
-            orientation: "top",
-            ...options,
-            height,
-          });
+    if (memoizedItems.length > 0) {
+      try {
+        const defaultOptions: TimelineOptions = {
+          stack: false,
+          orientation: "top",
+          ...memoizedOptions,
+          height,
+        };
+
+        if (memoizedGroups && memoizedGroups.length > 0 && groupSet) {
+          timelineRef.current = new Timeline(containerRef.current, dataSet, groupSet, defaultOptions);
+        } else {
+          timelineRef.current = new Timeline(containerRef.current, dataSet, defaultOptions);
+        }
+      } catch (error) {
+        console.error("Error creating timeline:", error);
+      }
     }
     // クリーンアップ
     return () => {
-      timelineRef.current?.destroy();
+      if (timelineRef.current) {
+        try {
+          timelineRef.current.destroy();
+          timelineRef.current = null;
+        } catch (error) {
+          console.warn("Error destroying timeline in cleanup:", error);
+          timelineRef.current = null;
+        }
+      }
     };
-  }, [
-    JSON.stringify(items),
-    JSON.stringify(groups),
-    JSON.stringify(options),
-    height,
-  ]); // データ・オプション変化で再描画
+  }, [memoizedItems, memoizedGroups, memoizedOptions, height]);
 
   return (
     <GanttContainer h={height}>
-      {items.length === 0 && <NoDataBox>No data</NoDataBox>}
+      {memoizedItems.length === 0 && <NoDataBox>No data</NoDataBox>}
       <TimelineBox ref={containerRef} />
     </GanttContainer>
   );

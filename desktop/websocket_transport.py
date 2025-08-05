@@ -1,48 +1,55 @@
-from PySide6.QtCore import Slot, Signal
-from PySide6.QtWebChannel import QWebChannelAbstractTransport
-from PySide6.QtWebSockets import QWebSocket
+"""create a remote connection to a webapp."""
+
+import sys
 import json
+
+from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtNetwork import QHostAddress, QSslSocket
+from PySide6.QtWebChannel import QWebChannel, QWebChannelAbstractTransport
+from PySide6.QtWebSockets import QWebSocketServer
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtCore import QObject, Signal, QByteArray, QJsonDocument, Slot, QUrl
 
 
 class WebSocketTransport(QWebChannelAbstractTransport):
-    """Transport layer between QWebChannel and a QWebSocket."""
+    """QWebChannelAbstractSocket implementation using a QWebSocket internally
+        The transport delegates all messages received over the QWebSocket over
+        its textMessageReceived signal. Analogously, all calls to
+        sendTextMessage will be sent over the QWebSocket to the remote client.
+    """
 
-    # Matches QWebChannelAbstractTransport.messageReceived(QJsonObject, QWebChannelAbstractTransport*)
-    messageReceived = Signal(dict)
-
-    def __init__(self, socket: QWebSocket):
-        super().__init__()
+    def __init__(self, socket):
+        """Construct the transport object and wrap the given socket.
+           The socket is also set as the parent of the transport object."""
+        super().__init__(socket)
         self._socket = socket
-        socket.textMessageReceived.connect(self.on_text_message)
-        socket.binaryMessageReceived.connect(self.on_binary_message)
-        socket.disconnected.connect(self.deleteLater)
-        print("[WebSocketTransport] new connection")
+        self._socket.textMessageReceived.connect(self.text_message_received)
+        self._socket.disconnected.connect(self._disconnected)
+
+    def __del__(self):
+        """Destroys the WebSocketTransport."""
+        self._socket.deleteLater()
+
+    def _disconnected(self):
+        self.deleteLater()
+
+    def sendMessage(self, message):
+        """Serialize the JSON message and send it as a text message via the
+           WebSocket to the client."""
+        doc = QJsonDocument(message)
+        json_message = str(doc.toJson(QJsonDocument.Compact), "utf-8")
+        self._socket.sendTextMessage(json_message)
 
     @Slot(str)
-    def on_text_message(self, message: str) -> None:
-        print("[WebSocketTransport] text message", message)
-        try:
-            data = json.loads(message)
-        except Exception:
-            print("[WebSocketTransport] Invalid JSON received")
+    def text_message_received(self, message_data_in):
+        """Deserialize the stringified JSON messageData and emit
+           messageReceived."""
+        message_data = QByteArray(bytes(message_data_in, encoding='utf8'))
+        message = QJsonDocument.fromJson(message_data)
+        if message.isNull():
+            print("Failed to parse text message as JSON object:", message_data)
             return
-        self.messageReceived.emit(data)
-
-    @Slot(bytes)
-    def on_binary_message(self, message: bytes) -> None:
-        decoded = bytes(message).decode("utf-8")
-        print("[WebSocketTransport] binary message", decoded)
-        try:
-            data = json.loads(decoded)
-        except Exception:
-            print("[WebSocketTransport] Invalid JSON received")
+        if not message.isObject():
+            print("Received JSON message that is not an object: ", message_data)
             return
-        self.messageReceived.emit(data)
-
-    def sendMessage(self, message: dict) -> None:  # type: ignore[override]
-        serialized = json.dumps(message)
-        print("[WebSocketTransport] send message", serialized)
-        try:
-            self._socket.sendTextMessage(serialized)
-        except Exception as e:
-            print("[WebSocketTransport] sendMessage ERROR:", e)
+        self.messageReceived.emit(message.object(), self)

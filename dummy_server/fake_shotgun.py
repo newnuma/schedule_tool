@@ -38,8 +38,32 @@ class FakeShotgun:
 
     def _serialize(self, obj: Any, fields: Optional[List[str]] = None) -> Dict[str, Any]:
         if fields:
-            return {f: getattr(obj, f) for f in fields}
-        return {f.name: getattr(obj, f.name) for f in obj._meta.fields}
+            result = {}
+            for f in fields:
+                if hasattr(obj, f):
+                    attr = getattr(obj, f)
+                    # ManyToManyFieldの場合はクエリセットからリストに変換
+                    if hasattr(attr, 'all'):
+                        result[f] = list(attr.all())
+                    else:
+                        result[f] = attr
+                else:
+                    result[f] = None
+            return result
+        
+        # 通常のフィールドとManyToManyフィールドの両方を取得
+        result = {}
+        
+        # 通常のフィールド
+        for field in obj._meta.fields:
+            result[field.name] = getattr(obj, field.name)
+        
+        # ManyToManyフィールド
+        for field in obj._meta.many_to_many:
+            manager = getattr(obj, field.name)
+            result[field.name] = list(manager.all())
+        
+        return result
 
     def _apply_filters(self, qs, filters: List) :
         for filt in filters:
