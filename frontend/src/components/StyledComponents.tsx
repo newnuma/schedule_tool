@@ -37,23 +37,3 @@ export const SideDrawer = styled(Drawer)(({ theme }) => ({
     paddingTop: theme.spacing(4),
   },
 }));
-
-export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
-  width: "100%",
-  height: h,
-  position: "relative",
-}));
-
-export const NoDataBox = styled(Box)(({ theme }) => ({
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  pointerEvents: "none",
-}));
-
-export const TimelineBox = styled(Box)({
-  width: "100%",
-  height: "100%",
-});

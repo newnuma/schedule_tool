@@ -9,7 +9,9 @@ const fetchInitialData = async (
   addTasks: any,
   addWorkloads: any,
   addPeople: any,
-  setLoading: any
+  setLoading: any,
+  setSelectedPersonList: any,
+  setSelectedSubprojectId: any
 ) => {
   setLoading(true);
   console.log("Fetching initial data...");
@@ -22,6 +24,8 @@ const fetchInitialData = async (
     addTasks(result.tasks || []);
     addWorkloads(result.workloads || []);
     addPeople(result.person || []);
+    setSelectedPersonList(result.selectedPersonList || []);
+    setSelectedSubprojectId(result.selectedSubprojectId || null);
   } catch (e) {
     console.error(e);
   } finally {
@@ -38,6 +42,8 @@ const Initializer = () => {
     addWorkloads,
     addPeople,
     setLoading,
+    setSelectedPersonList,
+    setSelectedSubprojectId
   } = useAppContext();
 
   useEffect(() => {
@@ -50,7 +56,9 @@ const Initializer = () => {
         addTasks,
         addWorkloads,
         addPeople,
-        setLoading
+        setLoading,
+        setSelectedPersonList,
+        setSelectedSubprojectId
       );
     })();
     // eslint-disable-next-line
