@@ -14,6 +14,10 @@ class DataBridge(QObject):
     def fetchAll(self) -> Any:
         project_id, person_list = cache.get_project_id_and_person_list()
         return api_client.fetch_all(project_id, person_list)
+    
+    @Slot(int, result="QVariant")
+    def fetchSubproject(self, id: int) -> Any:
+        return api_client.fetch_project_details(id)
 
     # @Slot(int, result="QVariant")
     # def getSubproject(self, subproject_id: int) -> Any:  # noqa: N802

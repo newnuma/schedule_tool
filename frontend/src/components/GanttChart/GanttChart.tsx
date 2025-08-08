@@ -5,7 +5,7 @@ import {
   GanttContainer,
   NoDataBox,
   TimelineBox,
-} from "./StyledComponents";
+} from "./GanttChartStyled";
 import {
   DataSet,
   Timeline,
@@ -21,6 +21,7 @@ export interface GanttItem {
   content: string;
   start: string | Date;
   end?: string | Date;
+  type?: 'range' | 'point' | 'box'; // マイルストーン用のtypeを追加
   className?: string; // 色分けなど
 }
 

@@ -159,6 +159,8 @@ def fetch_all(project_id: int, person_list: List[int]) -> Any:
         "tasks": merge_by_id(project_details.get("tasks", []), people_details.get("tasks", [])),
         "workloads": merge_by_id(project_details.get("workloads", []), people_details.get("workloads", [])),
         "person": merge_by_id(project_details.get("person", [])),
+        "selectedSubprojectId": project_id,
+        "selectedPersonList": person_list
     }
 
 

@@ -19,11 +19,6 @@ const App = () => {
       <Sidebar />
       <Content>
         <AppBar position="static">
-          <Toolbar>
-            <HeaderTitle variant="h6" component="div">
-              共通ヘッダー
-            </HeaderTitle>
-          </Toolbar>
         </AppBar>
         {currentPage === "Distribute" && <DistributePage />}
         {currentPage === "Project" && <ProjectPage />}

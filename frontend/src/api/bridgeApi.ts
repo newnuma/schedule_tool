@@ -25,15 +25,12 @@ function getBridge(): Promise<BridgeObject | null> {
       if (w.qt && w.qt.webChannelTransport) {
         new (w as any).QWebChannel(w.qt.webChannelTransport, (channel: any) => {
           readyResolve && readyResolve();
-          console.log("QWebChannel initialized");
           resolve(channel.objects.dataBridge);
         });
       } else if (webChannelUrl) {
         const socket = new WebSocket(webChannelUrl);
         socket.addEventListener("open", () => {
-          console.log("WebSocket opened", webChannelUrl);
           new (w as any).QWebChannel(socket, (channel: any) => {
-            console.log("QWebChannel initialized");
             readyResolve && readyResolve();
             resolve(channel.objects.dataBridge);
           });
@@ -69,6 +66,11 @@ async function callBridge(method: string, ...args: any[]): Promise<any> {
 export function fetchAll() {
   console.log("call fetchAll");
   return callBridge('fetchAll');
+}
+
+export function fetchSubproject(id?: number) {
+  console.log("call fetchSubproject", id);
+  return callBridge('fetchSubproject', id);
 }
 
 // export function fetchSubproject(id: number) {

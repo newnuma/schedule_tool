@@ -7,7 +7,6 @@ import ErrorBoundary from "../components/ErrorBoundary";
 
 const DistributePage: React.FC = () => {
   const { subprojects, phases } = useAppContext();
-  console.log("phases", phases);
 
    const groups = useMemo(
      () => (subprojects ?? []).map((p) => ({ id: p.id, content: p.name })),
