@@ -13,15 +13,16 @@ const DistributePage: React.FC = () => {
      [subprojects],
    );
  
-   const items = useMemo(
-     () =>
-       (phases?? []).map((t) => ({
-         id: t.id,
-         group: t.subproject.id,
-         content: t.name,
-         start: t.start_date,
-         end: t.end_date,
-       })),
+  const items = useMemo(
+    () =>
+      (phases ?? [])
+        .map((t) => ({
+          id: t.id,
+          group: t.subproject.id,
+          content: t.name,
+          start: t.start_date,
+          end: t.end_date,
+         })),
      [phases],
    );
  

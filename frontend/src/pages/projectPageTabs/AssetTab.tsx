@@ -42,26 +42,28 @@ const AssetTab: React.FC = () => {
   const items = useMemo(
     () => {
       // Phaseアイテム（マイルストーン形式）
-      const phaseItems = filteredPhases.map((phase) => ({
-        id: `phase-${phase.id}`,
-        group: 'phase-group',
-        content: phase.name,
-        start: phase.end_date, // マイルストーンは終了日に表示
-        end: phase.end_date,   // start === end でマイルストーンになる
-        type: 'point' as const,  // マイルストーンタイプ
-        className: 'milestone'
-      }));
+      const phaseItems = filteredPhases
+        .map((phase) => ({
+          id: `phase-${phase.id}`,
+          group: 'phase-group',
+          content: phase.name,
+          start: phase.end_date, // マイルストーンは終了日に表示
+          end: phase.end_date,   // start === end でマイルストーンになる
+          type: 'point' as const,  // マイルストーンタイプ
+          className: 'milestone'
+        }));
 
       // Assetアイテム
-      const assetItems = filteredAssets.map((a) => ({
-        id: a.id,
-        group: a.type, // Asset typeでグループ化
-        content: a.name,
-        start: a.start_date,
-        end: a.end_date,
-        className: a.status === 'Completed' ? 'completed' : 
-                  a.status === 'In Progress' ? 'in-progress' : 'not-started'
-      }));
+      const assetItems = filteredAssets
+        .map((a) => ({
+          id: a.id,
+          group: a.type, // Asset typeでグループ化
+          content: a.name,
+          start: a.start_date,
+          end: a.end_date,
+          className: a.status === 'Completed' ? 'completed' : 
+                    a.status === 'In Progress' ? 'in-progress' : 'not-started'
+        }));
 
       return [...phaseItems, ...assetItems];
     },

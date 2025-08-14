@@ -38,15 +38,16 @@ const TaskTab: React.FC = () => {
 
   const items = useMemo(
     () =>
-      filteredTasks.map((t) => ({
-        id: t.id,
-        group: t.asset.id,
-        content: t.name,
-        start: t.start_date,
-        end: t.end_date,
-        className: t.status === 'Completed' ? 'completed' : 
-                  t.status === 'In Progress' ? 'in-progress' : 'not-started'
-      })),
+      filteredTasks
+        .map((t) => ({
+          id: t.id,
+          group: t.asset.id,
+          content: t.name,
+          start: t.start_date,
+          end: t.end_date,
+          className: t.status === 'Completed' ? 'completed' : 
+                    t.status === 'In Progress' ? 'in-progress' : 'not-started'
+        })),
     [filteredTasks]
   );
 

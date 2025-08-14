@@ -28,6 +28,12 @@ const AssignmentPage: React.FC = () => {
     }> = [];
 
     (tasks ?? []).forEach((task) => {
+      // start_dateとend_dateがnull/undefinedの場合はスキップ
+      if (!task.start_date || !task.end_date) {
+        console.warn(`Task ${task.id} has missing dates, excluding from chart`, task);
+        return;
+      }
+      
       // タスクにアサインされている各personに対してアイテムを作成
       (task.people ?? []).forEach((person) => {
         taskItems.push({

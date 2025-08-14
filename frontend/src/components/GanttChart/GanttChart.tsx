@@ -19,10 +19,21 @@ export interface GanttItem {
   id: number | string;
   group: number | string;
   content: string;
-  start: string | Date;
-  end?: string | Date;
+  start: string | Date | null | undefined;
+  end?: string | Date | null | undefined;
   type?: 'range' | 'point' | 'box'; // マイルストーン用のtypeを追加
   className?: string; // 色分けなど
+}
+
+// vis-timeline用の内部型（nullが除外された状態）
+interface ValidGanttItem {
+  id: number | string;
+  group: number | string;
+  content: string;
+  start: string | Date;
+  end?: string | Date;
+  type?: 'range' | 'point' | 'box';
+  className?: string;
 }
 
 export interface GanttGroup {
@@ -47,7 +58,38 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const timelineRef = useRef<Timeline | null>(null);
 
   // データセットをメモ化して不要な再描画を防ぐ
-  const memoizedItems = useMemo(() => items, [JSON.stringify(items)]);
+  // start/endがnullやundefinedのアイテムを除外し、vis-timeline互換の型に変換
+  const memoizedItems = useMemo(() => {
+    const validItems: ValidGanttItem[] = items
+      .filter(item => {
+        // startは必須
+        if (!item.start) {
+          console.warn(`Item ${item.id} has no start date, excluding from chart`, item);
+          return false;
+        }
+        // typeがpointの場合はendは必須ではない
+        if (item.type === 'point') {
+          return true;
+        }
+        // range/boxタイプの場合はendも必要
+        if (!item.end) {
+          console.warn(`Item ${item.id} has no end date, excluding from chart`, item);
+          return false;
+        }
+        return true;
+      })
+      .map(item => ({
+        id: item.id,
+        group: item.group,
+        content: item.content,
+        start: item.start!,
+        end: item.end || undefined,
+        type: item.type,
+        className: item.className
+      }));
+    return validItems;
+  }, [JSON.stringify(items)]);
+  
   const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
   const memoizedOptions = useMemo(() => options, [JSON.stringify(options)]);
 
@@ -65,7 +107,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
       }
     }
 
-    const dataSet = new DataSet(memoizedItems);
+    const dataSet = new DataSet<ValidGanttItem, 'id'>(memoizedItems);
     let groupSet: DataSet<GanttGroup> | undefined;
     if (memoizedGroups) {
       groupSet = new DataSet(memoizedGroups);
