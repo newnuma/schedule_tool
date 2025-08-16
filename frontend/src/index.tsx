@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { AppProvider } from "./context/AppContext";
+import { FilterProvider } from "./context/FilterContext";
 import App from "./App";
 import Initializer from "./Initializer";
 
@@ -13,8 +14,10 @@ root.render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AppProvider>
-        <App />
-        <Initializer />
+        <FilterProvider>
+          <App />
+          <Initializer />
+        </FilterProvider>
       </AppProvider>
     </ThemeProvider>
   </React.StrictMode>
