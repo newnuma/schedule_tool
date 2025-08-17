@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Typography, Box, Tabs, Tab, Autocomplete, TextField } from "@mui/material";
+import { Typography, Box, Tabs, Tab, Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
 import { Main } from "../components/StyledComponents";
 import { useAppContext } from "../context/AppContext";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -8,6 +8,8 @@ import AssetTab from "../pages/projectPageTabs/AssetTab";
 import TaskTab from "../pages/projectPageTabs/TaskTab";
 import WorkloadTab from "../pages/projectPageTabs/WorkloadTab";
 import type { ISubproject } from "../context/AppContext";
+import { FormProvider } from "../context/FormContext";
+import { FormManager } from "../components/forms";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -19,6 +21,8 @@ interface SubprojectSelectorProps {
   selectedSubproject: ISubproject | undefined;
   subprojects: ISubproject[];
   onChange: (event: any, value: ISubproject | null) => void;
+  isEditMode: boolean;
+  setEditMode: (enabled: boolean) => void;
 }
 
 function TabPanel(props: TabPanelProps) {
@@ -37,27 +41,42 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-function SubprojectSelector({ selectedSubproject, subprojects, onChange }: SubprojectSelectorProps) {
+function SubprojectSelector({ selectedSubproject, subprojects, onChange, isEditMode, setEditMode }: SubprojectSelectorProps) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-      <Typography variant="h5" component="span">
-        SubProject:
-      </Typography>
-      <Autocomplete
-        value={selectedSubproject || null}
-        onChange={(event, newValue) => onChange(event, newValue)}
-        options={subprojects}
-        getOptionLabel={(option) => option.name}
-        isOptionEqualToValue={(option, value) => option.id === value.id}
-        sx={{ minWidth: 200 }}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            variant="outlined"
-            size="small"
-            placeholder="Select subproject"
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, pr: 4 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography variant="h5" component="span">
+          SubProject:
+        </Typography>
+        <Autocomplete
+          value={selectedSubproject || null}
+          onChange={(event, newValue) => onChange(event, newValue)}
+          options={subprojects}
+          getOptionLabel={(option) => option.name}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          sx={{ minWidth: 200 }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              variant="outlined"
+              size="small"
+              placeholder="Select subproject"
+            />
+          )}
+        />
+      </Box>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={isEditMode}
+            onChange={(event) => setEditMode(event.target.checked)}
+            color="primary"
+            size="medium"
           />
-        )}
+        }
+        label={<Typography variant="h6">Edit</Typography>}
+        labelPlacement="start"
+        sx={{ gap: 1 }}
       />
     </Box>
   );
@@ -71,7 +90,7 @@ function a11yProps(index: number) {
 }
 
 const ProjectPage: React.FC = () => {
-  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, addPhases, addAssets, addTasks, addWorkloads, addPeople, setSelectedPersonList } = useAppContext();
+  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, addPhases, addAssets, addTasks, addWorkloads, addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask } = useAppContext();
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -117,39 +136,49 @@ const ProjectPage: React.FC = () => {
   }, [selectedSubprojectId, setLoading]);
 
   return (
-    <Main component="main">
-      <SubprojectSelector
-        selectedSubproject={selectedSubproject}
-        subprojects={subprojects}
-        onChange={handleSubprojectChange}
-      />
+    <FormProvider
+      onPhaseSubmit={createPhase}
+      onAssetSubmit={createAsset}
+      onTaskSubmit={createTask}
+    >
+      <Main component="main">
+        <SubprojectSelector
+          selectedSubproject={selectedSubproject}
+          subprojects={subprojects}
+          onChange={handleSubprojectChange}
+          isEditMode={isEditMode}
+          setEditMode={setEditMode}
+        />
 
-      {selectedSubprojectId ? (
-        <ErrorBoundary>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={tabValue} onChange={handleTabChange} aria-label="project tabs">
-              <Tab label="Asset" {...a11yProps(0)} />
-              <Tab label="Task" {...a11yProps(1)} />
-              <Tab label="Workload" {...a11yProps(2)} />
-            </Tabs>
-          </Box>
+        {selectedSubprojectId ? (
+          <ErrorBoundary>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs value={tabValue} onChange={handleTabChange} aria-label="project tabs">
+                <Tab label="Asset" {...a11yProps(0)} />
+                <Tab label="Task" {...a11yProps(1)} />
+                <Tab label="Workload" {...a11yProps(2)} />
+              </Tabs>
+            </Box>
 
-          <TabPanel value={tabValue} index={0}>
-            <AssetTab />
-          </TabPanel>
-          <TabPanel value={tabValue} index={1}>
-            <TaskTab />
-          </TabPanel>
-          <TabPanel value={tabValue} index={2}>
-            <WorkloadTab />
-          </TabPanel>
-        </ErrorBoundary>
-      ) : (
-        <Typography variant="h6" color="text.secondary">
-          Please select a subproject to view details
-        </Typography>
-      )}
-    </Main>
+            <TabPanel value={tabValue} index={0}>
+              <AssetTab />
+            </TabPanel>
+            <TabPanel value={tabValue} index={1}>
+              <TaskTab />
+            </TabPanel>
+            <TabPanel value={tabValue} index={2}>
+              <WorkloadTab />
+            </TabPanel>
+          </ErrorBoundary>
+        ) : (
+          <Typography variant="h6" color="text.secondary">
+            Please select a subproject to view details
+          </Typography>
+        )}
+        
+        <FormManager />
+      </Main>
+    </FormProvider>
   );
 };
 

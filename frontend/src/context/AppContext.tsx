@@ -6,6 +6,7 @@ import React, {
     ReactNode,
 } from "react";
 import type { IPage } from "../types";
+import { Phase, Asset, Task } from "../types/filter.types";
 
 export interface IForignKey {
     type: "subproject" | "phase" | "asset" | "task" | "workload" | "person" | "workCategory";
@@ -78,12 +79,15 @@ export interface IAppContext {
 
     phases: IPhase[];
     addPhases: (phases: IPhase[]) => void;
+    createPhase: (phase: Omit<Phase, 'id'>) => void;
 
     assets: IAsset[];
     addAssets: (assets: IAsset[]) => void;
+    createAsset: (asset: Omit<Asset, 'id'>) => void;
 
     tasks: ITask[];
     addTasks: (tasks: ITask[]) => void;
+    createTask: (task: Omit<Task, 'id'>) => void;
 
     workloads: IWorkload[];
     addWorkloads: (workloads: IWorkload[]) => void;
@@ -102,6 +106,9 @@ export interface IAppContext {
 
     currentPage: IPage;
     setCurrentPage: (page: IPage) => void;
+
+    isEditMode: boolean;
+    setEditMode: (enabled: boolean) => void;
 }
 
 const defaultParams: IAppContext = {
@@ -109,10 +116,13 @@ const defaultParams: IAppContext = {
     addSubprojects: () => { },
     phases: [],
     addPhases: () => { },
+    createPhase: () => { },
     assets: [],
     addAssets: () => { },
+    createAsset: () => { },
     tasks: [],
     addTasks: () => { },
+    createTask: () => { },
     workloads: [],
     addWorkloads: () => { },
     people: [],
@@ -125,6 +135,8 @@ const defaultParams: IAppContext = {
     setLoading: () => { },
     currentPage: "Distribute",
     setCurrentPage: () => { },
+    isEditMode: false,
+    setEditMode: () => { },
 };
 
 const AppContext = createContext<IAppContext>({
@@ -144,6 +156,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [selectedPersonList, setSelectedPersonList] = useState<number[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState<IPage>("Distribute");
+    const [isEditMode, setEditMode] = useState<boolean>(false);
+
+    // SubProject変更時にEditModeをリセットするカスタム関数
+    const handleSetSelectedSubprojectId = useCallback((id?: number) => {
+        setSelectedSubprojectId(id);
+        setEditMode(false); // SubProject変更時にEditModeをfalseにリセット
+    }, []);
 
     // 追加・マージ（ID一意）
     const addSubprojects = useCallback((newItems: ISubproject[]) => {
@@ -213,6 +232,62 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
     }, []);
 
+    // 新しいアイテム作成関数
+    const generateId = () => Math.max(0, ...phases.map(p => p.id), ...assets.map(a => a.id), ...tasks.map(t => t.id)) + 1;
+
+    const createPhase = useCallback((phase: Omit<Phase, 'id'>) => {
+        const newPhase: IPhase = {
+            id: generateId(),
+            name: phase.name,
+            subproject: {
+                type: 'subproject',
+                id: phase.subproject_id,
+                name: subprojects.find(s => s.id === phase.subproject_id)?.name || 'Unknown'
+            },
+            start_date: phase.start_date || new Date().toISOString().split('T')[0],
+            end_date: phase.end_date || new Date().toISOString().split('T')[0],
+        };
+        addPhases([newPhase]);
+    }, [subprojects, addPhases]);
+
+    const createAsset = useCallback((asset: Omit<Asset, 'id'>) => {
+        const newAsset: IAsset = {
+            id: generateId(),
+            name: asset.name,
+            phase: {
+                type: 'phase',
+                id: asset.phase_id,
+                name: phases.find(p => p.id === asset.phase_id)?.name || 'Unknown'
+            },
+            start_date: asset.start_date || new Date().toISOString().split('T')[0],
+            end_date: asset.end_date || new Date().toISOString().split('T')[0],
+            type: 'Common' as const,
+            status: asset.status === 'Not Started' ? 'Not Started' : 
+                   asset.status === 'In Progress' ? 'In Progress' :
+                   asset.status === 'Completed' ? 'Completed' : 'waiting',
+        };
+        addAssets([newAsset]);
+    }, [phases, addAssets]);
+
+    const createTask = useCallback((task: Omit<Task, 'id'>) => {
+        const newTask: ITask = {
+            id: generateId(),
+            name: task.name,
+            asset: {
+                type: 'asset',
+                id: task.asset_id,
+                name: assets.find(a => a.id === task.asset_id)?.name || 'Unknown'
+            },
+            start_date: task.start_date || new Date().toISOString().split('T')[0],
+            end_date: task.end_date || new Date().toISOString().split('T')[0],
+            people: [],
+            status: task.status === 'Not Started' ? 'Not Started' : 
+                   task.status === 'In Progress' ? 'In Progress' :
+                   task.status === 'Completed' ? 'Completed' : 'waiting',
+        };
+        addTasks([newTask]);
+    }, [assets, addTasks]);
+
     return (
         <AppContext.Provider
             value={{
@@ -220,22 +295,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 addSubprojects,
                 phases,
                 addPhases,
+                createPhase,
                 assets,
                 addAssets,
+                createAsset,
                 tasks,
                 addTasks,
+                createTask,
                 workloads,
                 addWorkloads,
                 people,
                 addPeople,
                 selectedSubprojectId,
-                setSelectedSubprojectId,
+                setSelectedSubprojectId: handleSetSelectedSubprojectId,
                 selectedPersonList,
                 setSelectedPersonList,
                 loading,
                 setLoading,
                 currentPage,
                 setCurrentPage,
+                isEditMode,
+                setEditMode,
             }}
         >
             {children}

@@ -46,6 +46,7 @@ export interface GanttChartProps {
   groups?: GanttGroup[];
   options?: TimelineOptions;
   height?: string | number;
+  onItemRightClick?: (itemId: number | string, itemName: string, event: MouseEvent) => void;
 }
 
 const GanttChart: React.FC<GanttChartProps> = ({
@@ -53,9 +54,11 @@ const GanttChart: React.FC<GanttChartProps> = ({
   groups,
   options,
   height = 400,
+  onItemRightClick,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<Timeline | null>(null);
+  const eventListenerRef = useRef<((event: MouseEvent) => void) | null>(null);
 
   // データセットをメモ化して不要な再描画を防ぐ
   // start/endがnullやundefinedのアイテムを除外し、vis-timeline互換の型に変換
@@ -127,12 +130,55 @@ const GanttChart: React.FC<GanttChartProps> = ({
         } else {
           timelineRef.current = new Timeline(containerRef.current, dataSet, defaultOptions);
         }
+
+        // 右クリックイベントリスナーを追加
+        if (onItemRightClick && timelineRef.current && containerRef.current) {
+          const timeline = timelineRef.current;
+          
+          // timelineが正常に初期化されるまで少し待つ
+          setTimeout(() => {
+            if (containerRef.current) {
+              // 以前のイベントリスナーを削除
+              if (eventListenerRef.current && containerRef.current) {
+                containerRef.current.removeEventListener('contextmenu', eventListenerRef.current);
+              }
+              
+              // 新しいイベントリスナーを作成
+              eventListenerRef.current = (event: MouseEvent) => {
+                event.preventDefault();
+                
+                try {
+                  // クリック位置からアイテムを特定
+                  const itemId = timeline.getEventProperties(event).item;
+                  if (itemId !== null && itemId !== undefined) {
+                    // アイテムのデータを取得
+                    const itemData = dataSet.get(itemId);
+                    if (itemData) {
+                      onItemRightClick(itemId, itemData.content, event);
+                    }
+                  }
+                } catch (err) {
+                  console.warn("Error handling right click:", err);
+                }
+              };
+              
+              // timeline上でのcontextmenuイベントをキャッチ
+              containerRef.current.addEventListener('contextmenu', eventListenerRef.current);
+            }
+          }, 100);
+        }
       } catch (error) {
         console.error("Error creating timeline:", error);
       }
     }
     // クリーンアップ
     return () => {
+      // イベントリスナーの削除
+      if (eventListenerRef.current && containerRef.current) {
+        containerRef.current.removeEventListener('contextmenu', eventListenerRef.current);
+        eventListenerRef.current = null;
+      }
+      
       if (timelineRef.current) {
         try {
           timelineRef.current.destroy();

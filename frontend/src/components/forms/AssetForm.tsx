@@ -1,0 +1,223 @@
+import React, { useState, useEffect } from 'react';
+import {
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Box,
+  Stack,
+} from '@mui/material';
+import { Asset } from '../../types/filter.types';
+import { useAppContext } from '../../context/AppContext';
+
+interface AssetFormProps {
+  asset?: Asset;
+  onSubmit: (asset: Omit<Asset, 'id'>) => void;
+  onValidationChange?: (isValid: boolean) => void;
+  submitTrigger?: number;
+}
+
+const AssetForm: React.FC<AssetFormProps> = ({ asset, onSubmit, onValidationChange, submitTrigger }) => {
+  const { phases } = useAppContext();
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    start_date: '',
+    end_date: '',
+    status: 'Not Started' as Asset['status'],
+    priority: 'Medium' as Asset['priority'],
+    phase_id: 0,
+    assignee: '',
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (asset) {
+      setFormData({
+        name: asset.name,
+        description: asset.description || '',
+        start_date: asset.start_date || '',
+        end_date: asset.end_date || '',
+        status: asset.status,
+        priority: asset.priority,
+        phase_id: asset.phase_id,
+        assignee: asset.assignee || '',
+      });
+    } else if (phases.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        phase_id: phases[0].id,
+      }));
+    }
+  }, [asset, phases]);
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Asset name is required';
+    }
+
+    if (!formData.phase_id) {
+      newErrors.phase_id = 'Phase selection is required';
+    }
+
+    if (formData.start_date && formData.end_date && formData.start_date > formData.end_date) {
+      newErrors.end_date = 'End date must be after start date';
+    }
+
+    setErrors(newErrors);
+    const isValid = Object.keys(newErrors).length === 0;
+    
+    if (onValidationChange) {
+      onValidationChange(isValid);
+    }
+
+    return isValid;
+  };
+
+  useEffect(() => {
+    validateForm();
+  }, [formData]);
+
+  const handleSubmit = () => {
+    if (validateForm()) {
+      onSubmit({
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        start_date: formData.start_date || undefined,
+        end_date: formData.end_date || undefined,
+        status: formData.status,
+        priority: formData.priority,
+        phase_id: formData.phase_id,
+        assignee: formData.assignee.trim() || undefined,
+      });
+    }
+  };
+
+  // submitTriggerが変更されたときにフォームを送信
+  useEffect(() => {
+    if (submitTrigger && submitTrigger > 0) {
+      handleSubmit();
+    }
+  }, [submitTrigger]);
+
+  const handleFieldChange = (field: keyof typeof formData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  return (
+    <Box component="form" noValidate>
+      <Stack spacing={3}>
+        <TextField
+          fullWidth
+          label="Asset Name"
+          value={formData.name}
+          onChange={(e) => handleFieldChange('name', e.target.value)}
+          error={!!errors.name}
+          helperText={errors.name}
+          required
+        />
+
+        <FormControl fullWidth error={!!errors.phase_id}>
+          <InputLabel>Phase</InputLabel>
+          <Select
+            value={formData.phase_id}
+            label="Phase"
+            onChange={(e) => handleFieldChange('phase_id', e.target.value as number)}
+            required
+          >
+            {phases.map((phase) => (
+              <MenuItem key={phase.id} value={phase.id}>
+                {phase.name}
+              </MenuItem>
+            ))}
+          </Select>
+          {errors.phase_id && (
+            <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
+              {errors.phase_id}
+            </Box>
+          )}
+        </FormControl>
+
+        <TextField
+          fullWidth
+          label="Description"
+          value={formData.description}
+          onChange={(e) => handleFieldChange('description', e.target.value)}
+          multiline
+          rows={3}
+        />
+
+        <TextField
+          fullWidth
+          label="Assignee"
+          value={formData.assignee}
+          onChange={(e) => handleFieldChange('assignee', e.target.value)}
+        />
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <TextField
+            fullWidth
+            label="Start Date"
+            type="date"
+            value={formData.start_date}
+            onChange={(e) => handleFieldChange('start_date', e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            error={!!errors.start_date}
+            helperText={errors.start_date}
+          />
+
+          <TextField
+            fullWidth
+            label="End Date"
+            type="date"
+            value={formData.end_date}
+            onChange={(e) => handleFieldChange('end_date', e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            error={!!errors.end_date}
+            helperText={errors.end_date}
+          />
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <FormControl fullWidth>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={formData.status}
+              label="Status"
+              onChange={(e) => handleFieldChange('status', e.target.value as Asset['status'])}
+            >
+              <MenuItem value="Not Started">Not Started</MenuItem>
+              <MenuItem value="In Progress">In Progress</MenuItem>
+              <MenuItem value="Completed">Completed</MenuItem>
+              <MenuItem value="On Hold">On Hold</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth>
+            <InputLabel>Priority</InputLabel>
+            <Select
+              value={formData.priority}
+              label="Priority"
+              onChange={(e) => handleFieldChange('priority', e.target.value as Asset['priority'])}
+            >
+              <MenuItem value="Low">Low</MenuItem>
+              <MenuItem value="Medium">Medium</MenuItem>
+              <MenuItem value="High">High</MenuItem>
+              <MenuItem value="Critical">Critical</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </Stack>
+    </Box>
+  );
+};
+
+export default AssetForm;

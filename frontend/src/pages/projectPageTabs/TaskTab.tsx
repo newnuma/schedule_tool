@@ -1,13 +1,62 @@
 import React, { useMemo } from "react";
 import { Typography, Box } from "@mui/material";
+import { Assignment as AssignmentIcon, Task as TaskIcon } from "@mui/icons-material";
 import { useAppContext } from "../../context/AppContext";
 import { useFilterContext } from "../../context/FilterContext";
+import { useFormContext } from "../../context/FormContext";
 import GanttChart from "../../components/GanttChart";
 import { CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../components/filters";
+import AddButton, { AddButtonItem } from "../../components/common/AddButton";
+import ContextMenu from "../../components/common/ContextMenu";
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 const TaskTab: React.FC = () => {
-  const { assets, tasks, selectedSubprojectId, phases } = useAppContext();
+  const { assets, tasks, selectedSubprojectId, phases, isEditMode } = useAppContext();
   const { getFilteredData, filters } = useFilterContext();
+  const { openCreateForm } = useFormContext();
+  const {
+    contextMenu,
+    handleContextMenu: originalHandleContextMenu,
+    handleClose,
+    handleDetail,
+    handleEdit,
+    handleCopy,
+    handleDelete,
+  } = useContextMenu();
+
+  // GanttChartの期待する型に合わせてhandlerを変換
+  const handleGanttRightClick = (itemId: number | string, itemName: string, event: MouseEvent) => {
+    const syntheticEvent = {
+      preventDefault: () => event.preventDefault(),
+      stopPropagation: () => event.stopPropagation(),
+      currentTarget: event.target as HTMLElement,
+    } as React.MouseEvent<HTMLElement>;
+    
+    originalHandleContextMenu(syntheticEvent, Number(itemId), itemName, 'task');
+  };
+
+  // Add menu handlers
+  const handleAddAsset = () => {
+    openCreateForm('asset');
+  };
+
+  const handleAddTask = () => {
+    openCreateForm('task');
+  };
+
+  // Add button items configuration
+  const addItems: AddButtonItem[] = [
+    { 
+      label: 'Asset', 
+      icon: <AssignmentIcon fontSize="small" />, 
+      action: handleAddAsset 
+    },
+    { 
+      label: 'Task', 
+      icon: <TaskIcon fontSize="small" />, 
+      action: handleAddTask 
+    }
+  ];
 
   // 選択されたSubprojectに関連するPhaseのみをフィルタ
   const filteredPhases = useMemo(
@@ -88,8 +137,9 @@ const TaskTab: React.FC = () => {
 
   return (
     <div>
-      {/* Title and Filter */}
+      {/* Title and Controls */}
       <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 2 }}>
+        <AddButton items={addItems} disabled={!isEditMode} />
         <Typography variant="h6" gutterBottom sx={{ margin: 0, flex: 1 }}>
           Tasks ({filteredTasks.length} / {basicFilteredAssets.reduce((total, asset) => {
             const assetTaskCount = tasks.filter(task => task.asset.id === asset.id).length;
@@ -106,13 +156,29 @@ const TaskTab: React.FC = () => {
       {/* Gantt Chart Container */}
       <Box sx={{ width: '100%', height: '600px' }}>
         {filteredTasks.length > 0 ? (
-          <GanttChart items={items} groups={groups} />
+          <GanttChart 
+            items={items} 
+            groups={groups} 
+            onItemRightClick={handleGanttRightClick}
+          />
         ) : (
           <Typography variant="body2" color="text.secondary">
             No tasks match the current filters
           </Typography>
         )}
       </Box>
+      
+      {/* Context Menu */}
+      <ContextMenu
+        anchorEl={contextMenu.anchorEl}
+        open={contextMenu.open}
+        onClose={handleClose}
+        onDetail={handleDetail}
+        onEdit={handleEdit}
+        onCopy={handleCopy}
+        onDelete={handleDelete}
+        itemName={contextMenu.itemName}
+      />
     </div>
   );
 };
