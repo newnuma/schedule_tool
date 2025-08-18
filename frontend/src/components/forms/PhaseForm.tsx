@@ -8,12 +8,12 @@ import {
   Box,
   Stack,
 } from '@mui/material';
-import { Phase } from '../../types/filter.types';
+import { IPhaseForm } from '../../context/FormContext';
 import { useAppContext } from '../../context/AppContext';
 
 interface PhaseFormProps {
-  phase?: Phase;
-  onSubmit: (phase: Omit<Phase, 'id'>) => void;
+  phase?: IPhaseForm;
+  onSubmit: (phase: Omit<IPhaseForm, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
   submitTrigger?: number; // 外部からの送信トリガー
 }
@@ -26,8 +26,8 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ phase, onSubmit, onValidationChan
     description: '',
     start_date: '',
     end_date: '',
-    status: 'Not Started' as Phase['status'],
-    priority: 'Medium' as Phase['priority'],
+    status: 'Not Started' as IPhaseForm['status'],
+    priority: 'Medium' as IPhaseForm['priority'],
     subproject_id: selectedSubprojectId || 1,
   });
 
@@ -152,7 +152,7 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ phase, onSubmit, onValidationChan
             <Select
               value={formData.status}
               label="Status"
-              onChange={(e) => handleFieldChange('status', e.target.value as Phase['status'])}
+              onChange={(e) => handleFieldChange('status', e.target.value as IPhaseForm['status'])}
             >
               <MenuItem value="Not Started">Not Started</MenuItem>
               <MenuItem value="In Progress">In Progress</MenuItem>
@@ -166,7 +166,7 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ phase, onSubmit, onValidationChan
             <Select
               value={formData.priority}
               label="Priority"
-              onChange={(e) => handleFieldChange('priority', e.target.value as Phase['priority'])}
+              onChange={(e) => handleFieldChange('priority', e.target.value as IPhaseForm['priority'])}
             >
               <MenuItem value="Low">Low</MenuItem>
               <MenuItem value="Medium">Medium</MenuItem>

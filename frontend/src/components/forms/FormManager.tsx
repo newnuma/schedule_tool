@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { FormModal, PhaseForm, AssetForm, TaskForm } from '../forms';
-import { useFormContext } from '../../context/FormContext';
-import { Phase, Asset, Task } from '../../types/filter.types';
+import { useFormContext, IPhaseForm, IAssetForm, ITaskForm } from '../../context/FormContext';
 
 const FormManager: React.FC = () => {
   const { formState, closeForm, handleFormSubmit } = useFormContext();
@@ -25,7 +24,7 @@ const FormManager: React.FC = () => {
       case 'phase':
         return (
           <PhaseForm
-            phase={formState.mode === 'edit' ? formState.data as Phase : undefined}
+            phase={formState.mode === 'edit' ? formState.data as IPhaseForm : undefined}
             onSubmit={(data) => {
               handleFormSubmit(data);
             }}
@@ -36,7 +35,7 @@ const FormManager: React.FC = () => {
       case 'asset':
         return (
           <AssetForm
-            asset={formState.mode === 'edit' ? formState.data as Asset : undefined}
+            asset={formState.mode === 'edit' ? formState.data as IAssetForm : undefined}
             onSubmit={(data) => {
               handleFormSubmit(data);
             }}
@@ -47,7 +46,7 @@ const FormManager: React.FC = () => {
       case 'task':
         return (
           <TaskForm
-            task={formState.mode === 'edit' ? formState.data as Task : undefined}
+            task={formState.mode === 'edit' ? formState.data as ITaskForm : undefined}
             onSubmit={(data) => {
               handleFormSubmit(data);
             }}

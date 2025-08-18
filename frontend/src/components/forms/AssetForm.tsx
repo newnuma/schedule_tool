@@ -8,12 +8,12 @@ import {
   Box,
   Stack,
 } from '@mui/material';
-import { Asset } from '../../types/filter.types';
+import { IAssetForm } from '../../context/FormContext';
 import { useAppContext } from '../../context/AppContext';
 
 interface AssetFormProps {
-  asset?: Asset;
-  onSubmit: (asset: Omit<Asset, 'id'>) => void;
+  asset?: IAssetForm;
+  onSubmit: (asset: Omit<IAssetForm, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
   submitTrigger?: number;
 }
@@ -26,8 +26,8 @@ const AssetForm: React.FC<AssetFormProps> = ({ asset, onSubmit, onValidationChan
     description: '',
     start_date: '',
     end_date: '',
-    status: 'Not Started' as Asset['status'],
-    priority: 'Medium' as Asset['priority'],
+    status: 'Not Started' as IAssetForm['status'],
+    priority: 'Medium' as IAssetForm['priority'],
     phase_id: 0,
     assignee: '',
   });
@@ -192,7 +192,7 @@ const AssetForm: React.FC<AssetFormProps> = ({ asset, onSubmit, onValidationChan
             <Select
               value={formData.status}
               label="Status"
-              onChange={(e) => handleFieldChange('status', e.target.value as Asset['status'])}
+              onChange={(e) => handleFieldChange('status', e.target.value as IAssetForm['status'])}
             >
               <MenuItem value="Not Started">Not Started</MenuItem>
               <MenuItem value="In Progress">In Progress</MenuItem>
@@ -206,7 +206,7 @@ const AssetForm: React.FC<AssetFormProps> = ({ asset, onSubmit, onValidationChan
             <Select
               value={formData.priority}
               label="Priority"
-              onChange={(e) => handleFieldChange('priority', e.target.value as Asset['priority'])}
+              onChange={(e) => handleFieldChange('priority', e.target.value as IAssetForm['priority'])}
             >
               <MenuItem value="Low">Low</MenuItem>
               <MenuItem value="Medium">Medium</MenuItem>

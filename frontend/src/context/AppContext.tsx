@@ -6,7 +6,7 @@ import React, {
     ReactNode,
 } from "react";
 import type { IPage } from "../types";
-import { Phase, Asset, Task } from "../types/filter.types";
+import { IPhaseForm, IAssetForm, ITaskForm } from "./FormContext";
 
 export interface IForignKey {
     type: "subproject" | "phase" | "asset" | "task" | "workload" | "person" | "workCategory";
@@ -79,15 +79,15 @@ export interface IAppContext {
 
     phases: IPhase[];
     addPhases: (phases: IPhase[]) => void;
-    createPhase: (phase: Omit<Phase, 'id'>) => void;
+    createPhase: (phase: Omit<IPhaseForm, 'id'>) => void;
 
     assets: IAsset[];
     addAssets: (assets: IAsset[]) => void;
-    createAsset: (asset: Omit<Asset, 'id'>) => void;
+    createAsset: (asset: Omit<IAssetForm, 'id'>) => void;
 
     tasks: ITask[];
     addTasks: (tasks: ITask[]) => void;
-    createTask: (task: Omit<Task, 'id'>) => void;
+    createTask: (task: Omit<ITaskForm, 'id'>) => void;
 
     workloads: IWorkload[];
     addWorkloads: (workloads: IWorkload[]) => void;
@@ -235,7 +235,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // 新しいアイテム作成関数
     const generateId = () => Math.max(0, ...phases.map(p => p.id), ...assets.map(a => a.id), ...tasks.map(t => t.id)) + 1;
 
-    const createPhase = useCallback((phase: Omit<Phase, 'id'>) => {
+    const createPhase = useCallback((phase: Omit<IPhaseForm, 'id'>) => {
         const newPhase: IPhase = {
             id: generateId(),
             name: phase.name,
@@ -250,7 +250,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addPhases([newPhase]);
     }, [subprojects, addPhases]);
 
-    const createAsset = useCallback((asset: Omit<Asset, 'id'>) => {
+    const createAsset = useCallback((asset: Omit<IAssetForm, 'id'>) => {
         const newAsset: IAsset = {
             id: generateId(),
             name: asset.name,
@@ -269,7 +269,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addAssets([newAsset]);
     }, [phases, addAssets]);
 
-    const createTask = useCallback((task: Omit<Task, 'id'>) => {
+    const createTask = useCallback((task: Omit<ITaskForm, 'id'>) => {
         const newTask: ITask = {
             id: generateId(),
             name: task.name,

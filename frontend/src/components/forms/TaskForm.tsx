@@ -8,12 +8,12 @@ import {
   Box,
   Stack,
 } from '@mui/material';
-import { Task } from '../../types/filter.types';
+import { ITaskForm } from '../../context/FormContext';
 import { useAppContext } from '../../context/AppContext';
 
 interface TaskFormProps {
-  task?: Task;
-  onSubmit: (task: Omit<Task, 'id'>) => void;
+  task?: ITaskForm;
+  onSubmit: (task: Omit<ITaskForm, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
   submitTrigger?: number;
 }
@@ -26,8 +26,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onValidationChange,
     description: '',
     start_date: '',
     end_date: '',
-    status: 'Not Started' as Task['status'],
-    priority: 'Medium' as Task['priority'],
+    status: 'Not Started' as ITaskForm['status'],
+    priority: 'Medium' as ITaskForm['priority'],
     asset_id: 0,
     assignee: '',
     estimated_hours: '',
@@ -212,7 +212,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onValidationChange,
             <Select
               value={formData.status}
               label="Status"
-              onChange={(e) => handleFieldChange('status', e.target.value as Task['status'])}
+              onChange={(e) => handleFieldChange('status', e.target.value as ITaskForm['status'])}
             >
               <MenuItem value="Not Started">Not Started</MenuItem>
               <MenuItem value="In Progress">In Progress</MenuItem>
@@ -226,7 +226,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onValidationChange,
             <Select
               value={formData.priority}
               label="Priority"
-              onChange={(e) => handleFieldChange('priority', e.target.value as Task['priority'])}
+              onChange={(e) => handleFieldChange('priority', e.target.value as ITaskForm['priority'])}
             >
               <MenuItem value="Low">Low</MenuItem>
               <MenuItem value="Medium">Medium</MenuItem>

@@ -1,5 +1,41 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Phase, Asset, Task } from '../types/filter.types';
+
+// Form data types
+export interface IPhaseForm {
+  id: number;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  status: 'Not Started' | 'In Progress' | 'Completed' | 'On Hold';
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  subproject_id: number;
+}
+
+export interface IAssetForm {
+  id: number;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  status: 'Not Started' | 'In Progress' | 'Completed' | 'On Hold';
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  phase_id: number;
+  assignee?: string;
+}
+
+export interface ITaskForm {
+  id: number;
+  name: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  status: 'Not Started' | 'In Progress' | 'Completed' | 'On Hold';
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  asset_id: number;
+  assignee?: string;
+  estimated_hours?: number;
+}
 
 type FormType = 'phase' | 'asset' | 'task';
 type FormMode = 'create' | 'edit';
@@ -8,13 +44,13 @@ interface FormState {
   isOpen: boolean;
   type: FormType | null;
   mode: FormMode;
-  data?: Phase | Asset | Task;
+  data?: IPhaseForm | IAssetForm | ITaskForm;
 }
 
 interface FormContextType {
   formState: FormState;
   openCreateForm: (type: FormType) => void;
-  openEditForm: (type: FormType, data: Phase | Asset | Task) => void;
+  openEditForm: (type: FormType, data: IPhaseForm | IAssetForm | ITaskForm) => void;
   closeForm: () => void;
   handleFormSubmit: (data: any) => void;
 }
@@ -31,12 +67,12 @@ export const useFormContext = () => {
 
 interface FormProviderProps {
   children: React.ReactNode;
-  onPhaseSubmit?: (phase: Omit<Phase, 'id'>) => void;
-  onAssetSubmit?: (asset: Omit<Asset, 'id'>) => void;
-  onTaskSubmit?: (task: Omit<Task, 'id'>) => void;
-  onPhaseUpdate?: (id: number, phase: Partial<Phase>) => void;
-  onAssetUpdate?: (id: number, asset: Partial<Asset>) => void;
-  onTaskUpdate?: (id: number, task: Partial<Task>) => void;
+  onPhaseSubmit?: (phase: Omit<IPhaseForm, 'id'>) => void;
+  onAssetSubmit?: (asset: Omit<IAssetForm, 'id'>) => void;
+  onTaskSubmit?: (task: Omit<ITaskForm, 'id'>) => void;
+  onPhaseUpdate?: (id: number, phase: Partial<IPhaseForm>) => void;
+  onAssetUpdate?: (id: number, asset: Partial<IAssetForm>) => void;
+  onTaskUpdate?: (id: number, task: Partial<ITaskForm>) => void;
 }
 
 export const FormProvider: React.FC<FormProviderProps> = ({
@@ -62,7 +98,7 @@ export const FormProvider: React.FC<FormProviderProps> = ({
     });
   }, []);
 
-  const openEditForm = useCallback((type: FormType, data: Phase | Asset | Task) => {
+  const openEditForm = useCallback((type: FormType, data: IPhaseForm | IAssetForm | ITaskForm) => {
     setFormState({
       isOpen: true,
       type,
