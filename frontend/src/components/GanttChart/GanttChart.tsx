@@ -39,6 +39,7 @@ interface ValidGanttItem {
 export interface GanttGroup {
   id: number | string;
   content: string;
+  className?: string; // allow styling of specific group rows
 }
 
 export interface GanttChartProps {
@@ -53,7 +54,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   items = [],
   groups,
   options,
-  height = 400,
+  height = 500,
   onItemRightClick,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -118,12 +119,18 @@ const GanttChart: React.FC<GanttChartProps> = ({
 
     if (memoizedItems.length > 0) {
       try {
+        // stack: true で同一行(同一group)内の期間重複アイテムを縦に積み上げ表示
+        // height は指定せず自動計算させ、maxHeight で上限を制御
         const defaultOptions: TimelineOptions = {
-          stack: false,
           orientation: "top",
+          stack: true,
+          maxHeight: height,
+          verticalScroll: true, // 内部に縦スクロールバーを表示
+          // アイテム間余白: 横0 / 縦15px
+          margin: { item: { horizontal: 0, vertical: 15 }, axis: 5 },
+          // 利用側で上書き可能（memoizedOptions が後で来ると上書きされる）
           ...memoizedOptions,
-          height,
-        };
+        } as TimelineOptions;
 
         if (memoizedGroups && memoizedGroups.length > 0 && groupSet) {
           timelineRef.current = new Timeline(containerRef.current, dataSet, groupSet, defaultOptions);

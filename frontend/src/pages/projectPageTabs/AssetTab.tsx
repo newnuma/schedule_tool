@@ -80,7 +80,7 @@ const AssetTab: React.FC = () => {
   const groups = useMemo(
     () => {
       // 最初にPhaseグループを追加（固定）
-      const phaseGroup = { id: 'phase-group', content: 'Phase' };
+  const phaseGroup = { id: 'phase-group', content: 'Phase', className: 'phase-row' };
       
       // Asset typeによるグループ
       const typeGroups = [
