@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Typography } from "@mui/material";
 import { Main } from "../components/StyledComponents";
 import { useAppContext } from "../context/AppContext";
-import GanttChart from "../components/GanttChart";
+import GanttChart, { GanttItem } from "../components/GanttChart";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 const AssignmentPage: React.FC = () => {
@@ -17,15 +17,13 @@ const AssignmentPage: React.FC = () => {
     [people],
   );
 
+  const itemToolTip = (item: GanttItem) => {
+    return item.tooltipHtml || `<div><strong>${item.content}</strong><br/>${item.start} - ${item.end}</div>`;
+  };
+
   // 各タスクを、アサインされているpeople毎にアイテムとして展開
   const items = useMemo(() => {
-    const taskItems: Array<{
-      id: string;
-      group: number;
-      content: string;
-      start: string;
-      end: string;
-    }> = [];
+    const taskItems: GanttItem[] = [];
 
     (tasks ?? []).forEach((task) => {
       // start_dateとend_dateがnull/undefinedの場合はスキップ
@@ -39,9 +37,10 @@ const AssignmentPage: React.FC = () => {
         taskItems.push({
           id: `${task.id}-${person.id}`, // タスクID-PersonIDで一意性を保つ
           group: person.id,
-          content: task.name,
+            content: task.name,
           start: task.start_date,
           end: task.end_date,
+          tooltipHtml: `<div><strong>${task.name}</strong><br/>${task.start_date} - ${task.end_date}</div>`
         });
       });
     });

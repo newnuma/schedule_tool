@@ -23,6 +23,8 @@ export interface GanttItem {
   end?: string | Date | null | undefined;
   type?: 'range' | 'point' | 'box'; // マイルストーン用のtypeを追加
   className?: string; // 色分けなど
+  // ホバー時に表示したいツールチップ（HTML可）。未指定の場合は getItemTooltip が使われる
+  tooltipHtml?: string;
 }
 
 // vis-timeline用の内部型（nullが除外された状態）
@@ -34,6 +36,7 @@ interface ValidGanttItem {
   end?: string | Date;
   type?: 'range' | 'point' | 'box';
   className?: string;
+  title?: string; // vis-timeline の hover ツールチップ用プロパティ
 }
 
 export interface GanttGroup {
@@ -48,6 +51,8 @@ export interface GanttChartProps {
   options?: TimelineOptions;
   height?: string | number;
   onItemRightClick?: (itemId: number | string, itemName: string, event: MouseEvent) => void;
+  // アイテムからツールチップ (HTML 文字列) を生成するコールバック。item.tooltipHtml が優先される。
+  getItemTooltip?: (item: GanttItem) => string | undefined;
 }
 
 const GanttChart: React.FC<GanttChartProps> = ({
@@ -56,6 +61,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   options,
   height = 500,
   onItemRightClick,
+  getItemTooltip,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<Timeline | null>(null);
@@ -89,10 +95,11 @@ const GanttChart: React.FC<GanttChartProps> = ({
         start: item.start!,
         end: item.end || undefined,
         type: item.type,
-        className: item.className
+        className: item.className,
+        title: item.tooltipHtml || getItemTooltip?.(item)
       }));
     return validItems;
-  }, [JSON.stringify(items)]);
+  }, [JSON.stringify(items), getItemTooltip]);
   
   const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
   const memoizedOptions = useMemo(() => options, [JSON.stringify(options)]);
@@ -128,6 +135,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
           verticalScroll: true, // 内部に縦スクロールバーを表示
           // アイテム間余白: 横0 / 縦15px
           margin: { item: { horizontal: 0, vertical: 15 }, axis: 5 },
+          // tooltip をマウスに追従させたい場合に有効化（必要に応じて上書き可）
+          tooltip: { followMouse: true },
           // 利用側で上書き可能（memoizedOptions が後で来ると上書きされる）
           ...memoizedOptions,
         } as TimelineOptions;

@@ -44,6 +44,7 @@ const DistributePage: React.FC = () => {
       content: t.name,
       start: t.start_date,
       end: t.end_date,
+      tooltipHtml: `<div><strong>Phase:</strong> ${t.name}<br/><strong>Subproject:</strong> ${t.subproject.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
     })),
     [filteredPhases]
   );

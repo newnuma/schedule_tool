@@ -101,7 +101,8 @@ const TaskTab: React.FC = () => {
           start: t.start_date,
           end: t.end_date,
           className: t.status === 'Completed' ? 'completed' :
-            t.status === 'In Progress' ? 'in-progress' : 'not-started'
+            t.status === 'In Progress' ? 'in-progress' : 'not-started',
+          tooltipHtml: `<div><strong>Task:</strong> ${t.name}<br/><strong>Status:</strong> ${t.status}<br/><strong>Asset:</strong> ${t.asset.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
         })),
     [filteredTasks]
   );

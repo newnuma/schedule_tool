@@ -105,7 +105,8 @@ const AssetTab: React.FC = () => {
           start: phase.end_date, // マイルストーンは終了日に表示
           end: phase.end_date,   // start === end でマイルストーンになる
           type: 'point' as const,  // マイルストーンタイプ
-          className: 'milestone'
+          className: 'milestone',
+          tooltipHtml: `<div><strong>Phase:</strong> ${phase.name}<br/><strong>End:</strong> ${phase.end_date}</div>`
         }));
 
       // Assetアイテム
@@ -117,7 +118,8 @@ const AssetTab: React.FC = () => {
           start: a.start_date,
           end: a.end_date,
           className: a.status === 'Completed' ? 'completed' : 
-                    a.status === 'In Progress' ? 'in-progress' : 'not-started'
+                    a.status === 'In Progress' ? 'in-progress' : 'not-started',
+          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Status:</strong> ${a.status}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
         }));
 
       return [...phaseItems, ...assetItems];
