@@ -1,52 +1,38 @@
-import React, { useMemo } from "react";
-import { Typography } from "@mui/material";
+import React, { useState } from "react";
+import { Typography, Box, Tabs, Tab } from "@mui/material";
 import { Main } from "../components/StyledComponents";
-import { useAppContext } from "../context/AppContext";
-import GanttChart, { GanttItem } from "../components/GanttChart";
 import ErrorBoundary from "../components/ErrorBoundary";
+import AssinmentTask from "./assignmentPageTabs/AssinmentTask";
+import AssinmentWorkload from "./assignmentPageTabs/AssinmentWorkload";
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div role="tabpanel" hidden={value !== index} id={`assignment-tabpanel-${index}`} aria-labelledby={`assignment-tab-${index}`} {...other}>
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+function a11yProps(index: number) {
+  return {
+    id: `assignment-tab-${index}`,
+    'aria-controls': `assignment-tabpanel-${index}`,
+  };
+}
 
 const AssignmentPage: React.FC = () => {
-  const { people, tasks } = useAppContext();
+  const [tabValue, setTabValue] = useState(0);
 
-  // People毎にグループを作成
-  const groups = useMemo(
-    () => (people ?? []).map((person) => ({ 
-      id: person.id, 
-      content: person.name 
-    })),
-    [people],
-  );
-
-  const itemToolTip = (item: GanttItem) => {
-    return item.tooltipHtml || `<div><strong>${item.content}</strong><br/>${item.start} - ${item.end}</div>`;
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
   };
-
-  // 各タスクを、アサインされているpeople毎にアイテムとして展開
-  const items = useMemo(() => {
-    const taskItems: GanttItem[] = [];
-
-    (tasks ?? []).forEach((task) => {
-      // start_dateとend_dateがnull/undefinedの場合はスキップ
-      if (!task.start_date || !task.end_date) {
-        console.warn(`Task ${task.id} has missing dates, excluding from chart`, task);
-        return;
-      }
-      
-      // タスクにアサインされている各personに対してアイテムを作成
-      (task.people ?? []).forEach((person) => {
-        taskItems.push({
-          id: `${task.id}-${person.id}`, // タスクID-PersonIDで一意性を保つ
-          group: person.id,
-            content: task.name,
-          start: task.start_date,
-          end: task.end_date,
-          tooltipHtml: `<div><strong>${task.name}</strong><br/>${task.start_date} - ${task.end_date}</div>`
-        });
-      });
-    });
-
-    return taskItems;
-  }, [tasks]);
 
   return (
     <Main component="main">
@@ -54,7 +40,19 @@ const AssignmentPage: React.FC = () => {
         Assignment
       </Typography>
       <ErrorBoundary>
-        <GanttChart items={items} groups={groups} />
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={handleTabChange} aria-label="assignment tabs">
+            <Tab label="Task" {...a11yProps(0)} />
+            <Tab label="Workload" {...a11yProps(1)} />
+          </Tabs>
+        </Box>
+
+        <TabPanel value={tabValue} index={0}>
+          <AssinmentTask />
+        </TabPanel>
+        <TabPanel value={tabValue} index={1}>
+          <AssinmentWorkload />
+        </TabPanel>
       </ErrorBoundary>
     </Main>
   );
