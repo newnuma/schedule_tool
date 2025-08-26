@@ -3,7 +3,7 @@ import { Typography, Box, Tabs, Tab, Autocomplete, TextField, Switch, FormContro
 import { Main } from "../components/StyledComponents";
 import { useAppContext } from "../context/AppContext";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { fetchSubproject } from "../api/bridgeApi";
+import { fetchProjectPage } from "../api/bridgeApi";
 import AssetTab from "../pages/projectPageTabs/AssetTab";
 import TaskTab from "../pages/projectPageTabs/TaskTab";
 import WorkloadTab from "../pages/projectPageTabs/WorkloadTab";
@@ -90,7 +90,7 @@ function a11yProps(index: number) {
 }
 
 const ProjectPage: React.FC = () => {
-  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, addPhases, addAssets, addTasks, addWorkloads, addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask } = useAppContext();
+  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask } = useAppContext();
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -117,12 +117,12 @@ const ProjectPage: React.FC = () => {
       if (selectedSubprojectId) {
         try {
           setLoading(true);
-          const result = await fetchSubproject(selectedSubprojectId);
+          const result = await fetchProjectPage(selectedSubprojectId);
           addPhases(result.phases || []);
           addAssets(result.assets || []);
           addTasks(result.tasks || []);
-          addWorkloads(result.workloads || []);
-          addPeople(result.person || []);
+          addPersonWorkloads(result.personworkloads || []);
+          addPMMWorkloads(result.pmmworkloads || []);
           console.log('Subproject data fetched for ID:', selectedSubprojectId);
         } catch (error) {
           console.error('Failed to fetch subproject data:', error);

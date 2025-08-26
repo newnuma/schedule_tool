@@ -6,7 +6,7 @@ The exported helper functions keep the old interface used by the Qt bridge
 layer so the frontend does not need to change.
 """
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import os
 import sys
@@ -78,22 +78,22 @@ def get_entity(entity: str, entity_id: int, fields: Optional[List[str]] = None) 
     data = sg.find_one(entity, filters, fields)
     return _format_dict(data) if data else data
 
-def fetch_distribute() -> Any:
-    # ProjectとPhaseを取得
-    subproject = get_entities("Subproject")
+def fetch_distribute_page() -> Any:
+    """Distributeページ用: すべてのSubprojectとPhaseを取得"""
+    subprojects = get_entities("Subproject")
     phases = get_entities("Phase")
     return {
-        "subprojects": subproject,
+        "subprojects": subprojects,
         "phases": phases,
     }
 
 
-def fetch_assignment() -> Any:
-    return get_entities("Person")
+def fetch_steps() -> Any:
+    return get_entities("Step")
 
 
 # 指定したIDのプロジェクトに関連する情報を取得
-def fetch_project_details(project_id: int) -> Any:
+def fetch_project_page(project_id: int) -> Any:
     # Subproject（プロジェクト）取得
     subproject = get_entity("Subproject", project_id)
     if not subproject:
@@ -101,8 +101,8 @@ def fetch_project_details(project_id: int) -> Any:
             "phases": [],
             "assets": [],
             "tasks": [],
-            "workloads": [],
-            "person": [],
+            "personworkloads": [],
+            "pmmworkloads": [],
         }
 
     # Phase取得（親: Subproject）
@@ -116,56 +116,151 @@ def fetch_project_details(project_id: int) -> Any:
     asset_ids = [asset["id"] for asset in assets]
     tasks = get_entities("Task", [["asset", "in", asset_ids]]) if asset_ids else []
 
-    # Workload取得（親: Task）
+    # PersonWorkload取得（親: Task）
     task_ids = [task["id"] for task in tasks]
-    workloads = get_entities("Workload", [["task", "in", task_ids]]) if task_ids else []
+    personworkloads = get_entities("PersonWorkload", [["task", "in", task_ids]]) if task_ids else []
 
-    # Person取得（プロジェクトに紐づく全員）
-    person = get_entities("Person")
+    # PMMWorkload取得（親: Subproject）
+    pmmworkloads = get_entities("PMMWorkload", [["subproject", "is", subproject["id"]]]) if subproject else []
 
     return {
-        "subproject": subproject,
         "phases": phases,
         "assets": assets,
         "tasks": tasks,
-        "workloads": workloads,
-        "person": person,
+        "personworkloads": personworkloads,
+        "pmmworkloads": pmmworkloads,
     }
 
 # メンバーリストにあるpersonに関連する情報を取得
-def fetch_people_details(person_list : List[int]) -> Any:
-    workloads = get_entities("Workload", [["people", "in", person_list]])
-    tasks = get_entities("Task", [["people", "in", person_list]])
+def _parse_iso_date(s: str) -> datetime.date:
+    return datetime.date.fromisoformat(s)
+
+def _overlaps(a_start: datetime.date, a_end: datetime.date, b_start: datetime.date, b_end: datetime.date) -> bool:
+    return a_start <= b_end and a_end >= b_start
+
+def fetch_assignment_page(start_iso: str, end_iso: str) -> Any:
+    """Assignmentページ用: 指定期間に存在するTask, PersonWorkload と全Person"""
+    start = _parse_iso_date(start_iso)
+    end = _parse_iso_date(end_iso)
+
+    # 生データ取得（未整形）
+    tasks_raw = sg.find("Task", [], None)
+    pw_raw = sg.find("PersonWorkload", [], None)
+
+    # 期間に重なるTask
+    tasks_filtered = [t for t in tasks_raw if _overlaps(t["start_date"], t["end_date"], start, end)]
+
+    # 期間内のPersonWorkload（週が範囲内）
+    pw_filtered = [w for w in pw_raw if start <= w["week"] <= end]
+
+    # 整形
+    tasks = _format_list(tasks_filtered)
+    personworkloads = _format_list(pw_filtered)
+    person = get_entities("Person")
+
     return {
-        "workloads": workloads,
         "tasks": tasks,
+        "personworkloads": personworkloads,
+        "person": person,
     }
 
-def fetch_all(project_id: int, person_list: List[int]) -> Any:
-    """
-    fetch_distribute, fetch_project_details, fetch_people_details をまとめて取得し、
-    各エンティティごとにID重複なしでマージして返す
-    """
-    distribute = fetch_distribute()
-    project_details = fetch_project_details(project_id)
-    people_details = fetch_people_details(person_list)
+def fetch_assignment_tasks(start_iso: str, end_iso: str) -> Any:
+    """期間に重なるTaskのみを返す（大量データ読み込みを避けるためフィルタして取得）"""
+    start = _parse_iso_date(start_iso)
+    end = _parse_iso_date(end_iso)
+    # DB側でフィルター（start_date <= end かつ end_date >= start）
+    tasks = get_entities(
+        "Task",
+        [["start_date", "<=", end], ["end_date", ">=", start]],
+    )
+    # subprojectをドットキーで付与（task -> asset -> phase -> subproject）
+    try:
+        asset_ids = list({t.get("asset", {}).get("id") for t in tasks if t.get("asset")})
+        assets = get_entities("Asset", [["id", "in", asset_ids]], ["id", "phase"]) if asset_ids else []
+        phase_ids = list({a.get("phase", {}).get("id") for a in assets if a.get("phase")})
+        phases = get_entities("Phase", [["id", "in", phase_ids]], ["id", "subproject"]) if phase_ids else []
+
+        asset_to_phase = {a["id"]: (a.get("phase") or {}).get("id") for a in assets}
+        phase_to_sp = {p["id"]: p.get("subproject") for p in phases}
+
+        for t in tasks:
+            aid = (t.get("asset") or {}).get("id")
+            pid = asset_to_phase.get(aid)
+            sp = phase_to_sp.get(pid)
+            if sp and isinstance(sp, dict) and "id" in sp:
+                # ドットキーで付与
+                t["asset.phase.subproject"] = {
+                    "type": "subproject",
+                    "id": sp.get("id"),
+                    "name": sp.get("name", ""),
+                }
+    except Exception:
+        # フォールバック（埋め込みなしでも返却）
+        pass
+    return {"tasks": tasks}
+
+def fetch_assignment_workloads(start_iso: str, end_iso: str) -> Any:
+    """期間内のPersonWorkloadのみを返す（週=weekが範囲内）"""
+    start = _parse_iso_date(start_iso)
+    end = _parse_iso_date(end_iso)
+    personworkloads = get_entities(
+        "PersonWorkload",
+        [["week", ">=", start], ["week", "<=", end]],
+    )
+    # subprojectをドットキーで付与（workload -> task -> asset -> phase -> subproject）
+    try:
+        task_ids = list({w.get("task", {}).get("id") for w in personworkloads if w.get("task")})
+        tasks_min = get_entities("Task", [["id", "in", task_ids]], ["id", "asset"]) if task_ids else []
+        asset_ids = list({t.get("asset", {}).get("id") for t in tasks_min if t.get("asset")})
+        assets = get_entities("Asset", [["id", "in", asset_ids]], ["id", "phase"]) if asset_ids else []
+        phase_ids = list({a.get("phase", {}).get("id") for a in assets if a.get("phase")})
+        phases = get_entities("Phase", [["id", "in", phase_ids]], ["id", "subproject"]) if phase_ids else []
+
+        task_to_asset = {t["id"]: (t.get("asset") or {}).get("id") for t in tasks_min}
+        asset_to_phase = {a["id"]: (a.get("phase") or {}).get("id") for a in assets}
+        phase_to_sp = {p["id"]: p.get("subproject") for p in phases}
+
+        for w in personworkloads:
+            tid = (w.get("task") or {}).get("id")
+            aid = task_to_asset.get(tid)
+            pid = asset_to_phase.get(aid)
+            sp = phase_to_sp.get(pid)
+            if sp and isinstance(sp, dict) and "id" in sp:
+                w["task.asset.phase.subproject"] = {
+                    "type": "subproject",
+                    "id": sp.get("id"),
+                    "name": sp.get("name", ""),
+                }
+    except Exception:
+        pass
+    return {"personworkloads": personworkloads}
+
+def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[str, str]) -> Any:
+    """起動時ロード: 3ページの必要情報 + 基本情報(Step) を一括取得し、ID重複なしでマージして返す"""
+    distribute = fetch_distribute_page()
+    project_page = fetch_project_page(project_id)
+    assignment_page = fetch_assignment_page(assignment_range[0], assignment_range[1])
+
+    steps = fetch_steps()
 
     def merge_by_id(*lists, id_key="id"):
         merged = {}
         for lst in lists:
-            for item in lst:
+            for item in lst or []:
                 merged[item[id_key]] = item
         return list(merged.values())
 
     return {
-        "subproject": merge_by_id(distribute.get("subprojects", []), [project_details.get("subproject")] if project_details.get("subproject") else []),
-        "phases": merge_by_id(distribute.get("phases", []), project_details.get("phases", [])),
-        "assets": merge_by_id(project_details.get("assets", [])),
-        "tasks": merge_by_id(project_details.get("tasks", []), people_details.get("tasks", [])),
-        "workloads": merge_by_id(project_details.get("workloads", []), people_details.get("workloads", [])),
-        "person": merge_by_id(project_details.get("person", [])),
+        "steps": steps,
+        "subprojects": merge_by_id(distribute.get("subprojects", [])),
+        "phases": merge_by_id(distribute.get("phases", []), project_page.get("phases", [])),
+        "assets": merge_by_id(project_page.get("assets", [])),
+        "tasks": merge_by_id(project_page.get("tasks", []), assignment_page.get("tasks", [])),
+        "personworkloads": merge_by_id(project_page.get("personworkloads", []), assignment_page.get("personworkloads", [])),
+        "pmmworkloads": merge_by_id(project_page.get("pmmworkloads", [])),
+        "person": merge_by_id(assignment_page.get("person", [])),
         "selectedSubprojectId": project_id,
-        "selectedPersonList": person_list
+        "selectedPersonList": person_list,
     }
 
 

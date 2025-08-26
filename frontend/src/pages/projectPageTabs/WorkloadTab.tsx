@@ -102,7 +102,7 @@ const WorkloadTab: React.FC = () => {
     if (!task) return 0;
     
     let total = 0;
-    task.people.forEach(personRef => {
+  task.assignees.forEach(personRef => {
       const key = `task-${taskId}-person-${personRef.id}-week-${weekIndex}`;
       total += workloadData[key] || 0;
     });
@@ -396,7 +396,7 @@ const WorkloadTab: React.FC = () => {
                       </TableRow>
                       
                       {/* Person行（入力可能） */}
-                      {task.people.map((personRef) => (
+                      {task.assignees.map((personRef) => (
                         <TableRow key={`${task.id}-${personRef.id}`}>
                           <TableCell 
                             sx={{ 

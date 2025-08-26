@@ -3,11 +3,13 @@ import { useAppContext } from "./context/AppContext";
 import * as bridgeApi from "./api/bridgeApi";
 
 const fetchInitialData = async (
+  addSteps: any,
   addSubprojects: any,
   addPhases: any,
   addAssets: any,
   addTasks: any,
-  addWorkloads: any,
+  addPersonWorkloads: any,
+  addPMMWorkloads: any,
   addPeople: any,
   setLoading: any,
   setSelectedPersonList: any,
@@ -16,16 +18,18 @@ const fetchInitialData = async (
   setLoading(true);
   console.log("Fetching initial data...");
   try {
-    const result = await bridgeApi.fetchAll();
-    console.log("res",result);
-    addSubprojects(result.subproject || []);
+    const result = await bridgeApi.initLoad();
+    console.log("res", result);
+    addSteps(result.steps || []);
+    addSubprojects(result.subprojects || []);
     addPhases(result.phases || []);
     addAssets(result.assets || []);
     addTasks(result.tasks || []);
-    addWorkloads(result.workloads || []);
+    addPersonWorkloads(result.personworkloads || []);
+    addPMMWorkloads(result.pmmworkloads || []);
     addPeople(result.person || []);
     setSelectedPersonList(result.selectedPersonList || []);
-    setSelectedSubprojectId(result.selectedSubprojectId || null);
+    setSelectedSubprojectId(result.selectedSubprojectId || undefined);
   } catch (e) {
     console.error(e);
   } finally {
@@ -35,26 +39,30 @@ const fetchInitialData = async (
 
 const Initializer = () => {
   const {
+    addSteps,
     addSubprojects,
     addPhases,
     addAssets,
     addTasks,
-    addWorkloads,
+    addPersonWorkloads,
+    addPMMWorkloads,
     addPeople,
     setLoading,
     setSelectedPersonList,
-    setSelectedSubprojectId
+    setSelectedSubprojectId,
   } = useAppContext();
 
   useEffect(() => {
     (async () => {
       await bridgeApi.channelReady;
       await fetchInitialData(
+        addSteps,
         addSubprojects,
         addPhases,
         addAssets,
         addTasks,
-        addWorkloads,
+        addPersonWorkloads,
+        addPMMWorkloads,
         addPeople,
         setLoading,
         setSelectedPersonList,

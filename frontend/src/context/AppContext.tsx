@@ -9,7 +9,7 @@ import type { IPage } from "../types";
 import { IPhaseForm, IAssetForm, ITaskForm } from "./FormContext";
 
 export interface IForignKey {
-    type: "subproject" | "phase" | "asset" | "task" | "workload" | "person" | "workCategory";
+    type: "subproject" | "phase" | "asset" | "task" | "workload" | "person" | "workCategory" | "department" | "step";
     id: number;
     name: string;
 }
@@ -19,8 +19,8 @@ export interface ISubproject {
     name: string;
     start_date: string; // ISO日付文字列
     end_date: string;   // ISO日付文字列
-    people: number[];   // PersonのID配列
-    is_edding: boolean;
+    people: IForignKey[];   // Person参照
+    editing?: IForignKey | null; // 編集中ユーザー(Person FK)
 }
 
 export interface IPhase {
@@ -38,7 +38,8 @@ export interface IAsset {
     start_date: string;
     end_date: string;
     type: "EXT" | "INT" | "Common";
-    work_category?: number | null; // WorkCategoryのID
+    work_category?: IForignKey | null; // WorkCategory
+    step?: IForignKey | null; // Step
     status: "waiting" | "In Progress" | "Completed" | "Not Started";
 }
 
@@ -48,23 +49,36 @@ export interface ITask {
     asset: IForignKey; // 親AssetのID
     start_date: string;
     end_date: string;
-    people: IForignKey[]; 
+    assignees: IForignKey[]; // Person参照
     status: "waiting" | "In Progress" | "Completed" | "Not Started";
+    subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
 }
 
-export interface IWorkload {
+export interface IPersonWorkload {
     id: number;
     task: IForignKey; // 親TaskのID
     name: string;
-    start_date: string;
-    people: number; // PersonのID
-    hours: number;
+    week: string; // 週の月曜日（ISO文字列）
+    person: IForignKey; // Person参照
+    man_week: number; // 工数(人週)
+    subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
+}
+
+export interface IPMMWorkload {
+    id: number;
+    subproject: IForignKey; // Subproject参照
+    work_category?: IForignKey | null; // WorkCategory参照
+    name: string;
+    week: string; // 週の月曜日（ISO文字列）
+    man_week: number; // 工数(人週)
 }
 
 export interface IPerson {
     id: number;
     name: string;
     email?: string;
+    department?: IForignKey | null;
+    manager?: IForignKey | null;
 }
 
 export interface IWorkCategory {
@@ -73,7 +87,15 @@ export interface IWorkCategory {
     description?: string;
 }
 
+export interface IStep {
+    id: number;
+    name: string;
+    color: string; // "r, g, b"
+}
+
 export interface IAppContext {
+    steps: IStep[];
+    addSteps: (steps: IStep[]) => void;
     subprojects: ISubproject[];
     addSubprojects: (subprojects: ISubproject[]) => void;
 
@@ -89,8 +111,10 @@ export interface IAppContext {
     addTasks: (tasks: ITask[]) => void;
     createTask: (task: Omit<ITaskForm, 'id'>) => void;
 
-    workloads: IWorkload[];
-    addWorkloads: (workloads: IWorkload[]) => void;
+    personWorkloads: IPersonWorkload[];
+    addPersonWorkloads: (workloads: IPersonWorkload[]) => void;
+    pmmWorkloads: IPMMWorkload[];
+    addPMMWorkloads: (workloads: IPMMWorkload[]) => void;
 
     people: IPerson[];
     addPeople: (people: IPerson[]) => void;
@@ -112,6 +136,8 @@ export interface IAppContext {
 }
 
 const defaultParams: IAppContext = {
+    steps: [],
+    addSteps: () => { },
     subprojects: [],
     addSubprojects: () => { },
     phases: [],
@@ -123,8 +149,10 @@ const defaultParams: IAppContext = {
     tasks: [],
     addTasks: () => { },
     createTask: () => { },
-    workloads: [],
-    addWorkloads: () => { },
+    personWorkloads: [],
+    addPersonWorkloads: () => { },
+    pmmWorkloads: [],
+    addPMMWorkloads: () => { },
     people: [],
     addPeople: () => { },
     selectedSubprojectId: undefined,
@@ -146,11 +174,13 @@ const AppContext = createContext<IAppContext>({
 export const useAppContext = () => useContext(AppContext);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+    const [steps, setSteps] = useState<IStep[]>([]);
     const [subprojects, setSubprojects] = useState<ISubproject[]>([]);
     const [phases, setPhases] = useState<IPhase[]>([]);
     const [assets, setAssets] = useState<IAsset[]>([]);
     const [tasks, setTasks] = useState<ITask[]>([]);
-    const [workloads, setWorkloads] = useState<IWorkload[]>([]);
+    const [personWorkloads, setPersonWorkloads] = useState<IPersonWorkload[]>([]);
+    const [pmmWorkloads, setPMMWorkloads] = useState<IPMMWorkload[]>([]);
     const [people, setPeople] = useState<IPerson[]>([]);
     const [selectedSubprojectId, setSelectedSubprojectId] = useState<number | undefined>(undefined);
     const [selectedPersonList, setSelectedPersonList] = useState<number[]>([]);
@@ -167,6 +197,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // 追加・マージ（ID一意）
     const addSubprojects = useCallback((newItems: ISubproject[]) => {
         setSubprojects((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addSteps = useCallback((newItems: IStep[]) => {
+        setSteps((prev) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
@@ -199,9 +240,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
     }, []);
     const addTasks = useCallback((newItems: ITask[]) => {
+        // Flow-PTのドットキー（"asset.phase.subproject"）をそのままsubprojectへ置換
+        const normalized = newItems.map((it: any) => {
+            const dotKey = 'asset.phase.subproject';
+            const dotVal = it?.[dotKey];
+            if (dotVal === undefined) return it as ITask;
+            const cleaned: any = { ...it };
+            if (cleaned.subproject == null) cleaned.subproject = dotVal as IForignKey;
+            delete cleaned[dotKey];
+            return cleaned as ITask;
+        });
         setTasks((prev) => {
             const merged = [...prev];
-            newItems.forEach((item) => {
+            normalized.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
                 if (idx !== -1) merged[idx] = item;
                 else merged.push(item);
@@ -209,8 +260,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             return merged;
         });
     }, []);
-    const addWorkloads = useCallback((newItems: IWorkload[]) => {
-        setWorkloads((prev) => {
+    const addPersonWorkloads = useCallback((newItems: IPersonWorkload[]) => {
+        // Flow-PTのドットキー（"task.asset.phase.subproject"）をそのままsubprojectへ置換
+        const normalized = (newItems as any[]).map((it: any) => {
+            const dotKey = 'task.asset.phase.subproject';
+            const dotVal = it?.[dotKey];
+            if (dotVal === undefined) return it as IPersonWorkload;
+            const cleaned: any = { ...it };
+            if (cleaned.subproject == null) cleaned.subproject = dotVal as IForignKey;
+            delete cleaned[dotKey];
+            return cleaned as IPersonWorkload;
+        });
+        setPersonWorkloads((prev) => {
+            const merged = [...prev];
+            normalized.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addPMMWorkloads = useCallback((newItems: IPMMWorkload[]) => {
+        setPMMWorkloads((prev) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
@@ -280,7 +352,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             },
             start_date: task.start_date || new Date().toISOString().split('T')[0],
             end_date: task.end_date || new Date().toISOString().split('T')[0],
-            people: [],
+            assignees: [],
             status: task.status === 'Not Started' ? 'Not Started' : 
                    task.status === 'In Progress' ? 'In Progress' :
                    task.status === 'Completed' ? 'Completed' : 'waiting',
@@ -291,6 +363,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return (
         <AppContext.Provider
             value={{
+                steps,
+                addSteps,
                 subprojects,
                 addSubprojects,
                 phases,
@@ -302,8 +376,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 tasks,
                 addTasks,
                 createTask,
-                workloads,
-                addWorkloads,
+                personWorkloads,
+                addPersonWorkloads,
+                pmmWorkloads,
+                addPMMWorkloads,
                 people,
                 addPeople,
                 selectedSubprojectId,

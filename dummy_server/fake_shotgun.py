@@ -24,8 +24,10 @@ class FakeShotgun:
                 "Phase": apps.get_model("api", "Phase"),
                 "Asset": apps.get_model("api", "Asset"),
                 "Task": apps.get_model("api", "Task"),
-                "Workload": apps.get_model("api", "Workload"),
+                "PersonWorkload": apps.get_model("api", "PersonWorkload"),
+                "PMMWorkload": apps.get_model("api", "PMMWorkload"),
                 "WorkCategory": apps.get_model("api", "WorkCategory"),
+                "Step": apps.get_model("api", "Step"),
             }
 
     # utility
@@ -76,6 +78,17 @@ class FakeShotgun:
                 qs = qs.filter(**{field: value})
             elif op == "in":
                 qs = qs.filter(**{f"{field}__in": value})
+            elif op in (">=", "gte"):
+                qs = qs.filter(**{f"{field}__gte": value})
+            elif op in ("<=", "lte"):
+                qs = qs.filter(**{f"{field}__lte": value})
+            elif op in (">", "gt"):
+                qs = qs.filter(**{f"{field}__gt": value})
+            elif op in ("<", "lt"):
+                qs = qs.filter(**{f"{field}__lt": value})
+            elif op in ("range", "between"):
+                # value should be (start, end)
+                qs = qs.filter(**{f"{field}__range": value})
             else:
                 raise NotImplementedError(f"Operator {op} not supported")
         return qs

@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Typography, Box, Tabs, Tab } from "@mui/material";
 import { Main } from "../components/StyledComponents";
 import ErrorBoundary from "../components/ErrorBoundary";
 import AssinmentTask from "./assignmentPageTabs/AssinmentTask";
 import AssinmentWorkload from "./assignmentPageTabs/AssinmentWorkload";
+import { useFilterContext } from "../context/FilterContext";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -29,10 +30,38 @@ function a11yProps(index: number) {
 
 const AssignmentPage: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
+  const { filters, setDateRangeFilter } = useFilterContext();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
+
+  // 初期デフォルト期間（今週月曜〜8週間後-1日）を投入（未設定時のみ）
+  useEffect(() => {
+    const taskKey = "assignment:task";
+    const workloadKey = "assignment:workload";
+    const alreadyTask = !!filters[taskKey]?.dateRange;
+    const alreadyWorkload = !!filters[workloadKey]?.dateRange;
+    if (alreadyTask && alreadyWorkload) return;
+
+    const today = new Date();
+    const monday = new Date(today);
+    const day = monday.getDay();
+    const diffToMonday = (day === 0 ? -6 : 1 - day); // Monday=1, Sunday=0
+    monday.setDate(monday.getDate() + diffToMonday);
+    const end = new Date(monday);
+    end.setDate(end.getDate() + 8 * 7 - 1);
+    const toIso = (d: Date) => d.toISOString().slice(0, 10);
+    const startIso = toIso(monday);
+    const endIso = toIso(end);
+
+    if (!alreadyTask) {
+      setDateRangeFilter(taskKey, startIso, endIso, "start_date", "end_date");
+    }
+    if (!alreadyWorkload) {
+      setDateRangeFilter(workloadKey, startIso, endIso, "week", "week");
+    }
+  }, [filters, setDateRangeFilter]);
 
   return (
     <Main component="main">

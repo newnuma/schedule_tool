@@ -58,19 +58,46 @@ async function callBridge(method: string, ...args: any[]): Promise<any> {
   await channelReady;
   const bridge = await getBridge();
   if (!bridge || typeof bridge[method] !== "function") {
-    throw new Error("Bridge not available");
+    console.warn(`Bridge not available or method not found: ${method}`);
+    return {};
   }
   return bridge[method](...args);
 }
 
-export function fetchAll() {
-  console.log("call fetchAll");
-  return callBridge('fetchAll');
+// Initial bulk load: steps + data for all three pages
+export function initLoad() {
+  console.log("call initLoad");
+  return callBridge('initLoad');
 }
 
-export function fetchSubproject(id?: number) {
-  console.log("call fetchSubproject", id);
-  return callBridge('fetchSubproject', id);
+export function fetchDistributePage() {
+  console.log("call fetchDistributePage");
+  return callBridge('fetchDistributePage');
+}
+
+export function fetchProjectPage(id: number) {
+  console.log("call fetchProjectPage", id);
+  return callBridge('fetchProjectPage', id);
+}
+
+export function fetchAssignmentPage(startIso: string, endIso: string) {
+  console.log("call fetchAssignmentPage", startIso, endIso);
+  return callBridge('fetchAssignmentPage', startIso, endIso);
+}
+
+export function fetchAssignmentTasks(startIso: string, endIso: string) {
+  console.log("call fetchAssignmentTasks", startIso, endIso);
+  return callBridge('fetchAssignmentTasks', startIso, endIso);
+}
+
+export function fetchAssignmentWorkloads(startIso: string, endIso: string) {
+  console.log("call fetchAssignmentWorkloads", startIso, endIso);
+  return callBridge('fetchAssignmentWorkloads', startIso, endIso);
+}
+
+export function fetchSteps() {
+  console.log("call fetchSteps");
+  return callBridge('fetchSteps');
 }
 
 // export function fetchSubproject(id: number) {
