@@ -3,14 +3,29 @@
 from rest_framework import serializers
 
 from .models import (
+    Department,
+    Step,
     Person,
     Subproject,
     Phase,
     Asset,
     Task,
-    Workload,
+    PersonWorkload,
+    PMMWorkload,
     WorkCategory,
 )
+
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = "__all__"
+
+
+class StepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Step
+        fields = "__all__"
 
 
 class PersonSerializer(serializers.ModelSerializer):
@@ -42,10 +57,15 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = "__all__"
 
-
-class WorkloadSerializer(serializers.ModelSerializer):
+class PersonWorkloadSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Workload
+        model = PersonWorkload
+        fields = "__all__"
+
+
+class PMMWorkloadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PMMWorkload
         fields = "__all__"
 
 

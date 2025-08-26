@@ -3,21 +3,27 @@
 from django.contrib import admin
 
 from .models import (
+    Department,
+    Step,
     Person,
     Subproject,
     Phase,
     Asset,
     Task,
-    Workload,
+    PersonWorkload,
+    PMMWorkload,
     WorkCategory,
 )
 
 
+admin.site.register(Department)
+admin.site.register(Step)
 admin.site.register(Person)
 admin.site.register(Subproject)
 admin.site.register(Phase)
 admin.site.register(Asset)
 admin.site.register(Task)
-admin.site.register(Workload)
+admin.site.register(PersonWorkload)
+admin.site.register(PMMWorkload)
 admin.site.register(WorkCategory)
 

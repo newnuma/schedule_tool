@@ -1,172 +1,240 @@
-# python manage.py shell → exec(open('dummy_server/api/sample_data.py', encoding="utf-8").read())
+"""Automotive design-themed sample data generator.
 
-from api.models import Person, Subproject, Phase, Asset, Task, Workload, WorkCategory
+Use in Django shell:
+  python manage.py shell -c "exec(open('dummy_server/api/sample_data.py', encoding='utf-8').read())"
+"""
+
+from api.models import (
+    Department,
+    Step,
+    Person,
+    Subproject,
+    Phase,
+    Asset,
+    Task,
+    PersonWorkload,
+    PMMWorkload,
+    WorkCategory,
+)
 from datetime import date, timedelta
 import random
 
-# 既存データ削除
-Person.objects.all().delete()
-Subproject.objects.all().delete()
-Phase.objects.all().delete()
-Asset.objects.all().delete()
+# Wipe existing data (order matters due to FKs)
+PersonWorkload.objects.all().delete()
+PMMWorkload.objects.all().delete()
 Task.objects.all().delete()
-Workload.objects.all().delete()
+Asset.objects.all().delete()
+Phase.objects.all().delete()
+Subproject.objects.all().delete()
+Person.objects.all().delete()
+Department.objects.all().delete()
+Step.objects.all().delete()
 WorkCategory.objects.all().delete()
 
-# 1. Person (25人に増加)
+# Departments (automotive-focused)
+dept_names = [
+    ("Exterior Design", "外装デザイン"),
+    ("Interior Design", "内装デザイン"),
+    ("CMF", "カラー・素材・仕上げ"),
+    ("Engineering", "設計・エンジニアリング"),
+    ("Prototype", "試作・モックアップ"),
+]
+departments = [Department.objects.create(name=n, description=d) for n, d in dept_names]
+
+# Steps (pipeline steps with colors)
+steps_data = [
+    ("Sketch", "255, 200, 0"),
+    ("Clay Modeling", "210, 105, 30"),
+    ("Digital Modeling", "70, 130, 180"),
+    ("Surfacing", "100, 149, 237"),
+    ("Prototyping", "46, 139, 87"),
+]
+steps = [Step.objects.create(name=n, color=c) for n, c in steps_data]
+
+# People (~100)
 people = []
-person_names = [
-    "Alice", "Bob", "Carol", "Dave", "Eve", "Frank", "Grace", "Henry", "Ivy", "Jack",
-    "Kate", "Liam", "Maya", "Noah", "Olivia", "Paul", "Quinn", "Ruby", "Sam", "Tina",
-    "Uma", "Victor", "Wendy", "Xavier", "Yuki"
+base_names = [
+    "Aiko", "Daichi", "Haruto", "Yuna", "Sora", "Ren", "Mio", "Hinata", "Kaito", "Rin",
+    "Yuto", "Saki", "Koji", "Aya", "Tsubasa", "Mei", "Naoki", "Riku", "Sara", "Kei",
 ]
+while len(base_names) < 50:
+    base_names.append(f"Designer{len(base_names)+1:02d}")
+for i in range(100):
+    name = f"{base_names[i % len(base_names)]}-{i+1:03d}"
+    dept = random.choice(departments)
+    p = Person.objects.create(name=name, email=f"{name.lower().replace(' ', '')}@studio.example", department=dept)
+    people.append(p)
 
-for i, name in enumerate(person_names):
-    person = Person.objects.create(name=name, email=f"{name.lower()}@example.com")
-    people.append(person)
+# Assign managers randomly (some people have a manager)
+for p in people:
+    if random.random() < 0.5:
+        mgr = random.choice([x for x in people if x != p])
+        p.manager = mgr
+        p.save()
 
-# 2. WorkCategory (10個に増加)
-categories = []
-category_data = [
-    ("Modeling", "3Dモデリング"),
-    ("Animation", "アニメーション"), 
-    ("Compositing", "合成"),
-    ("Rigging", "リギング"),
-    ("Texturing", "テクスチャリング"),
-    ("Lighting", "ライティング"),
-    ("Rendering", "レンダリング"),
-    ("Effects", "エフェクト"),
-    ("Layout", "レイアウト"),
-    ("Concept", "コンセプトアート")
+# Work categories (auto design phases) ~10
+wc_data = [
+    ("Concept", "コンセプト立案"),
+    ("Exterior", "外装"),
+    ("Interior", "内装"),
+    ("CMF", "カラー素材"),
+    ("Aero", "空力"),
+    ("Ergonomics", "人間工学"),
+    ("HMI", "ヒューマンマシンインターフェース"),
+    ("Packaging", "車室パッケージ"),
+    ("Lighting", "照明設計"),
+    ("Acoustic", "音響"),
 ]
+categories = [WorkCategory.objects.create(name=n, description=d) for n, d in wc_data]
 
-for name, desc in category_data:
-    cat = WorkCategory.objects.create(name=name, description=desc)
-    categories.append(cat)
-
-# 3. Subproject (15個に増加)
+# Subprojects (~25, vehicle lines or model years)
 subprojects = []
-project_names = [
-    "Project Alpha", "Project Beta", "Project Gamma", "Project Delta", "Project Epsilon",
-    "Project Zeta", "Project Eta", "Project Theta", "Project Iota", "Project Kappa",
-    "Project Lambda", "Project Mu", "Project Nu", "Project Xi", "Project Omicron"
-]
-
-for i, name in enumerate(project_names):
-    start_date = date.today() + timedelta(days=i*10)
-    end_date = start_date + timedelta(days=60 + i*5)
-    is_edding = random.choice([True, False])
-    
+today = date.today()
+for i in range(25):
+    kind = random.choice(["Sedan", "SUV", "Coupe", "Hatchback", "EV Crossover", "Wagon", "Pickup"])
+    year = 26 + (i // 5)
+    name = f"{kind} MY{year} #{i+1:02d}"
+    start = today + timedelta(days=i * 7)
+    end = start + timedelta(days=120 + (i % 7) * 10)
     sp = Subproject.objects.create(
         name=name,
-        start_date=start_date,
-        end_date=end_date,
-        is_edding=is_edding
+        start_date=start,
+        end_date=end,
+        editing=random.choice(people),
     )
-    # ランダムに3-8人をアサイン
-    assigned_people = random.sample(people, random.randint(3, 8))
-    sp.people.set(assigned_people)
+    sp.people.set(random.sample(people, k=random.randint(8, 15)))
     subprojects.append(sp)
 
-# 4. Phase (各プロジェクトに2-4個のPhase、合計約45個)
+# Phases per subproject
 phases = []
+phase_names = ["Concept", "Design Development", "Final Design"]
 for sp in subprojects:
-    num_phases = random.randint(2, 4)
-    phase_duration = (sp.end_date - sp.start_date).days // num_phases
-    
-    for i in range(num_phases):
-        phase_start = sp.start_date + timedelta(days=i * phase_duration)
-        phase_end = phase_start + timedelta(days=phase_duration - 1)
-        if i == num_phases - 1:  # 最後のフェーズは終了日を合わせる
-            phase_end = sp.end_date
-        
-        phase = Phase.objects.create(
-            subproject=sp,
-            name=f"Phase {i+1}",
-            start_date=phase_start,
-            end_date=phase_end
-        )
-        phases.append(phase)
+    span = (sp.end_date - sp.start_date).days
+    chunk = max(20, span // len(phase_names))
+    for i, pname in enumerate(phase_names):
+        ps = sp.start_date + timedelta(days=i * chunk)
+        pe = sp.start_date + timedelta(days=(i + 1) * chunk - 1)
+        if i == len(phase_names) - 1:
+            pe = sp.end_date
+        ph = Phase.objects.create(subproject=sp, name=pname, start_date=ps, end_date=pe)
+        phases.append(ph)
 
-# 5. Asset (各Phaseに3-6個のAsset、合計約200個)
+# Assets per phase (e.g., body panels, interior areas)
 assets = []
-for phase in phases:
-    num_assets = random.randint(3, 6)
-    asset_duration = (phase.end_date - phase.start_date).days // num_assets
-    
-    for i in range(num_assets):
-        asset_start = phase.start_date + timedelta(days=i * asset_duration)
-        asset_end = asset_start + timedelta(days=asset_duration - 1)
-        if i == num_assets - 1:  # 最後のアセットは終了日を合わせる
-            asset_end = phase.end_date
-        
+asset_name_sets = {
+    "Concept": [
+        "Exterior Theme A", "Exterior Theme B", "Interior Mood A", "Interior Mood B", "Color Board A",
+        "Proportion Study", "Sketch Board A", "Sketch Board B"
+    ],
+    "Design Development": [
+        "Front Fascia", "Rear Fascia", "Instrument Panel", "Seats", "Door Trim", "Console Module",
+        "Steering Wheel", "Roof Console"
+    ],
+    "Final Design": [
+        "Door Trim Final", "Center Console Final", "Headlamp Final", "Tail Lamp Final", "Grille Final",
+        "Wheel Design", "Mirror Housing", "Rear Spoiler"
+    ],
+}
+for ph in phases:
+    names = asset_name_sets.get(ph.name, ["Generic Asset A", "Generic Asset B", "Generic Asset C", "Generic Asset D"])    
+    # keep ~3-5 assets per phase to scale to ~250 assets overall
+    per_phase = random.randint(3, min(5, len(names)))
+    picks = random.sample(names, k=per_phase)
+    for nm in picks:
+        # distribute dates inside phase
+        span = max(1, (ph.end_date - ph.start_date).days)
+        local = max(7, span // per_phase)
+        offset = random.randint(0, max(0, span - local))
+        a_start = ph.start_date + timedelta(days=offset)
+        a_end = min(ph.end_date, a_start + timedelta(days=local))
         asset = Asset.objects.create(
-            phase=phase,
-            name=f"Asset_{phase.subproject.name[-1]}{i+1}",
-            start_date=asset_start,
-            end_date=asset_end,
+            phase=ph,
+            name=nm,
+            start_date=a_start,
+            end_date=a_end,
             type=random.choice(['EXT', 'INT', 'Common']),
             work_category=random.choice(categories),
-            status=random.choice(['waiting', 'In Progress', 'Completed'])
+            status=random.choice(['waiting', 'In Progress', 'Completed']),
+            step=random.choice(steps),
         )
         assets.append(asset)
 
-# 6. Task (各Assetに2-4個のTask、合計約600個)
+# Tasks per asset (~2-4 each)
 tasks = []
+task_name_templates = [
+    "Sketch refinement", "3D blockout", "Surface development", "Detailing", "Prototype fit check"
+]
 for asset in assets:
-    num_tasks = random.randint(2, 4)
-    task_duration = (asset.end_date - asset.start_date).days // num_tasks
-    
-    for i in range(num_tasks):
-        task_start = asset.start_date + timedelta(days=i * task_duration)
-        task_end = task_start + timedelta(days=task_duration - 1)
-        if i == num_tasks - 1:  # 最後のタスクは終了日を合わせる
-            task_end = asset.end_date
-        
-        task = Task.objects.create(
+    n = random.randint(2, 4)
+    aspan = max(1, (asset.end_date - asset.start_date).days)
+    tspan = max(3, aspan // n)
+    for i in range(n):
+        t_start = asset.start_date + timedelta(days=min(i * tspan, max(0, aspan - 1)))
+        t_end = min(asset.end_date, t_start + timedelta(days=tspan - 1))
+        t = Task.objects.create(
             asset=asset,
-            name=f"Task_{asset.name}-{i+1}",
-            start_date=task_start,
-            end_date=task_end,
-            status=random.choice(['waiting', 'In Progress', 'Completed'])
+            name=f"{random.choice(task_name_templates)} {i+1}",
+            start_date=t_start,
+            end_date=t_end,
+            status=random.choice(['waiting', 'In Progress', 'Completed']),
         )
-        
-        # ランダムに1-4人をタスクにアサイン
-        num_assigned = random.randint(1, 4)
-        assigned_people = random.sample(people, num_assigned)
-        task.people.set(assigned_people)
-        
-        tasks.append(task)
+        t.assignees.set(random.sample(people, k=random.randint(1, 3)))
+        tasks.append(t)
 
-# 7. Workload (各Taskに1-3個のWorkload、合計約1200個)
-workloads = []
-for task in tasks:
-    task_people = list(task.people.all())
-    if not task_people:
+# PersonWorkloads per task (week-based man-weeks, ~1-2 entries per task)
+def monday_of(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+person_workloads = []
+for t in tasks:
+    assignees = list(t.assignees.all())
+    if not assignees:
         continue
-    
-    num_workloads = random.randint(1, 3)
-    
-    for i in range(num_workloads):
-        # タスクにアサインされた人の中からランダムに選択
-        assigned_person = random.choice(task_people)
-        hours = round(random.uniform(4.0, 20.0), 1)
-        
-        workload = Workload.objects.create(
-            task=task,
-            name=f"Workload_{task.name}-{i+1}",
-            start_date=task.start_date + timedelta(days=random.randint(0, 3)),
-            people=assigned_person,
-            hours=hours
+    weeks = []
+    # choose 1-3 Mondays within the task period
+    cur = monday_of(t.start_date)
+    while cur <= t.end_date:
+        weeks.append(cur)
+        cur += timedelta(days=7)
+    for i in range(random.randint(1, min(2, len(weeks)) )):
+        wk = random.choice(weeks)
+        pw = PersonWorkload.objects.create(
+            task=t,
+            person=random.choice(assignees),
+            name=f"{t.name} - W{i+1}",
+            week=wk,
+            man_week=round(random.uniform(0.2, 1.0), 1),
         )
-        workloads.append(workload)
+        person_workloads.append(pw)
 
-print(f"Sample data inserted!")
-print(f"Created:")
+# PMMWorkloads per subproject & work category per week
+pmm_workloads = []
+for sp in subprojects:
+    weeks = []
+    cur = monday_of(sp.start_date)
+    while cur <= sp.end_date:
+        weeks.append(cur)
+        cur += timedelta(days=7)
+    for wk in weeks:
+        for wc in random.sample(categories, k=min(4, len(categories))):
+            pmm = PMMWorkload.objects.create(
+                subproject=sp,
+                work_category=wc,
+                name=f"{sp.name} - {wc.name}",
+                week=wk,
+                man_week=round(random.uniform(1.0, 5.0), 1),
+            )
+            pmm_workloads.append(pmm)
+
+print("Sample data inserted!")
+print("Created:")
+print(f"  - {len(departments)} Departments")
+print(f"  - {len(steps)} Steps")
 print(f"  - {len(people)} People")
 print(f"  - {len(categories)} Work Categories")
 print(f"  - {len(subprojects)} Subprojects")
 print(f"  - {len(phases)} Phases")
 print(f"  - {len(assets)} Assets")
 print(f"  - {len(tasks)} Tasks")
-print(f"  - {len(workloads)} Workloads")
+print(f"  - {len(person_workloads)} PersonWorkloads")
+print(f"  - {len(pmm_workloads)} PMMWorkloads")

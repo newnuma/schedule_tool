@@ -3,9 +3,26 @@
 
 from django.db import models
 
+class Department(models.Model):
+    name = models.CharField(max_length=128)
+    description = models.TextField(blank=True, null=True)
+    def __str__(self):
+        return self.name
+
+class Step(models.Model):
+    name = models.CharField(max_length=128)
+    # rgb, "255, 255, 255"
+    color = models.CharField(max_length=32, default="255, 255, 255")
+
+    def __str__(self):
+        return self.name
+
+
 class Person(models.Model):
     name = models.CharField(max_length=128)
     email = models.EmailField(unique=True, blank=True, null=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='people')
+    manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subordinates')
     # 追加属性があればここに
 
     def __str__(self):
@@ -16,7 +33,7 @@ class Subproject(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     people = models.ManyToManyField(Person, related_name='subprojects', blank=True)
-    is_edding = models.BooleanField(default=False)  # EDDINGかどうか
+    editing = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, blank=True, related_name='editing_subprojects')
 
     def __str__(self):
         return self.name
@@ -47,6 +64,7 @@ class Asset(models.Model):
         ('In Progress', 'In Progress'),
         ('Completed', 'Completed'),
     ], default='Not Started')
+    step = models.ForeignKey(Step, on_delete=models.SET_NULL, null=True, blank=True, related_name='assets')
 
     def __str__(self):
         return f"{self.phase.subproject.name} - {self.phase.name} - {self.name}"
@@ -56,7 +74,7 @@ class Task(models.Model):
     name = models.CharField(max_length=128)
     start_date = models.DateField()
     end_date = models.DateField()
-    people = models.ManyToManyField(Person, related_name='tasks', blank=True)
+    assignees = models.ManyToManyField(Person, related_name='tasks', blank=True)
     status = models.CharField(max_length=32, choices=[
         ('waiting', 'waiting'), 
         ('In Progress', 'In Progress'),
@@ -66,15 +84,28 @@ class Task(models.Model):
     def __str__(self):
         return f"{self.asset.phase.subproject.name} - {self.asset.phase.name} - {self.asset.name} - {self.name}"
 
-class Workload(models.Model):
+# Taskにアサインされている人ごとの工数（週単位）
+class PersonWorkload(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='workloads')
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, blank=True) #taskのassigneesから選択
     name = models.CharField(max_length=128)
-    start_date = models.DateField()
-    people = models.ForeignKey(Person, on_delete=models.CASCADE, blank=True)
-    hours = models.DecimalField(max_digits=5, decimal_places=1)
+    week = models.DateField() #週の月曜日の日付を指定
+    man_week = models.DecimalField(max_digits=5, decimal_places=1)
 
     def __str__(self):
         return f"{self.task.asset.phase.subproject.name} - {self.task.asset.phase.name} - {self.task.asset.name} - {self.task.name} - {self.name}"
+
+# SubProjectのWorkCategory毎に与えられている工数（週単位）
+class PMMWorkload(models.Model):
+    subproject = models.ForeignKey(Subproject, on_delete=models.CASCADE, related_name='pmm_workloads')
+    work_category = models.ForeignKey('WorkCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='pmm_workloads')   
+    name = models.CharField(max_length=128)
+    week = models.DateField() #週の月曜日の日付を指定
+    man_week = models.DecimalField(max_digits=5, decimal_places=1)
+
+    def __str__(self):
+        wc = self.work_category.name if self.work_category else "(No Category)"
+        return f"{self.subproject.name} - {wc} - {self.name}"
 
 class WorkCategory(models.Model):
     name = models.CharField(max_length=128)

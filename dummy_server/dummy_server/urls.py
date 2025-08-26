@@ -18,22 +18,28 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
 from api.views import (
+    DepartmentViewSet,
+    StepViewSet,
     PersonViewSet,
     SubprojectViewSet,
     PhaseViewSet,
     AssetViewSet,
     TaskViewSet,
-    WorkloadViewSet,
+    PersonWorkloadViewSet,
+    PMMWorkloadViewSet,
     WorkCategoryViewSet,
 )
 
 router = routers.DefaultRouter()
+router.register(r'departments', DepartmentViewSet)
+router.register(r'steps', StepViewSet)
 router.register(r'people', PersonViewSet)
 router.register(r'subprojects', SubprojectViewSet)
 router.register(r'phases', PhaseViewSet)
 router.register(r'assets', AssetViewSet)
 router.register(r'tasks', TaskViewSet)
-router.register(r'workloads', WorkloadViewSet)
+router.register(r'personworkloads', PersonWorkloadViewSet)
+router.register(r'pmmworkloads', PMMWorkloadViewSet)
 router.register(r'workcategories', WorkCategoryViewSet)
 
 urlpatterns = [

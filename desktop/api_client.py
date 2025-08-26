@@ -87,6 +87,11 @@ def fetch_distribute() -> Any:
         "phases": phases,
     }
 
+
+def fetch_assignment() -> Any:
+    return get_entities("Person")
+
+
 # 指定したIDのプロジェクトに関連する情報を取得
 def fetch_project_details(project_id: int) -> Any:
     # Subproject（プロジェクト）取得
