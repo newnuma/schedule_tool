@@ -115,25 +115,34 @@ const AssinmentWorkload: React.FC = () => {
       map.set(key, (map.get(key) || 0) + val);
     };
 
-    filteredPW.forEach(w => {
-      const personId = w.person.id;
-      const taskId = w.task.id;
-      const week = w.week;
-      const spId = w.subproject?.id ?? 0;
-      const spName = w.subproject?.name ?? "(No Subproject)";
-      subprojName.set(spId, spName);
+		filteredPW.forEach(w => {
+			// 必須フィールドの存在チェック（不足時はスキップ）
+			const personId = w?.person?.id;
+			const taskId = w?.task?.id;
+			const week = w?.week;
+			if (typeof personId !== 'number' || typeof taskId !== 'number' || !week) {
+				return; // 不完全なレコードはスキップ
+			}
 
-      add(personWeek, `${personId}|${week}`, w.man_week || 0);
-      add(personTaskWeek, `${personId}|${taskId}|${week}`, w.man_week || 0);
-      add(personSubprojWeek, `${personId}|${spId}|${week}`, w.man_week || 0);
+			// サブプロジェクトは省略可
+			const spId = w.subproject?.id ?? 0;
+			const spName = w.subproject?.name ?? "(No Subproject)";
+			subprojName.set(spId, spName);
 
-      if (!personSubprojects.has(personId)) personSubprojects.set(personId, new Set());
-      personSubprojects.get(personId)!.add(spId);
+			// man_week は数値でない場合は 0 として扱う
+			const val = (typeof w.man_week === 'number' && isFinite(w.man_week)) ? w.man_week : 0;
 
-      const pstKey = `${personId}|${spId}`;
-      if (!personSubprojTasks.has(pstKey)) personSubprojTasks.set(pstKey, new Set());
-      personSubprojTasks.get(pstKey)!.add(taskId);
-    });
+			add(personWeek, `${personId}|${week}`, val);
+			add(personTaskWeek, `${personId}|${taskId}|${week}`, val);
+			add(personSubprojWeek, `${personId}|${spId}|${week}`, val);
+
+			if (!personSubprojects.has(personId)) personSubprojects.set(personId, new Set());
+			personSubprojects.get(personId)!.add(spId);
+
+			const pstKey = `${personId}|${spId}`;
+			if (!personSubprojTasks.has(pstKey)) personSubprojTasks.set(pstKey, new Set());
+			personSubprojTasks.get(pstKey)!.add(taskId);
+		});
 
     return { personWeek, personTaskWeek, personSubprojWeek, personSubprojects, personSubprojTasks, subprojName };
   }, [filteredPW]);
