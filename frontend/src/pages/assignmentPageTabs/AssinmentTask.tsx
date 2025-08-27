@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import { useAppContext } from "../../context/AppContext";
 import GanttChart, { GanttItem, GanttGroup } from "../../components/GanttChart";
 import DateRangeFilter from "../../components/filters/DateRangeFilter";
 import { useFilterContext } from "../../context/FilterContext";
 import { fetchAssignmentTasks } from "../../api/bridgeApi";
+import CollapsibleFilterPanel from "../../components/filters/CollapsibleFilterPanel";
+import CheckboxFilter from "../../components/filters/CheckboxFilter";
 
 const AssinmentTask: React.FC = () => {
   const { people, tasks, addTasks, setLoading } = useAppContext();
@@ -34,13 +36,31 @@ const AssinmentTask: React.FC = () => {
     };
   }, [filters, addTasks, setLoading]);
 
-  // People毎にグループを作成
+  // Department options + filtering
+  type DeptOption = { departmentName: string };
+  const peopleWithDeptName: (DeptOption & { id: number; name: string })[] = useMemo(() => {
+    return (people ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      departmentName: p.department?.name || "(No Department)",
+    }));
+  }, [people]);
+
+  const selectedDepartments: string[] = (filters[pageKey]?.dropdown?.["departmentName"] as string[]) || [];
+  const peopleFiltered = useMemo(() => {
+    if (!selectedDepartments || selectedDepartments.length === 0) return peopleWithDeptName;
+    return peopleWithDeptName.filter((p) => selectedDepartments.includes(p.departmentName));
+  }, [peopleWithDeptName, selectedDepartments]);
+
+  const allowedPersonIds = useMemo(() => new Set(peopleFiltered.map((p) => p.id)), [peopleFiltered]);
+
+  // People毎にグループを作成（部門フィルター適用）
   const groups: GanttGroup[] = useMemo(
-    () => (people ?? []).map((person) => ({ id: person.id, content: person.name })),
-    [people]
+    () => peopleFiltered.map((person) => ({ id: person.id, content: person.name })),
+    [peopleFiltered]
   );
 
-  console.log("tasks", tasks);
+  // console.log("tasks", tasks);
 
   // 各タスクを、アサインされているpeople毎にアイテムとして展開
   const items: GanttItem[] = useMemo(() => {
@@ -49,7 +69,8 @@ const AssinmentTask: React.FC = () => {
       if (!task.start_date || !task.end_date) {
         return; // 不正データはスキップ
       }
-  (task.assignees ?? []).forEach((person) => {
+      (task.assignees ?? []).forEach((person) => {
+        if (!allowedPersonIds.has(person.id)) return; // 部門フィルター
         taskItems.push({
           id: `${task.id}-${person.id}`,
           group: person.id,
@@ -61,11 +82,24 @@ const AssinmentTask: React.FC = () => {
       });
     });
     return taskItems;
-  }, [tasks]);
+  }, [tasks, allowedPersonIds]);
 
   return (
     <div>
-  <DateRangeFilter pageKey={pageKey} label="Period" />
+      {/* Top bar: Date range on the left, filters on the right */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+        <Box>
+          <DateRangeFilter pageKey={pageKey} label="Period" compact />
+        </Box>
+        <CollapsibleFilterPanel pageKey={pageKey} sx={{ ml: 2 }}>
+          <CheckboxFilter<DeptOption>
+            pageKey={pageKey}
+            data={peopleWithDeptName}
+            property={"departmentName"}
+            label="Department"
+          />
+        </CollapsibleFilterPanel>
+      </Box>
       <GanttChart items={items} groups={groups} />
     </div>
   );

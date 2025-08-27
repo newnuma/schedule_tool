@@ -12,6 +12,7 @@ interface DateRangeFilterProps {
   startProperty?: string;
   endProperty?: string;
   hideTitle?: boolean;
+  compact?: boolean;
 }
 
 const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
@@ -20,6 +21,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   startProperty = "start_date",
   endProperty = "end_date",
   hideTitle = false,
+  compact = false,
 }) => {
   const { filters, setDateRangeFilter } = useFilterContext();
   
@@ -39,7 +41,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   };
 
   return (
-    <Box sx={{ margin: "8px 0" }}>
+    <Box sx={{ margin: compact || hideTitle ? 0 : "8px 0" }}>
       {!hideTitle && (
         <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
           {label}

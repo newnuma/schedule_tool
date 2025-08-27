@@ -7,6 +7,7 @@ layer so the frontend does not need to change.
 """
 
 from typing import Any, List, Optional, Tuple
+from decimal import Decimal
 
 import os
 import sys
@@ -30,6 +31,9 @@ import datetime
 
 # 共通整形関数
 def _format_value(value):
+    # Decimal を数値(float)へ変換（フロントで扱いやすくするため）
+    if isinstance(value, Decimal):
+        return float(value)
     # datetime.datetime または datetime.date を文字列に変換
     if isinstance(value, (datetime.datetime, datetime.date)):
         return value.strftime('%Y-%m-%d')
@@ -51,7 +55,7 @@ def _format_value(value):
 
 def _format_dict(d):
     if not isinstance(d, dict):
-        return d
+        return _format_value(d)
     result = {}
     for k, v in d.items():
         if isinstance(v, list):
@@ -67,7 +71,7 @@ def _format_dict(d):
     return result
 
 def _format_list(lst):
-    return [_format_dict(item) if isinstance(item, dict) else item for item in lst]
+    return [_format_dict(item) if isinstance(item, dict) else _format_value(item) for item in lst]
 
 def get_entities(entity: str, filters: Optional[List] = None, fields: Optional[List[str]] = None) -> Any:
     data = sg.find(entity, filters or [], fields)
