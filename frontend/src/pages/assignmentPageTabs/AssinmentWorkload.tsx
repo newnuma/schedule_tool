@@ -185,8 +185,8 @@ const AssinmentWorkload: React.FC = () => {
 	}, [peopleWithDeptName, selectedDepartments]);
 
 	return (
-		<div>
-			<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+		<Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+			<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexShrink: 0 }}>
 				{/* 左上: 列に作用する期間フィルタ */}
 				<DateRangeFilter pageKey={pageKey} label="Period (Week)" startProperty="week" endProperty="week" />
 				{/* 右上: 行に作用するフィルタ群 */}
@@ -204,7 +204,7 @@ const AssinmentWorkload: React.FC = () => {
 
 			<TableContainer
 				component={Paper}
-				sx={{ width: 1200, height: 520, overflow: 'auto' }}
+				sx={{ width: '100%', flex: 1, overflow: 'auto', minHeight: 0 }}
 			>
 				<Table size="small" sx={{ minWidth: 900 }}>
 					<TableHead>
@@ -306,7 +306,7 @@ const AssinmentWorkload: React.FC = () => {
 						</TableBody>
 					</Table>
 				</TableContainer>
-		</div>
+		</Box>
 	);
 };
 
