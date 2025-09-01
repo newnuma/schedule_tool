@@ -92,19 +92,36 @@ const TaskTab: React.FC = () => {
   );
 
   const items = useMemo(
-    () =>
-      filteredTasks
-        .map((t) => ({
-          id: t.id,
-          group: t.asset.id,
-          content: t.name,
-          start: t.start_date,
-          end: t.end_date,
-          className: t.status === 'Completed' ? 'completed' :
-            t.status === 'In Progress' ? 'in-progress' : 'not-started',
-          tooltipHtml: `<div><strong>Task:</strong> ${t.name}<br/><strong>Status:</strong> ${t.status}<br/><strong>Asset:</strong> ${t.asset.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
-        })),
-    [filteredTasks]
+    () => {
+      // 親Assetの期間を背景として表示するアイテム（groupごと）
+      const backgroundItems = filteredAssets
+        .filter(a => a.start_date && a.end_date)
+        .map(a => ({
+          id: `asset-bg-${a.id}`,
+          group: a.id,
+          content: "", // 背景なのでテキストは表示しない
+          start: a.start_date,
+          end: a.end_date,
+          type: 'background' as const,
+          className: 'asset-background',
+          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
+        }));
+
+      // タスクアイテム
+      const taskItems = filteredTasks.map((t) => ({
+        id: t.id,
+        group: t.asset.id,
+        content: t.name,
+        start: t.start_date,
+        end: t.end_date,
+        className: t.status === 'Completed' ? 'completed' :
+          t.status === 'In Progress' ? 'in-progress' : 'not-started',
+        tooltipHtml: `<div><strong>Task:</strong> ${t.name}<br/><strong>Status:</strong> ${t.status}<br/><strong>Asset:</strong> ${t.asset.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
+      }));
+
+      return [...backgroundItems, ...taskItems];
+    },
+    [filteredAssets, filteredTasks]
   );
 
   if (!selectedSubprojectId) {

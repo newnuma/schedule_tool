@@ -21,7 +21,7 @@ export interface GanttItem {
   content: string;
   start: string | Date | null | undefined;
   end?: string | Date | null | undefined;
-  type?: 'range' | 'point' | 'box'; // マイルストーン用のtypeを追加
+  type?: 'range' | 'point' | 'box' | 'background'; // 背景表示用のtypeも許可
   className?: string; // 色分けなど
   // ホバー時に表示したいツールチップ（HTML可）。未指定の場合は getItemTooltip が使われる
   tooltipHtml?: string;
@@ -34,7 +34,7 @@ interface ValidGanttItem {
   content: string;
   start: string | Date;
   end?: string | Date;
-  type?: 'range' | 'point' | 'box';
+  type?: 'range' | 'point' | 'box' | 'background';
   className?: string;
   title?: string; // vis-timeline の hover ツールチップ用プロパティ
 }
@@ -53,6 +53,9 @@ export interface GanttChartProps {
   onItemRightClick?: (itemId: number | string, itemName: string, event: MouseEvent) => void;
   // アイテムからツールチップ (HTML 文字列) を生成するコールバック。item.tooltipHtml が優先される。
   getItemTooltip?: (item: GanttItem) => string | undefined;
+  // グループ（左列ラベル）のクリック/右クリックイベント
+  onGroupClick?: (groupId: number | string, group: GanttGroup, event: MouseEvent) => void;
+  onGroupRightClick?: (groupId: number | string, group: GanttGroup, event: MouseEvent) => void;
 }
 
 const GanttChart: React.FC<GanttChartProps> = ({
@@ -62,6 +65,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
   height = 500,
   onItemRightClick,
   getItemTooltip,
+  onGroupClick,
+  onGroupRightClick,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<Timeline | null>(null);
@@ -141,6 +146,49 @@ const GanttChart: React.FC<GanttChartProps> = ({
           ...memoizedOptions,
         } as TimelineOptions;
 
+        // グループラベル（最左列）へのクリック/右クリック対応
+        if ((onGroupClick || onGroupRightClick)) {
+          (defaultOptions as any).groupTemplate = (group: any, element: HTMLElement) => {
+            // content 表示
+            if (element) {
+              element.textContent = group?.content ?? '';
+              element.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
+              // 二重登録防止
+              const elAny = element as any;
+              if (!elAny.__hasGroupHandlers) {
+                if (onGroupClick) {
+                  element.addEventListener('click', (ev: Event) => {
+                    onGroupClick(group.id, group as GanttGroup, ev as MouseEvent);
+                  });
+                }
+                if (onGroupRightClick) {
+                  element.addEventListener('contextmenu', (ev: Event) => {
+                    ev.preventDefault();
+                    onGroupRightClick(group.id, group as GanttGroup, ev as MouseEvent);
+                  });
+                }
+                elAny.__hasGroupHandlers = true;
+              }
+              return element;
+            }
+            const div = document.createElement('div');
+            div.textContent = group?.content ?? '';
+            div.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
+            if (onGroupClick) {
+              div.addEventListener('click', (ev: Event) => {
+                onGroupClick(group.id, group as GanttGroup, ev as MouseEvent);
+              });
+            }
+            if (onGroupRightClick) {
+              div.addEventListener('contextmenu', (ev: Event) => {
+                ev.preventDefault();
+                onGroupRightClick(group.id, group as GanttGroup, ev as MouseEvent);
+              });
+            }
+            return div;
+          };
+        }
+
         if (memoizedGroups && memoizedGroups.length > 0 && groupSet) {
           timelineRef.current = new Timeline(containerRef.current, dataSet, groupSet, defaultOptions);
         } else {
@@ -169,7 +217,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
                   if (itemId !== null && itemId !== undefined) {
                     // アイテムのデータを取得
                     const itemData = dataSet.get(itemId);
-                    if (itemData) {
+                    // 背景アイテムはコンテキストメニュー対象外
+                    if (itemData && itemData.type !== 'background') {
                       onItemRightClick(itemId, itemData.content, event);
                     }
                   }

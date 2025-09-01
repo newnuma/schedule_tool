@@ -72,6 +72,11 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
     backgroundColor: "#9e9e9e",
     borderColor: "#616161",
   },
+  // 背景アイテムのスタイル（薄い色で後ろに）
+  "& .vis-item.vis-background": {
+    backgroundColor: "rgba(33, 150, 243, 0.08)",
+    borderColor: "transparent",
+  },
 }));
 
 export const NoDataBox = styled(Box)(({ theme }) => ({
