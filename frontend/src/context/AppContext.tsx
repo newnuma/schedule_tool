@@ -240,19 +240,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
     }, []);
     const addTasks = useCallback((newItems: ITask[]) => {
-        // Flow-PTのドットキー（"asset.phase.subproject"）をそのままsubprojectへ置換
-        const normalized = newItems.map((it: any) => {
-            const dotKey = 'asset.phase.subproject';
-            const dotVal = it?.[dotKey];
-            if (dotVal === undefined) return it as ITask;
-            const cleaned: any = { ...it };
-            if (cleaned.subproject == null) cleaned.subproject = dotVal as IForignKey;
-            delete cleaned[dotKey];
-            return cleaned as ITask;
-        });
         setTasks((prev) => {
             const merged = [...prev];
-            normalized.forEach((item) => {
+            newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
                 if (idx !== -1) merged[idx] = item;
                 else merged.push(item);
@@ -261,19 +251,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
     }, []);
     const addPersonWorkloads = useCallback((newItems: IPersonWorkload[]) => {
-        // Flow-PTのドットキー（"task.asset.phase.subproject"）をそのままsubprojectへ置換
-        const normalized = (newItems as any[]).map((it: any) => {
-            const dotKey = 'task.asset.phase.subproject';
-            const dotVal = it?.[dotKey];
-            if (dotVal === undefined) return it as IPersonWorkload;
-            const cleaned: any = { ...it };
-            if (cleaned.subproject == null) cleaned.subproject = dotVal as IForignKey;
-            delete cleaned[dotKey];
-            return cleaned as IPersonWorkload;
-        });
         setPersonWorkloads((prev) => {
             const merged = [...prev];
-            normalized.forEach((item) => {
+            newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
                 if (idx !== -1) merged[idx] = item;
                 else merged.push(item);
