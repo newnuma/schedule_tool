@@ -20,7 +20,7 @@ import { useAppContext } from "../../context/AppContext";
 import type { IPerson } from "../../context/AppContext";
 
 const AssinmentWorkload: React.FC = () => {
-	const { addPersonWorkloads, setLoading, personWorkloads, people, tasks } = useAppContext();
+	const { addPersonWorkloads, setLoading, personWorkloads, people } = useAppContext();
 	const { filters, getFilteredData } = useFilterContext();
 	// 分離した pageKey
 	const itemsPageKey = "assignment:workload:items";   // DateRange for weeks
@@ -90,12 +90,6 @@ const AssinmentWorkload: React.FC = () => {
     return result;
   }, [filters]);
 
-  // マスタ参照用
-  const taskNameById = useMemo(() => {
-    const m = new Map<number, string>();
-    tasks.forEach(t => m.set(t.id, t.name));
-    return m;
-  }, [tasks]);
 
 	// 期間内データのみを抽出
   const weekSet = useMemo(() => new Set(weekIsos), [weekIsos]);
@@ -103,6 +97,19 @@ const AssinmentWorkload: React.FC = () => {
     if (!weekIsos.length) return [] as typeof personWorkloads;
     return personWorkloads.filter(w => weekSet.has(w.week));
   }, [personWorkloads, weekSet, weekIsos.length]);
+
+	// タスク名参照用: personWorkloads の task フィールドから直接取得（tasks に依存しない）
+	const taskNameById = useMemo(() => {
+		const m = new Map<number, string>();
+		filteredPW.forEach(w => {
+			const id = w?.task?.id;
+			const name = w?.task?.name;
+			if (typeof id === 'number' && typeof name === 'string' && name) {
+				m.set(id, name);
+			}
+		});
+		return m;
+	}, [filteredPW]);
 
   // 集計インデックスの構築
   const aggregates = useMemo(() => {
@@ -155,28 +162,30 @@ const AssinmentWorkload: React.FC = () => {
     return v.toFixed(1);
   };
 
-  // トグル操作
-  const togglePerson = (pid: number) => {
-    setExpandedPersons(prev => {
-      const n = new Set(prev);
-      if (n.has(pid)) n.delete(pid); else n.add(pid);
-      return n;
-    });
-  };
+	// トグル操作
+	const togglePerson = (pid: number) => {
+		setExpandedPersons(prev => {
+			const n = new Set(prev);
+			if (n.has(pid)) n.delete(pid); else n.add(pid);
+			return n;
+		});
+	};
 	// Subproject は個別に折りたたまない（Person 展開時に常に表示）
 
-		// 部署名を付与した People 配列
-		type PersonWithDept = IPerson & { departmentName: string };
-		const peopleWithDeptName: PersonWithDept[] = useMemo(() =>
-			people.map(p => ({ ...p, departmentName: p.department?.name || '(No Department)' })),
-			[people]
-		);
-		// CheckboxFilter 用のオプション配列（ジェネリクスを素直に推論させるため単純化）
-		type DeptOption = { departmentName: string };
-		const peopleDeptOptions: DeptOption[] = useMemo(
-			() => peopleWithDeptName.map(p => ({ departmentName: p.departmentName })),
-			[peopleWithDeptName]
-		);
+	// 部署名を付与した People 配列
+	type PersonWithDept = IPerson & { departmentName: string };
+	const peopleWithDeptName: PersonWithDept[] = useMemo(
+		() => people.map(p => ({ ...p, departmentName: p.department?.name || '(No Department)' })),
+		[people]
+	);
+
+	// CheckboxFilter 用のオプション配列（ジェネリクスを素直に推論させるため単純化）
+	type DeptOption = { departmentName: string };
+	const peopleDeptOptions: DeptOption[] = useMemo(
+		() => peopleWithDeptName.map(p => ({ departmentName: p.departmentName })),
+		[peopleWithDeptName]
+	);
+
 	// 行に効くフィルタを適用した People（FilterContext 経由）
 	const peopleFiltered = useMemo(() => {
 		const sorted = [...peopleWithDeptName].sort((a, b) => a.name.localeCompare(b.name));
