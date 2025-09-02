@@ -37,30 +37,17 @@ const AssinmentTask: React.FC = () => {
     };
   }, [itemsStart, itemsEnd, addTasks, setLoading]);
 
-  // Department options + filtering
-  type DeptOption = { departmentName: string };
-  const peopleWithDeptName: (DeptOption & { id: number; name: string })[] = useMemo(() => {
-    return (people ?? []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      departmentName: p.department?.name || "(No Department)",
-    }));
-  }, [people]);
-
-  // groups は groupsPageKey を用いて FilterContext 経由で抽出
   const peopleFiltered = useMemo(() => {
-    return getFilteredData(groupsPageKey, peopleWithDeptName);
-  }, [peopleWithDeptName, getFilteredData]);
+    return getFilteredData(groupsPageKey, people ?? []);
+  }, [people, getFilteredData]);
 
   const allowedPersonIds = useMemo(() => new Set(peopleFiltered.map((p) => p.id)), [peopleFiltered]);
 
-  // People毎にグループを作成（部門フィルター適用）
   const groups: GanttGroup[] = useMemo(
-    () => peopleFiltered.map((person) => ({ id: person.id, content: person.name })),
+  () => (peopleFiltered ?? []).map((person) => ({ id: person.id, content: person.name })),
     [peopleFiltered]
   );
 
-  // items は itemsPageKey（dateRange）を適用してから、部門で可視化対象の人に限定
   const filteredTasks = useMemo(() => {
     return getFilteredData(itemsPageKey, tasks ?? []);
   }, [tasks, getFilteredData]);
@@ -94,10 +81,10 @@ const AssinmentTask: React.FC = () => {
           <DateRangeFilter pageKey={itemsPageKey} label="Period" compact />
         </Box>
         <CollapsibleFilterPanel pageKey={groupsPageKey} sx={{ ml: 2 }}>
-          <CheckboxFilter<DeptOption>
+          <CheckboxFilter
             pageKey={groupsPageKey}
-            data={peopleWithDeptName}
-            property={"departmentName"}
+            data={people ?? []}
+            property={"department.name"}
             label="Department"
           />
         </CollapsibleFilterPanel>

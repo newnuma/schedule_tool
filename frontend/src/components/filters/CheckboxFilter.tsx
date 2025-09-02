@@ -12,22 +12,30 @@ import { useFilterContext } from "../../context/FilterContext";
 interface CheckboxFilterProps<T> {
   pageKey: string;
   data: T[];
-  property: keyof T;
+  property: keyof T | string; // support dot-path like "department.name"
   label: string;
   hideTitle?: boolean;
 }
 
+const getByPath = (obj: any, path: string) => {
+  if (!obj || !path) return undefined;
+  return path.split(".").reduce((acc: any, key: string) => (acc == null ? undefined : acc[key]), obj);
+};
+
 const CheckboxFilter = <T,>({ pageKey, data, property, label, hideTitle = false }: CheckboxFilterProps<T>) => {
   const { filters, setDropdownFilter } = useFilterContext();
+  const propertyKey = String(property);
   
   // 現在の選択値を取得
-  const currentSelectedValues = filters[pageKey]?.dropdown[property as string] || [];
+  const currentSelectedValues = filters[pageKey]?.dropdown[propertyKey] || [];
   
   // データから選択可能な値を抽出（重複除去）
   const availableOptions = useMemo(() => {
-    const values = data.map(item => (item as any)[property]).filter(Boolean);
-    return Array.from(new Set(values));
-  }, [data, property]);
+    const values = data
+      .map(item => getByPath(item as any, propertyKey))
+      .filter((v) => v !== undefined && v !== null && v !== "");
+    return Array.from(new Set(values.map(v => String(v))));
+  }, [data, propertyKey]);
 
   const handleChange = (value: string, checked: boolean) => {
     let newValues: string[];
@@ -38,7 +46,7 @@ const CheckboxFilter = <T,>({ pageKey, data, property, label, hideTitle = false 
       // チェックが外された場合、値を削除
       newValues = currentSelectedValues.filter((v: string) => v !== value);
     }
-    setDropdownFilter(pageKey, property as string, newValues);
+    setDropdownFilter(pageKey, propertyKey, newValues);
   };
 
   return (

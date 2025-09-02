@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Box,
-  IconButton,
+	Table,
+	TableBody,
+	TableCell,
+	TableContainer,
+	TableHead,
+	TableRow,
+	Paper,
+	Box,
+	IconButton,
 } from "@mui/material";
 import { ExpandMore, ChevronRight } from "@mui/icons-material";
 import DateRangeFilter from "../../components/filters/DateRangeFilter";
@@ -17,7 +16,6 @@ import { CollapsibleFilterPanel, CheckboxFilter } from "../../components/filters
 import { useFilterContext } from "../../context/FilterContext";
 import { fetchAssignmentWorkloads } from "../../api/bridgeApi";
 import { useAppContext } from "../../context/AppContext";
-import type { IPerson } from "../../context/AppContext";
 
 const AssinmentWorkload: React.FC = () => {
 	const { addPersonWorkloads, setLoading, personWorkloads, people } = useAppContext();
@@ -172,25 +170,11 @@ const AssinmentWorkload: React.FC = () => {
 	};
 	// Subproject は個別に折りたたまない（Person 展開時に常に表示）
 
-	// 部署名を付与した People 配列
-	type PersonWithDept = IPerson & { departmentName: string };
-	const peopleWithDeptName: PersonWithDept[] = useMemo(
-		() => people.map(p => ({ ...p, departmentName: p.department?.name || '(No Department)' })),
-		[people]
-	);
-
-	// CheckboxFilter 用のオプション配列（ジェネリクスを素直に推論させるため単純化）
-	type DeptOption = { departmentName: string };
-	const peopleDeptOptions: DeptOption[] = useMemo(
-		() => peopleWithDeptName.map(p => ({ departmentName: p.departmentName })),
-		[peopleWithDeptName]
-	);
-
 	// 行に効くフィルタを適用した People（FilterContext 経由）
 	const peopleFiltered = useMemo(() => {
-		const sorted = [...peopleWithDeptName].sort((a, b) => a.name.localeCompare(b.name));
+		const sorted = [...people].sort((a, b) => a.name.localeCompare(b.name));
 		return getFilteredData(groupsPageKey, sorted);
-	}, [peopleWithDeptName, getFilteredData]);
+	}, [people, getFilteredData]);
 
 	return (
 		<Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -200,10 +184,10 @@ const AssinmentWorkload: React.FC = () => {
 				{/* 右上: 行に作用するフィルタ群 */}
 				<Box sx={{ ml: 'auto' }}>
 					<CollapsibleFilterPanel pageKey={groupsPageKey}>
-						<CheckboxFilter<DeptOption>
+						<CheckboxFilter
 							pageKey={groupsPageKey}
-							data={peopleDeptOptions}
-							property="departmentName"
+							data={people}
+							property="department.name"
 							label="Department"
 						/>
 					</CollapsibleFilterPanel>

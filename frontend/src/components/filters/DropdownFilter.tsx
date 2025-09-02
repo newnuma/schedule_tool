@@ -13,27 +13,35 @@ import { useFilterContext } from "../../context/FilterContext";
 interface DropdownFilterProps<T> {
   pageKey: string;
   data: T[];
-  property: keyof T;
+  property: keyof T | string; // support dot-path like "department.name"
   label: string;
   hideTitle?: boolean;
 }
 
+const getByPath = (obj: any, path: string) => {
+  if (!obj || !path) return undefined;
+  return path.split(".").reduce((acc: any, key: string) => (acc == null ? undefined : acc[key]), obj);
+};
+
 const DropdownFilter = <T,>({ pageKey, data, property, label, hideTitle = false }: DropdownFilterProps<T>) => {
   const { filters, setDropdownFilter } = useFilterContext();
+  const propertyKey = String(property);
   
   // 現在の選択値を取得（単一選択なので最初の要素）
-  const currentSelectedValue = filters[pageKey]?.dropdown[property as string]?.[0] || "";
+  const currentSelectedValue = filters[pageKey]?.dropdown[propertyKey]?.[0] || "";
   
   // データから選択可能な値を抽出（重複除去）
   const availableOptions = useMemo(() => {
-    const values = data.map(item => (item as any)[property]).filter(Boolean);
-    return Array.from(new Set(values));
-  }, [data, property]);
+    const values = data
+      .map(item => getByPath(item as any, propertyKey))
+      .filter((v) => v !== undefined && v !== null && v !== "");
+    return Array.from(new Set(values.map(v => String(v))));
+  }, [data, propertyKey]);
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     const value = event.target.value;
     // 単一選択なので、選択された値を配列にして格納（空文字の場合は空配列）
-    setDropdownFilter(pageKey, property as string, value ? [value] : []);
+    setDropdownFilter(pageKey, propertyKey, value ? [value] : []);
   };
 
   return (

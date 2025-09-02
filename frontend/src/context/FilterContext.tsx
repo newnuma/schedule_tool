@@ -18,6 +18,10 @@ export const useFilterContext = () => {
 
 export const FilterProvider = ({ children }: { children: ReactNode }) => {
   const [filters, setFilters] = useState<Record<string, FilterConfig>>({});
+  const getByPath = useCallback((obj: any, path?: string) => {
+    if (!obj || !path) return undefined;
+    return path.split(".").reduce((acc: any, key: string) => (acc == null ? undefined : acc[key]), obj);
+  }, []);
 
   // ドロップダウンフィルターの設定
   const setDropdownFilter = useCallback((pageKey: string, property: string, selectedValues: any[]) => {
@@ -73,33 +77,33 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
     // ドロップダウンフィルター適用
     Object.entries(filterConfig.dropdown).forEach(([property, selectedValues]) => {
       if (selectedValues.length > 0) {
-        filteredData = filteredData.filter(item => 
-          selectedValues.includes((item as any)[property])
-        );
+        filteredData = filteredData.filter(item => {
+          const v = getByPath(item as any, property);
+          if (v === undefined || v === null) return false;
+          return (selectedValues as any[]).map(String).includes(String(v));
+        });
       }
     });
 
     // 日付範囲フィルター適用
     if (filterConfig.dateRange) {
       const { start, end, startProperty = 'start_date', endProperty = 'end_date' } = filterConfig.dateRange;
-      
       if (start) {
         filteredData = filteredData.filter(item => {
-          const itemStartDate = (item as any)[startProperty];
-          return itemStartDate && itemStartDate >= start;
+          const itemStartDate = getByPath(item as any, startProperty);
+          return itemStartDate && String(itemStartDate) >= String(start);
         });
       }
-      
       if (end) {
         filteredData = filteredData.filter(item => {
-          const itemEndDate = (item as any)[endProperty];
-          return itemEndDate && itemEndDate <= end;
+          const itemEndDate = getByPath(item as any, endProperty);
+          return itemEndDate && String(itemEndDate) <= String(end);
         });
       }
     }
 
     return filteredData;
-  }, [filters]);
+  }, [filters, getByPath]);
 
   return (
     <FilterContext.Provider
