@@ -11,29 +11,46 @@ const DistributePage: React.FC = () => {
   const { subprojects, phases } = useAppContext();
   const { getFilteredData } = useFilterContext();
 
+  // Split pageKeys by target: items vs groups
+  const itemsPageKey = "distribute.phases:items";   // date range on phases (items)
+  const groupsPageKey = "distribute.subprojects:groups"; // checkbox on subprojects (groups)
+
   // 基本データ拡張（フィルタ用にサブプロジェクト名を平坦化）
   const basePhases = useMemo(
     () => (phases ?? []).map(p => ({ ...p, subprojectName: p.subproject?.name ?? "" })),
     [phases]
   );
 
-  // フィルタ適用
-  const filteredPhases = getFilteredData("distribute.phases", basePhases);
+  // Apply group filter to subprojects directly
+  const baseSubprojects = useMemo(
+    () => (subprojects ?? []).map(sp => ({ ...sp })),
+    [subprojects]
+  );
+  const filteredSubprojects = useMemo(
+    () => getFilteredData(groupsPageKey, baseSubprojects),
+    [baseSubprojects, getFilteredData]
+  );
+  const allowedSubprojectIds = useMemo(
+    () => new Set(filteredSubprojects.map(sp => sp.id)),
+    [filteredSubprojects]
+  );
 
-  // グループ（フィルタ後のPhaseが属するSubprojectのみ表示）
+  // Apply items filter (date range) then intersect with allowed groups
+  const phasesForItems = useMemo(
+    () => getFilteredData(itemsPageKey, basePhases),
+    [basePhases, getFilteredData]
+  );
+  const filteredPhases = useMemo(
+    () => phasesForItems.filter(p => allowedSubprojectIds.has(p.subproject.id)),
+    [phasesForItems, allowedSubprojectIds]
+  );
+
+  // グループはAppContextのSubprojects（グループフィルタ適用後）
   const groups = useMemo(
     () => {
-      const ids = new Set<number>();
-      const list = [] as { id: number; content: string }[];
-      filteredPhases.forEach(p => {
-        if (!ids.has(p.subproject.id)) {
-          ids.add(p.subproject.id);
-          list.push({ id: p.subproject.id, content: p.subproject.name });
-        }
-      });
-      return list;
+      return filteredSubprojects.map(sp => ({ id: sp.id, content: sp.name }));
     },
-    [filteredPhases]
+    [filteredSubprojects]
   );
 
   // アイテム
@@ -52,17 +69,17 @@ const DistributePage: React.FC = () => {
   // フィルタコンポーネント
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel
-      pageKey="distribute.phases"
+      pageKey={groupsPageKey}
       defaultExpanded={false}
     >
       <CheckboxFilter
-        pageKey="distribute.phases"
-        data={basePhases}
-        property="subprojectName"
+        pageKey={groupsPageKey}
+        data={baseSubprojects}
+        property="name"
         label="Subproject"
       />
       <DateRangeFilter
-        pageKey="distribute.phases"
+        pageKey={itemsPageKey}
         label="Date Range"
         startProperty="start_date"
         endProperty="end_date"

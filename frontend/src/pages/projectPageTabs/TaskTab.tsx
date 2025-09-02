@@ -13,6 +13,9 @@ import { useContextMenu } from "../../hooks/useContextMenu";
 const TaskTab: React.FC = () => {
   const { assets, tasks, selectedSubprojectId, phases, isEditMode } = useAppContext();
   const { getFilteredData, filters } = useFilterContext();
+  // Split pageKeys by target: items vs groups
+  const itemsPageKey = "project.tasks:items";   // date range etc. for items
+  const groupsPageKey = "project.tasks:groups"; // group-level filter (asset type)
   const { openCreateForm } = useFormContext();
   const {
     contextMenu,
@@ -73,8 +76,25 @@ const TaskTab: React.FC = () => {
     [assets, filteredPhases]
   );
 
-  // 汎用フィルター適用（Assetに対して）
-  const filteredAssets = getFilteredData("project.tasks", basicFilteredAssets);
+  // Apply group filters (asset type, etc.) to decide visible groups
+  const assetsForGroups = useMemo(
+    () => getFilteredData(groupsPageKey, basicFilteredAssets),
+    [basicFilteredAssets, getFilteredData]
+  );
+  const allowedAssetIds = useMemo(
+    () => new Set(assetsForGroups.map(a => a.id)),
+    [assetsForGroups]
+  );
+
+  // Apply item filters (date range) to assets, then intersect with allowed groups
+  const assetsForItems = useMemo(
+    () => getFilteredData(itemsPageKey, basicFilteredAssets),
+    [basicFilteredAssets, getFilteredData]
+  );
+  const filteredAssets = useMemo(
+    () => assetsForItems.filter(a => allowedAssetIds.has(a.id)),
+    [assetsForItems, allowedAssetIds]
+  );
 
   // フィルター済みAssetに属するTaskのみを抽出
   const filteredTasks = useMemo(
@@ -135,18 +155,18 @@ const TaskTab: React.FC = () => {
   // Filter component
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel
-      pageKey="project.tasks"
+      pageKey={groupsPageKey}
       defaultExpanded={false}
     >
       <CheckboxFilter
-        pageKey="project.tasks"
+        pageKey={groupsPageKey}
         data={basicFilteredAssets}
         property="type"
-        label="Asset Type"
+        label="Asset Type (Groups)"
       />
       <DateRangeFilter
-        pageKey="project.tasks"
-        label="Asset Date Range"
+        pageKey={itemsPageKey}
+        label="Asset Date Range (Items)"
         startProperty="start_date"
         endProperty="end_date"
       />

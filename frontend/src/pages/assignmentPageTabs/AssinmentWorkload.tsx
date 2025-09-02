@@ -21,22 +21,24 @@ import type { IPerson } from "../../context/AppContext";
 
 const AssinmentWorkload: React.FC = () => {
 	const { addPersonWorkloads, setLoading, personWorkloads, people, tasks } = useAppContext();
-	const { filters } = useFilterContext();
-	const pageKey = "assignment:workload";
+	const { filters, getFilteredData } = useFilterContext();
+	// 分離した pageKey
+	const itemsPageKey = "assignment:workload:items";   // DateRange for weeks
+	const groupsPageKey = "assignment:workload:groups"; // Department filter for people
 	const debounceRef = useRef<number | undefined>(undefined);
 	const [expandedPersons, setExpandedPersons] = useState<Set<number>>(new Set());
 
 
+	const itemsDateRange = filters[itemsPageKey]?.dateRange;
+	const itemsStart = itemsDateRange?.start;
+	const itemsEnd = itemsDateRange?.end;
 	useEffect(() => {
-		const dr = filters[pageKey]?.dateRange;
-		const start = dr?.start;
-		const end = dr?.end;
-		if (!start || !end) return;
+		if (!itemsStart || !itemsEnd) return;
 		if (debounceRef.current) window.clearTimeout(debounceRef.current);
 		debounceRef.current = window.setTimeout(async () => {
 			try {
 				setLoading(true);
-				const res = await fetchAssignmentWorkloads(start, end);
+				const res = await fetchAssignmentWorkloads(itemsStart, itemsEnd);
 				addPersonWorkloads(res.personworkloads || []);
 			} finally {
 				setLoading(false);
@@ -45,7 +47,7 @@ const AssinmentWorkload: React.FC = () => {
 		return () => {
 			if (debounceRef.current) window.clearTimeout(debounceRef.current);
 		};
-	}, [filters, addPersonWorkloads, setLoading]);
+	}, [itemsStart, itemsEnd, addPersonWorkloads, setLoading]);
 
 	// 期間変更時は展開状態をリセット
 	useEffect(() => {
@@ -68,8 +70,8 @@ const AssinmentWorkload: React.FC = () => {
   const toMonthDay = (dt: Date) => `${dt.getMonth() + 1}/${dt.getDate()}`;
 
   // 週配列（start~end を月曜ベース（既に月曜渡し）で1週刻み、両端含む）
-  const { weekIsos, weekLabels } = useMemo(() => {
-    const dr = filters[pageKey]?.dateRange;
+	const { weekIsos, weekLabels } = useMemo(() => {
+		const dr = filters[itemsPageKey]?.dateRange;
     const start = dr?.start;
     const end = dr?.end;
     const result = { weekIsos: [] as string[], weekLabels: [] as string[] };
@@ -175,25 +177,22 @@ const AssinmentWorkload: React.FC = () => {
 			() => peopleWithDeptName.map(p => ({ departmentName: p.departmentName })),
 			[peopleWithDeptName]
 		);
-	// 部署フィルタの選択値
-	const selectedDepartments: string[] = (filters[pageKey]?.dropdown?.["departmentName"] as string[]) || [];
-	// 行に効くフィルタを適用した People
+	// 行に効くフィルタを適用した People（FilterContext 経由）
 	const peopleFiltered = useMemo(() => {
 		const sorted = [...peopleWithDeptName].sort((a, b) => a.name.localeCompare(b.name));
-		if (!selectedDepartments.length) return sorted;
-		return sorted.filter(p => selectedDepartments.includes(p.departmentName));
-	}, [peopleWithDeptName, selectedDepartments]);
+		return getFilteredData(groupsPageKey, sorted);
+	}, [peopleWithDeptName, getFilteredData]);
 
 	return (
 		<Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 			<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexShrink: 0 }}>
-				{/* 左上: 列に作用する期間フィルタ */}
-				<DateRangeFilter pageKey={pageKey} label="Period (Week)" startProperty="week" endProperty="week" />
+				{/* 左上: 列に作用する期間フィルタ（itemsPageKey） */}
+				<DateRangeFilter pageKey={itemsPageKey} label="Period (Week)" startProperty="week" endProperty="week" />
 				{/* 右上: 行に作用するフィルタ群 */}
 				<Box sx={{ ml: 'auto' }}>
-					<CollapsibleFilterPanel pageKey={pageKey}>
+					<CollapsibleFilterPanel pageKey={groupsPageKey}>
 						<CheckboxFilter<DeptOption>
-							pageKey={pageKey}
+							pageKey={groupsPageKey}
 							data={peopleDeptOptions}
 							property="departmentName"
 							label="Department"

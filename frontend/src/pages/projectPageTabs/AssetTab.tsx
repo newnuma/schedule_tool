@@ -13,6 +13,9 @@ import { useContextMenu } from "../../hooks/useContextMenu";
 const AssetTab: React.FC = () => {
   const { phases, assets, selectedSubprojectId, isEditMode } = useAppContext();
   const { getFilteredData } = useFilterContext();
+  // Split pageKeys by target: items vs groups
+  const itemsPageKey = "project.assets:items";   // date range + status for items
+  const groupsPageKey = "project.assets:groups"; // type for groups
   const { openCreateForm } = useFormContext();
   const {
     contextMenu,
@@ -73,25 +76,37 @@ const AssetTab: React.FC = () => {
     [assets, filteredPhases]
   );
 
-  // 汎用フィルター適用
-  const filteredAssets = getFilteredData("project.assets", basicFilteredAssets);
+  // Apply group filters to determine visible type groups
+  const assetsForGroups = useMemo(
+    () => getFilteredData(groupsPageKey, basicFilteredAssets),
+    [basicFilteredAssets, getFilteredData]
+  );
+  const allowedTypes = useMemo(
+    () => new Set(assetsForGroups.map(a => a.type)),
+    [assetsForGroups]
+  );
+
+  // Apply item filters (date range, status), then intersect with allowed groups
+  const assetsForItems = useMemo(
+    () => getFilteredData(itemsPageKey, basicFilteredAssets),
+    [basicFilteredAssets, getFilteredData]
+  );
+  const filteredAssets = useMemo(
+    () => assetsForItems.filter(a => allowedTypes.has(a.type)),
+    [assetsForItems, allowedTypes]
+  );
 
   // ガント表示用データの組み立て
   const groups = useMemo(
     () => {
       // 最初にPhaseグループを追加（固定）
-  const phaseGroup = { id: 'phase-group', content: 'Phase', className: 'phase-row' };
-      
-      // Asset typeによるグループ
-      const typeGroups = [
-        { id: 'EXT', content: 'EXT' },
-        { id: 'INT', content: 'INT' },
-        { id: 'Common', content: 'Common' }
-      ];
-      
+      const phaseGroup = { id: 'phase-group', content: 'Phase', className: 'phase-row' };
+      // Groups are asset types that passed the group filter
+      const typeSet = new Set(assetsForGroups.map(a => a.type));
+      const typeGroups = Array.from(typeSet).map(t => ({ id: t, content: t }));
       return [phaseGroup, ...typeGroups];
     },
-    []
+    [assetsForGroups]
   );
 
   const items = useMemo(
@@ -138,24 +153,24 @@ const AssetTab: React.FC = () => {
   // Filter component
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel 
-      pageKey="project.assets" 
+      pageKey={groupsPageKey}
       defaultExpanded={false}
     >
       <DropdownFilter
-        pageKey="project.assets"
+        pageKey={groupsPageKey}
         data={basicFilteredAssets}
         property="type"
-        label="Type"
+        label="Type (Groups)"
       />
       <CheckboxFilter
-        pageKey="project.assets"
+        pageKey={itemsPageKey}
         data={basicFilteredAssets}
         property="status"
-        label="Status"
+        label="Status (Items)"
       />
       <DateRangeFilter
-        pageKey="project.assets"
-        label="Date Range"
+        pageKey={itemsPageKey}
+        label="Date Range (Items)"
         startProperty="start_date"
         endProperty="end_date"
       />

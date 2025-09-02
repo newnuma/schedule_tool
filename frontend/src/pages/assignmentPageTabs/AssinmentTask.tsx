@@ -10,22 +10,23 @@ import CheckboxFilter from "../../components/filters/CheckboxFilter";
 
 const AssinmentTask: React.FC = () => {
   const { people, tasks, addTasks, setLoading } = useAppContext();
-  const { filters } = useFilterContext();
-  const pageKey = "assignment:task";
-  const debounceRef = useRef<number | undefined>(undefined);
+  const { filters, getFilteredData } = useFilterContext();
+  // 分離した pageKey
+  const itemsPageKey = "assignment:task:items";   // DateRange for tasks
+  const groupsPageKey = "assignment:task:groups"; // Department filter for people
 
-  // フィルター変更に応じてタスクを取得（追加）
+  // データ取得（itemsPageKey の dateRange にのみ連動）
+  const debounceRef = useRef<number | undefined>(undefined);
+  const itemsDateRange = filters[itemsPageKey]?.dateRange;
+  const itemsStart = itemsDateRange?.start;
+  const itemsEnd = itemsDateRange?.end;
   useEffect(() => {
-    const dr = filters[pageKey]?.dateRange;
-    const start = dr?.start;
-    const end = dr?.end;
-    if (!start || !end) return;
-    // デバウンス
+    if (!itemsStart || !itemsEnd) return;
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(async () => {
       try {
         setLoading(true);
-        const res = await fetchAssignmentTasks(start, end);
+        const res = await fetchAssignmentTasks(itemsStart, itemsEnd);
         addTasks(res.tasks || []); // 追加。置き換えはしない
       } finally {
         setLoading(false);
@@ -34,7 +35,7 @@ const AssinmentTask: React.FC = () => {
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [filters, addTasks, setLoading]);
+  }, [itemsStart, itemsEnd, addTasks, setLoading]);
 
   // Department options + filtering
   type DeptOption = { departmentName: string };
@@ -46,11 +47,10 @@ const AssinmentTask: React.FC = () => {
     }));
   }, [people]);
 
-  const selectedDepartments: string[] = (filters[pageKey]?.dropdown?.["departmentName"] as string[]) || [];
+  // groups は groupsPageKey を用いて FilterContext 経由で抽出
   const peopleFiltered = useMemo(() => {
-    if (!selectedDepartments || selectedDepartments.length === 0) return peopleWithDeptName;
-    return peopleWithDeptName.filter((p) => selectedDepartments.includes(p.departmentName));
-  }, [peopleWithDeptName, selectedDepartments]);
+    return getFilteredData(groupsPageKey, peopleWithDeptName);
+  }, [peopleWithDeptName, getFilteredData]);
 
   const allowedPersonIds = useMemo(() => new Set(peopleFiltered.map((p) => p.id)), [peopleFiltered]);
 
@@ -60,12 +60,14 @@ const AssinmentTask: React.FC = () => {
     [peopleFiltered]
   );
 
-  // console.log("tasks", tasks);
+  // items は itemsPageKey（dateRange）を適用してから、部門で可視化対象の人に限定
+  const filteredTasks = useMemo(() => {
+    return getFilteredData(itemsPageKey, tasks ?? []);
+  }, [tasks, getFilteredData]);
 
-  // 各タスクを、アサインされているpeople毎にアイテムとして展開
   const items: GanttItem[] = useMemo(() => {
     const taskItems: GanttItem[] = [];
-    (tasks ?? []).forEach((task) => {
+    (filteredTasks ?? []).forEach((task) => {
       if (!task.start_date || !task.end_date) {
         return; // 不正データはスキップ
       }
@@ -82,18 +84,18 @@ const AssinmentTask: React.FC = () => {
       });
     });
     return taskItems;
-  }, [tasks, allowedPersonIds]);
+  }, [filteredTasks, allowedPersonIds]);
 
   return (
     <div>
       {/* Top bar: Date range on the left, filters on the right */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
         <Box>
-          <DateRangeFilter pageKey={pageKey} label="Period" compact />
+          <DateRangeFilter pageKey={itemsPageKey} label="Period" compact />
         </Box>
-        <CollapsibleFilterPanel pageKey={pageKey} sx={{ ml: 2 }}>
+        <CollapsibleFilterPanel pageKey={groupsPageKey} sx={{ ml: 2 }}>
           <CheckboxFilter<DeptOption>
-            pageKey={pageKey}
+            pageKey={groupsPageKey}
             data={peopleWithDeptName}
             property={"departmentName"}
             label="Department"

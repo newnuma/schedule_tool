@@ -38,8 +38,9 @@ const AssignmentPage: React.FC = () => {
 
   // 初期デフォルト期間（今週月曜〜8週間後-1日）を投入（未設定時のみ）
   useEffect(() => {
-    const taskKey = "assignment:task";
-    const workloadKey = "assignment:workload";
+  // Use split pageKeys: items-only hold date ranges (groups have checkbox etc.)
+  const taskKey = "assignment:task:items";
+  const workloadKey = "assignment:workload:items";
     const alreadyTask = !!filters[taskKey]?.dateRange;
     const alreadyWorkload = !!filters[workloadKey]?.dateRange;
     if (alreadyTask && alreadyWorkload) return;
