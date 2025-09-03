@@ -85,19 +85,28 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // 日付範囲フィルター適用
+    // 日付範囲フィルター適用（オーバーラップ判定: start_date <= end AND end_date >= start）
     if (filterConfig.dateRange) {
       const { start, end, startProperty = 'start_date', endProperty = 'end_date' } = filterConfig.dateRange;
-      if (start) {
+      // ISO(YYYY-MM-DD) 前提のため、文字列比較でも大小関係は正しく扱える
+      if (start && end) {
         filteredData = filteredData.filter(item => {
-          const itemStartDate = getByPath(item as any, startProperty);
-          return itemStartDate && String(itemStartDate) >= String(start);
+          const s = getByPath(item as any, startProperty);
+          const e = getByPath(item as any, endProperty);
+          if (!s || !e) return false;
+          return String(s) <= String(end) && String(e) >= String(start);
         });
-      }
-      if (end) {
+      } else if (start) {
+        // start のみ指定: 期間の終端が start 以降
         filteredData = filteredData.filter(item => {
-          const itemEndDate = getByPath(item as any, endProperty);
-          return itemEndDate && String(itemEndDate) <= String(end);
+          const e = getByPath(item as any, endProperty);
+          return e && String(e) >= String(start);
+        });
+      } else if (end) {
+        // end のみ指定: 期間の始端が end 以前
+        filteredData = filteredData.filter(item => {
+          const s = getByPath(item as any, startProperty);
+          return s && String(s) <= String(end);
         });
       }
     }
