@@ -1,4 +1,4 @@
-import { AppBar, CircularProgress, Toolbar } from "@mui/material";
+import { AppBar, CircularProgress, Toolbar, Box } from "@mui/material";
 import {
   Layout,
   Content,
@@ -20,9 +20,15 @@ const App = () => {
       <Content>
         <AppBar position="static">
         </AppBar>
-        {currentPage === "Distribute" && <DistributePage />}
-        {currentPage === "Project" && <ProjectPage />}
-        {currentPage === "Assignment" && <AssignmentPage />}
+        <Box sx={{ display: currentPage === 'Distribute' ? 'block' : 'none' }}>
+          <DistributePage />
+        </Box>
+        <Box sx={{ display: currentPage === 'Project' ? 'block' : 'none' }}>
+          <ProjectPage />
+        </Box>
+        <Box sx={{ display: currentPage === 'Assignment' ? 'block' : 'none' }}>
+          <AssignmentPage />
+        </Box>
       </Content>
       <OverlayBackdrop open={loading}>
         <CircularProgress color="inherit" />
