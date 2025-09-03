@@ -158,11 +158,33 @@ def fetch_project_page(project_id: int) -> Any:
 
     # Task取得（親: Asset）
     asset_ids = [asset["id"] for asset in assets]
-    tasks = get_entities("Task", [["asset", "in", asset_ids]]) if asset_ids else []
+    task_fields = [
+        "id",
+        "name",
+        "asset",
+        "start_date",
+        "end_date",
+        "status",
+        "assignees",
+        "asset.phase.subproject",
+    ]
+    tasks = get_entities("Task", [["asset", "in", asset_ids]], task_fields) if asset_ids else []
+    # サブプロジェクトを統一キーに
+    tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
 
     # PersonWorkload取得（親: Task）
     task_ids = [task["id"] for task in tasks]
-    personworkloads = get_entities("PersonWorkload", [["task", "in", task_ids]]) if task_ids else []
+    pw_fields = [
+        "id",
+        "name",
+        "task",
+        "person",
+        "week",
+        "man_week",
+        "task.asset.phase.subproject",
+    ]
+    personworkloads = get_entities("PersonWorkload", [["task", "in", task_ids]], pw_fields) if task_ids else []
+    personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
 
     # PMMWorkload取得（親: Subproject）
     pmmworkloads = get_entities("PMMWorkload", [["subproject", "is", subproject["id"]]]) if subproject else []
@@ -187,69 +209,39 @@ def fetch_assignment_page(start_iso: str, end_iso: str) -> Any:
     start = _parse_iso_date(start_iso)
     end = _parse_iso_date(end_iso)
 
-    # 生データ取得（未整形）
-    tasks_raw = sg.find("Task", [], None)
-    pw_raw = sg.find("PersonWorkload", [], None)
+    # DB側でフィルタして取得
+    task_fields = [
+        "id",
+        "name",
+        "asset",
+        "start_date",
+        "end_date",
+        "status",
+        "assignees",
+        "asset.phase.subproject",
+    ]
+    tasks = get_entities(
+        "Task",
+        [["start_date", "<=", start], ["end_date", ">=", end]],
+        task_fields,
+    )
+    tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
 
-    # 期間に重なるTask
-    tasks_filtered = [t for t in tasks_raw if _overlaps(t["start_date"], t["end_date"], start, end)]
-
-    # 期間内のPersonWorkload（週が範囲内）
-    pw_filtered = [w for w in pw_raw if start <= w["week"] <= end]
-
-    # 整形
-    tasks = _format_list(tasks_filtered)
-    personworkloads = _format_list(pw_filtered)
-
-    # subproject 埋め込みとキー置換（サーバ側で統一）
-    try:
-        # Task -> Asset -> Phase -> Subproject
-        asset_ids = list({t.get("asset", {}).get("id") for t in tasks if t.get("asset")})
-        assets = get_entities("Asset", [["id", "in", asset_ids]], ["id", "phase"]) if asset_ids else []
-        phase_ids = list({a.get("phase", {}).get("id") for a in assets if a.get("phase")})
-        phases = get_entities("Phase", [["id", "in", phase_ids]], ["id", "subproject"]) if phase_ids else []
-
-        asset_to_phase = {a["id"]: (a.get("phase") or {}).get("id") for a in assets}
-        phase_to_sp = {p["id"]: p.get("subproject") for p in phases}
-
-        for t in tasks:
-            aid = (t.get("asset") or {}).get("id")
-            pid = asset_to_phase.get(aid)
-            sp = phase_to_sp.get(pid)
-            if sp and isinstance(sp, dict) and "id" in sp:
-                t["asset.phase.subproject"] = {
-                    "type": "subproject",
-                    "id": sp.get("id"),
-                    "name": sp.get("name", ""),
-                }
-        tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
-
-        # Workload -> Task -> Asset -> Phase -> Subproject
-        task_ids = list({w.get("task", {}).get("id") for w in personworkloads if w.get("task")})
-        tasks_min = get_entities("Task", [["id", "in", task_ids]], ["id", "asset"]) if task_ids else []
-        asset_ids2 = list({t.get("asset", {}).get("id") for t in tasks_min if t.get("asset")})
-        assets2 = get_entities("Asset", [["id", "in", asset_ids2]], ["id", "phase"]) if asset_ids2 else []
-        phase_ids2 = list({a.get("phase", {}).get("id") for a in assets2 if a.get("phase")})
-        phases2 = get_entities("Phase", [["id", "in", phase_ids2]], ["id", "subproject"]) if phase_ids2 else []
-
-        task_to_asset = {t["id"]: (t.get("asset") or {}).get("id") for t in tasks_min}
-        asset_to_phase2 = {a["id"]: (a.get("phase") or {}).get("id") for a in assets2}
-        phase_to_sp2 = {p["id"]: p.get("subproject") for p in phases2}
-
-        for w in personworkloads:
-            tid = (w.get("task") or {}).get("id")
-            aid = task_to_asset.get(tid)
-            pid = asset_to_phase2.get(aid)
-            sp = phase_to_sp2.get(pid)
-            if sp and isinstance(sp, dict) and "id" in sp:
-                w["task.asset.phase.subproject"] = {
-                    "type": "subproject",
-                    "id": sp.get("id"),
-                    "name": sp.get("name", ""),
-                }
-        personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
-    except Exception:
-        pass
+    pw_fields = [
+        "id",
+        "name",
+        "task",
+        "person",
+        "week",
+        "man_week",
+        "task.asset.phase.subproject",
+    ]
+    personworkloads = get_entities(
+        "PersonWorkload",
+        [["week", ">=", start], ["week", "<=", end]],
+        pw_fields,
+    )
+    personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
 
     person = get_entities("Person")
 
@@ -264,35 +256,21 @@ def fetch_assignment_tasks(start_iso: str, end_iso: str) -> Any:
     start = _parse_iso_date(start_iso)
     end = _parse_iso_date(end_iso)
     # DB側でフィルター（start_date <= end かつ end_date >= start）
+    task_fields = [
+        "id",
+        "name",
+        "asset",
+        "start_date",
+        "end_date",
+        "status",
+        "assignees",
+        "asset.phase.subproject",
+    ]
     tasks = get_entities(
         "Task",
         [["start_date", "<=", end], ["end_date", ">=", start]],
+        task_fields,
     )
-    # subprojectをドットキーで付与（task -> asset -> phase -> subproject）
-    try:
-        asset_ids = list({t.get("asset", {}).get("id") for t in tasks if t.get("asset")})
-        assets = get_entities("Asset", [["id", "in", asset_ids]], ["id", "phase"]) if asset_ids else []
-        phase_ids = list({a.get("phase", {}).get("id") for a in assets if a.get("phase")})
-        phases = get_entities("Phase", [["id", "in", phase_ids]], ["id", "subproject"]) if phase_ids else []
-
-        asset_to_phase = {a["id"]: (a.get("phase") or {}).get("id") for a in assets}
-        phase_to_sp = {p["id"]: p.get("subproject") for p in phases}
-
-        for t in tasks:
-            aid = (t.get("asset") or {}).get("id")
-            pid = asset_to_phase.get(aid)
-            sp = phase_to_sp.get(pid)
-            if sp and isinstance(sp, dict) and "id" in sp:
-                # ドットキーで付与
-                t["asset.phase.subproject"] = {
-                    "type": "subproject",
-                    "id": sp.get("id"),
-                    "name": sp.get("name", ""),
-                }
-    except Exception:
-        # フォールバック（埋め込みなしでも返却）
-        pass
-    # サーバ側でキー名を置換（クライアントの正規化を不要に）
     tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
     return {"tasks": tasks}
 
@@ -300,37 +278,20 @@ def fetch_assignment_workloads(start_iso: str, end_iso: str) -> Any:
     """期間内のPersonWorkloadのみを返す（週=weekが範囲内）"""
     start = _parse_iso_date(start_iso)
     end = _parse_iso_date(end_iso)
+    pw_fields = [
+        "id",
+        "name",
+        "task",
+        "person",
+        "week",
+        "man_week",
+        "task.asset.phase.subproject",
+    ]
     personworkloads = get_entities(
         "PersonWorkload",
         [["week", ">=", start], ["week", "<=", end]],
+        pw_fields,
     )
-    # subprojectをドットキーで付与（workload -> task -> asset -> phase -> subproject）
-    try:
-        task_ids = list({w.get("task", {}).get("id") for w in personworkloads if w.get("task")})
-        tasks_min = get_entities("Task", [["id", "in", task_ids]], ["id", "asset"]) if task_ids else []
-        asset_ids = list({t.get("asset", {}).get("id") for t in tasks_min if t.get("asset")})
-        assets = get_entities("Asset", [["id", "in", asset_ids]], ["id", "phase"]) if asset_ids else []
-        phase_ids = list({a.get("phase", {}).get("id") for a in assets if a.get("phase")})
-        phases = get_entities("Phase", [["id", "in", phase_ids]], ["id", "subproject"]) if phase_ids else []
-
-        task_to_asset = {t["id"]: (t.get("asset") or {}).get("id") for t in tasks_min}
-        asset_to_phase = {a["id"]: (a.get("phase") or {}).get("id") for a in assets}
-        phase_to_sp = {p["id"]: p.get("subproject") for p in phases}
-
-        for w in personworkloads:
-            tid = (w.get("task") or {}).get("id")
-            aid = task_to_asset.get(tid)
-            pid = asset_to_phase.get(aid)
-            sp = phase_to_sp.get(pid)
-            if sp and isinstance(sp, dict) and "id" in sp:
-                w["task.asset.phase.subproject"] = {
-                    "type": "subproject",
-                    "id": sp.get("id"),
-                    "name": sp.get("name", ""),
-                }
-    except Exception:
-        pass
-    # サーバ側でキー名を置換（クライアントの正規化を不要に）
     personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
     return {"personworkloads": personworkloads}
 
@@ -349,51 +310,10 @@ def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[s
                 merged[item[id_key]] = item
         return list(merged.values())
 
-    # マージ後にも subproject を統一（project_page 側に欠けがちなため補完）
+    # マージ（各ページで subproject に正規化済み）
     merged_tasks = merge_by_id(project_page.get("tasks", []), assignment_page.get("tasks", []))
-    try:
-        # Task -> Asset -> Phase -> Subproject を埋めてから置換
-        asset_ids = list({t.get("asset", {}).get("id") for t in merged_tasks if t.get("asset")})
-        assets = get_entities("Asset", [["id", "in", asset_ids]], ["id", "phase"]) if asset_ids else []
-        phase_ids = list({a.get("phase", {}).get("id") for a in assets if a.get("phase")})
-        phases = get_entities("Phase", [["id", "in", phase_ids]], ["id", "subproject"]) if phase_ids else []
-        asset_to_phase = {a["id"]: (a.get("phase") or {}).get("id") for a in assets}
-        phase_to_sp = {p["id"]: p.get("subproject") for p in phases}
-        for t in merged_tasks:
-            if "subproject" in t:
-                continue
-            aid = (t.get("asset") or {}).get("id")
-            pid = asset_to_phase.get(aid)
-            sp = phase_to_sp.get(pid)
-            if sp and isinstance(sp, dict) and "id" in sp:
-                t["asset.phase.subproject"] = {"type": "subproject", "id": sp.get("id"), "name": sp.get("name", "")}
-        merged_tasks = remap_key_in_list(merged_tasks, "asset.phase.subproject", "subproject")
-    except Exception:
-        pass
 
     merged_pws = merge_by_id(project_page.get("personworkloads", []), assignment_page.get("personworkloads", []))
-    try:
-        task_ids = list({w.get("task", {}).get("id") for w in merged_pws if w.get("task")})
-        tasks_min = get_entities("Task", [["id", "in", task_ids]], ["id", "asset"]) if task_ids else []
-        asset_ids = list({t.get("asset", {}).get("id") for t in tasks_min if t.get("asset")})
-        assets = get_entities("Asset", [["id", "in", asset_ids]], ["id", "phase"]) if asset_ids else []
-        phase_ids = list({a.get("phase", {}).get("id") for a in assets if a.get("phase")})
-        phases = get_entities("Phase", [["id", "in", phase_ids]], ["id", "subproject"]) if phase_ids else []
-        task_to_asset = {t["id"]: (t.get("asset") or {}).get("id") for t in tasks_min}
-        asset_to_phase = {a["id"]: (a.get("phase") or {}).get("id") for a in assets}
-        phase_to_sp = {p["id"]: p.get("subproject") for p in phases}
-        for w in merged_pws:
-            if "subproject" in w:
-                continue
-            tid = (w.get("task") or {}).get("id")
-            aid = task_to_asset.get(tid)
-            pid = asset_to_phase.get(aid)
-            sp = phase_to_sp.get(pid)
-            if sp and isinstance(sp, dict) and "id" in sp:
-                w["task.asset.phase.subproject"] = {"type": "subproject", "id": sp.get("id"), "name": sp.get("name", "")}
-        merged_pws = remap_key_in_list(merged_pws, "task.asset.phase.subproject", "subproject")
-    except Exception:
-        pass
 
     return {
         "steps": steps,
