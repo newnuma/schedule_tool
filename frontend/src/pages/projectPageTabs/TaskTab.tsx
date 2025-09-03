@@ -81,28 +81,32 @@ const TaskTab: React.FC = () => {
     () => getFilteredData(groupsPageKey, basicFilteredAssets),
     [basicFilteredAssets, getFilteredData]
   );
-  const allowedAssetIds = useMemo(
-    () => new Set(assetsForGroups.map(a => a.id)),
-    [assetsForGroups]
-  );
 
-  // Apply item filters (date range) to assets, then intersect with allowed groups
-  const assetsForItems = useMemo(
-    () => getFilteredData(itemsPageKey, basicFilteredAssets),
-    [basicFilteredAssets, getFilteredData]
-  );
-  const filteredAssets = useMemo(
-    () => assetsForItems.filter(a => allowedAssetIds.has(a.id)),
-    [assetsForItems, allowedAssetIds]
-  );
-
-  // フィルター済みAssetに属するTaskのみを抽出
-  const filteredTasks = useMemo(
+  // Base tasks within the selected subproject (by basicFilteredAssets)
+  const baseTasksForSubproject = useMemo(
     () => {
-      const assetIds = filteredAssets.map(a => a.id);
-      return tasks.filter((task) => assetIds.includes(task.asset.id));
+      const assetIds = new Set(basicFilteredAssets.map(a => a.id));
+      return tasks.filter(t => assetIds.has(t.asset.id));
     },
-    [tasks, filteredAssets]
+    [tasks, basicFilteredAssets]
+  );
+
+  // Apply item filters (date range etc.) to tasks
+  const tasksForItems = useMemo(
+    () => getFilteredData(itemsPageKey, baseTasksForSubproject),
+    [baseTasksForSubproject, getFilteredData]
+  );
+
+  // items側フィルタ結果をそのまま採用（グループとは独立）
+  const filteredTasks = useMemo(
+    () => tasksForItems,
+    [tasksForItems]
+  );
+
+  // groups側フィルタ結果をそのまま採用（タスクが無いアセットもグループ表示）
+  const filteredAssets = useMemo(
+    () => assetsForGroups,
+    [assetsForGroups]
   );
 
   // ガント表示用データの組み立て
@@ -165,8 +169,8 @@ const TaskTab: React.FC = () => {
         label="Asset Type (Groups)"
       />
       <DateRangeFilter
-        pageKey={itemsPageKey}
-        label="Asset Date Range (Items)"
+        pageKey={groupsPageKey}
+        label="Asset Date Range (Groups)"
         startProperty="start_date"
         endProperty="end_date"
       />
