@@ -89,12 +89,11 @@ const AssinmentWorkload: React.FC = () => {
   }, [filters]);
 
 
-	// 期間内データのみを抽出
-  const weekSet = useMemo(() => new Set(weekIsos), [weekIsos]);
-  const filteredPW = useMemo(() => {
-    if (!weekIsos.length) return [] as typeof personWorkloads;
-    return personWorkloads.filter(w => weekSet.has(w.week));
-  }, [personWorkloads, weekSet, weekIsos.length]);
+	// 期間内データのみを抽出（FilterContext 経由の列方向フィルタを適用）
+			const filteredPW: typeof personWorkloads = useMemo(() => {
+			// itemsPageKey に設定された DateRangeFilter（week）を使用して personWorkloads をフィルタ
+			return getFilteredData(itemsPageKey, personWorkloads);
+			}, [personWorkloads, getFilteredData, itemsStart, itemsEnd]);
 
 	// タスク名参照用: personWorkloads の task フィールドから直接取得（tasks に依存しない）
 	const taskNameById = useMemo(() => {
@@ -171,16 +170,25 @@ const AssinmentWorkload: React.FC = () => {
 	// Subproject は個別に折りたたまない（Person 展開時に常に表示）
 
 	// 行に効くフィルタを適用した People（FilterContext 経由）
+	// グループ（Department）用のフィルタスライスに追従
+	const groupsFilter = filters[groupsPageKey];
 	const peopleFiltered = useMemo(() => {
 		const sorted = [...people].sort((a, b) => a.name.localeCompare(b.name));
 		return getFilteredData(groupsPageKey, sorted);
-	}, [people, getFilteredData]);
+	}, [people, getFilteredData, groupsFilter]);
 
 	return (
-		<Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+		<Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100vh', overflow: 'hidden' }}>
 			<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexShrink: 0 }}>
 				{/* 左上: 列に作用する期間フィルタ（itemsPageKey） */}
-				<DateRangeFilter pageKey={itemsPageKey} label="Period (Week)" startProperty="week" endProperty="week" />
+				<DateRangeFilter
+					pageKey={itemsPageKey}
+					label="Period (Week)"
+					startProperty="week"
+					endProperty="week"
+					alignStartToMonday
+					alignEndToFriday
+				/>
 				{/* 右上: 行に作用するフィルタ群 */}
 				<Box sx={{ ml: 'auto' }}>
 					<CollapsibleFilterPanel pageKey={groupsPageKey}>
@@ -196,9 +204,9 @@ const AssinmentWorkload: React.FC = () => {
 
 			<TableContainer
 				component={Paper}
-				sx={{ width: '100%', flex: 1, overflow: 'auto', minHeight: 0 }}
+				sx={{ width: '100%', flex: 1, overflowX: 'auto', overflowY: 'auto', minHeight: 0 }}
 			>
-				<Table size="small" sx={{ minWidth: 900 }}>
+				<Table size="small" sx={{ minWidth: 'max-content' }}>
 					<TableHead>
 						<TableRow>
 							<TableCell

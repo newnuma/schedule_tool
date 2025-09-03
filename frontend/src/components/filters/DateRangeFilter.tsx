@@ -13,6 +13,8 @@ interface DateRangeFilterProps {
   endProperty?: string;
   hideTitle?: boolean;
   compact?: boolean;
+  alignStartToMonday?: boolean;
+  alignEndToFriday?: boolean;
 }
 
 const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
@@ -22,6 +24,8 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   endProperty = "end_date",
   hideTitle = false,
   compact = false,
+  alignStartToMonday = false,
+  alignEndToFriday = false,
 }) => {
   const { filters, setDateRangeFilter } = useFilterContext();
   
@@ -30,13 +34,49 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   const startValue = currentDateRange?.start || "";
   const endValue = currentDateRange?.end || "";
 
+  // utils
+  const parseISO = (v?: string) => {
+    if (!v) return null;
+    const [y, m, d] = v.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  };
+  const fmtISO = (dt: Date) => {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const d = String(dt.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+  const floorToMonday = (dt: Date) => {
+    // JS: 0=Sun..6=Sat; Monday offset
+    const day = dt.getDay();
+    const delta = (day + 6) % 7; // 0 when Monday
+    const out = new Date(dt);
+    out.setDate(dt.getDate() - delta);
+    return out;
+  };
+  const toFridayOfWeek = (dt: Date) => {
+    const mon = floorToMonday(dt);
+    const out = new Date(mon);
+    out.setDate(mon.getDate() + 4); // Friday
+    return out;
+  };
+
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const start = event.target.value;
+    let start = event.target.value;
+    if (start && alignStartToMonday) {
+      const dt = parseISO(start);
+      if (dt) start = fmtISO(floorToMonday(dt));
+    }
     setDateRangeFilter(pageKey, start, endValue, startProperty, endProperty);
   };
 
   const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const end = event.target.value;
+    let end = event.target.value;
+    if (end && alignEndToFriday) {
+      const dt = parseISO(end);
+      if (dt) end = fmtISO(toFridayOfWeek(dt));
+    }
     setDateRangeFilter(pageKey, startValue, end, startProperty, endProperty);
   };
 
