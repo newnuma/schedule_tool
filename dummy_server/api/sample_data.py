@@ -102,7 +102,10 @@ for i in range(25):
         end_date=end,
         editing=random.choice(people),
     )
-    sp.people.set(random.sample(people, k=random.randint(8, 15)))
+    # Assign people to subproject from the Person.subproject M2M side
+    assigned = random.sample(people, k=random.randint(8, 15))
+    for p in assigned:
+        p.subproject.add(sp)
     subprojects.append(sp)
 
 # Phases per subproject
@@ -116,7 +119,13 @@ for sp in subprojects:
         pe = sp.start_date + timedelta(days=(i + 1) * chunk - 1)
         if i == len(phase_names) - 1:
             pe = sp.end_date
-        ph = Phase.objects.create(subproject=sp, name=pname, start_date=ps, end_date=pe)
+        # Phase.type is required; map names to a reasonable type
+        ptype = {
+            "Concept": "DESIGN",
+            "Design Development": "DESIGN",
+            "Final Design": "DESIGN",
+        }.get(pname, "DESIGN")
+        ph = Phase.objects.create(subproject=sp, name=pname, start_date=ps, end_date=pe, type=ptype)
         phases.append(ph)
 
 # Assets per phase (e.g., body panels, interior areas)
@@ -154,7 +163,6 @@ for ph in phases:
             end_date=a_end,
             type=random.choice(['EXT', 'INT', 'Common']),
             work_category=random.choice(categories),
-            status=random.choice(['waiting', 'In Progress', 'Completed']),
             step=random.choice(steps),
         )
         assets.append(asset)
@@ -176,7 +184,8 @@ for asset in assets:
             name=f"{random.choice(task_name_templates)} {i+1}",
             start_date=t_start,
             end_date=t_end,
-            status=random.choice(['waiting', 'In Progress', 'Completed']),
+            # match Task.status choices: 'wtg', 'ip', 'fin'
+            status=random.choice(['wtg', 'ip', 'fin']),
         )
         t.assignees.set(random.sample(people, k=random.randint(1, 3)))
         tasks.append(t)

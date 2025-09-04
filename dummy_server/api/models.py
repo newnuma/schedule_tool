@@ -23,6 +23,7 @@ class Person(models.Model):
     email = models.EmailField(unique=True, blank=True, null=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='people')
     manager = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subordinates')
+    subproject = models.ManyToManyField('Subproject', related_name='people', blank=True)
     # 追加属性があればここに
 
     def __str__(self):
@@ -32,8 +33,14 @@ class Subproject(models.Model):
     name = models.CharField(max_length=128)
     start_date = models.DateField()
     end_date = models.DateField()
-    people = models.ManyToManyField(Person, related_name='subprojects', blank=True)
+    # people = models.ManyToManyField(Person, related_name='subprojects', blank=True)
     editing = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, blank=True, related_name='editing_subprojects')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='subprojects')
+    access = models.CharField(max_length=32, choices=[
+        ('Common', 'Common'),
+        ('Project Team', 'Project Team'),
+        ('High Confidential', 'High Confidential'),
+    ], default='Project')
 
     def __str__(self):
         return self.name
@@ -43,6 +50,12 @@ class Phase(models.Model):
     name = models.CharField(max_length=128)
     start_date = models.DateField()
     end_date = models.DateField()
+    milestone = models.BooleanField(default=False)
+    type = models.CharField(max_length=32, choices=[
+        ('DESIGN', 'DESIGN'),
+        ('PRODT', 'PRODT'),
+        ('ENG', 'ENG'),
+    ], default='DESIGN')
 
     def __str__(self):
         return f"{self.subproject.name} - {self.name}"
@@ -59,11 +72,6 @@ class Asset(models.Model):
         ('Common', 'Common')
     ], default='Common')
     work_category = models.ForeignKey('WorkCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='assets')
-    status = models.CharField(max_length=32, choices=[
-        ('waiting', 'waiting'), 
-        ('In Progress', 'In Progress'),
-        ('Completed', 'Completed'),
-    ], default='Not Started')
     step = models.ForeignKey(Step, on_delete=models.SET_NULL, null=True, blank=True, related_name='assets')
 
     def __str__(self):
@@ -76,10 +84,10 @@ class Task(models.Model):
     end_date = models.DateField()
     assignees = models.ManyToManyField(Person, related_name='tasks', blank=True)
     status = models.CharField(max_length=32, choices=[
-        ('waiting', 'waiting'), 
-        ('In Progress', 'In Progress'),
-        ('Completed', 'Completed'),
-    ], default='Not Started')
+        ('wtg', 'wtg'), 
+        ('ip', 'ip'),
+        ('fin', 'fin'),
+    ], default='wtg')
 
     def __str__(self):
         return f"{self.asset.phase.subproject.name} - {self.asset.phase.name} - {self.asset.name} - {self.name}"
