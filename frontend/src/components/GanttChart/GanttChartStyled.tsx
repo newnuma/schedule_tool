@@ -59,16 +59,16 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
   "& .vis-group.phase-row, & .vis-label.phase-row, & .vis-group.phase-row .vis-itemset": {
     backgroundColor: "#e8f5ff !important",
   },
-  // Asset用のスタイル
-  "& .vis-item.completed": {
+  // Status styles for items (wtg/ip/fin)
+  "& .vis-item.status-fin": {
     backgroundColor: "#4caf50",
     borderColor: "#388e3c",
   },
-  "& .vis-item.in-progress": {
+  "& .vis-item.status-ip": {
     backgroundColor: "#ff9800",
     borderColor: "#f57c00",
   },
-  "& .vis-item.not-started": {
+  "& .vis-item.status-wtg": {
     backgroundColor: "#9e9e9e",
     borderColor: "#616161",
   },

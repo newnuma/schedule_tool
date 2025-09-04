@@ -125,6 +125,7 @@ const AssetTab: React.FC = () => {
         }));
 
       // Assetアイテム
+      const statusLabel = (s?: string) => s === 'fin' ? 'Completed' : s === 'ip' ? 'In Progress' : 'Not Started';
       const assetItems = filteredAssets
         .map((a) => ({
           id: a.id,
@@ -132,9 +133,9 @@ const AssetTab: React.FC = () => {
           content: a.name,
           start: a.start_date,
           end: a.end_date,
-          className: a.status === 'Completed' ? 'completed' : 
-                    a.status === 'In Progress' ? 'in-progress' : 'not-started',
-          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Status:</strong> ${a.status}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
+          className: (a.status ?? 'wtg') === 'fin' ? 'status-fin' :
+                    (a.status ?? 'wtg') === 'ip' ? 'status-ip' : 'status-wtg',
+          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Status:</strong> ${statusLabel(a.status)}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
         }));
 
       return [...phaseItems, ...assetItems];

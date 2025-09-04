@@ -20,6 +20,8 @@ export interface ISubproject {
     start_date: string; // ISO日付文字列
     end_date: string;   // ISO日付文字列
     people: IForignKey[];   // Person参照
+    department?: IForignKey | null; // Department参照
+    access: "Common" | "Project Team" | "High Confidential";
     editing?: IForignKey | null; // 編集中ユーザー(Person FK)
 }
 
@@ -29,6 +31,8 @@ export interface IPhase {
     subproject: IForignKey; 
     start_date: string;
     end_date: string;
+    milestone: boolean;
+    type: "DESIGN" | "PRODT" | "ENG";
 }
 
 export interface IAsset {
@@ -40,7 +44,9 @@ export interface IAsset {
     type: "EXT" | "INT" | "Common";
     work_category?: IForignKey | null; // WorkCategory
     step?: IForignKey | null; // Step
-    status: "waiting" | "In Progress" | "Completed" | "Not Started";
+    color?: string; // "r, g, b"
+    // Note: Asset no longer has status server-side; keep optional for UI if needed
+    status?: "wtg" | "ip" | "fin";
 }
 
 export interface ITask {
@@ -50,7 +56,7 @@ export interface ITask {
     start_date: string;
     end_date: string;
     assignees: IForignKey[]; // Person参照
-    status: "waiting" | "In Progress" | "Completed" | "Not Started";
+    status: "wtg" | "ip" | "fin";
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
 }
 
@@ -298,6 +304,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             },
             start_date: phase.start_date || new Date().toISOString().split('T')[0],
             end_date: phase.end_date || new Date().toISOString().split('T')[0],
+            milestone: false,
+            type: 'DESIGN',
         };
         addPhases([newPhase]);
     }, [subprojects, addPhases]);
@@ -314,9 +322,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             start_date: asset.start_date || new Date().toISOString().split('T')[0],
             end_date: asset.end_date || new Date().toISOString().split('T')[0],
             type: 'Common' as const,
-            status: asset.status === 'Not Started' ? 'Not Started' : 
-                   asset.status === 'In Progress' ? 'In Progress' :
-                   asset.status === 'Completed' ? 'Completed' : 'waiting',
+        // If the form still passes human-readable statuses, map them to codes
+        status: asset.status === 'Completed' ? 'fin' :
+            asset.status === 'In Progress' ? 'ip' :
+            asset.status === 'Not Started' ? 'wtg' : undefined,
         };
         addAssets([newAsset]);
     }, [phases, addAssets]);
@@ -333,9 +342,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             start_date: task.start_date || new Date().toISOString().split('T')[0],
             end_date: task.end_date || new Date().toISOString().split('T')[0],
             assignees: [],
-            status: task.status === 'Not Started' ? 'Not Started' : 
-                   task.status === 'In Progress' ? 'In Progress' :
-                   task.status === 'Completed' ? 'Completed' : 'waiting',
+            // Map human-readable to code, fallback to 'wtg'
+            status: task.status === 'Completed' ? 'fin' :
+                   task.status === 'In Progress' ? 'ip' :
+                   task.status === 'Not Started' ? 'wtg' : 'wtg',
         };
         addTasks([newTask]);
     }, [assets, addTasks]);

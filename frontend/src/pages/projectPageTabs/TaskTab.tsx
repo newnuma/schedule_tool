@@ -132,15 +132,16 @@ const TaskTab: React.FC = () => {
         }));
 
       // タスクアイテム
+      const statusLabel = (s: string) => s === 'fin' ? 'Completed' : s === 'ip' ? 'In Progress' : 'Not Started';
       const taskItems = filteredTasks.map((t) => ({
         id: t.id,
         group: t.asset.id,
         content: t.name,
         start: t.start_date,
         end: t.end_date,
-        className: t.status === 'Completed' ? 'completed' :
-          t.status === 'In Progress' ? 'in-progress' : 'not-started',
-        tooltipHtml: `<div><strong>Task:</strong> ${t.name}<br/><strong>Status:</strong> ${t.status}<br/><strong>Asset:</strong> ${t.asset.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
+        className: t.status === 'fin' ? 'status-fin' :
+          t.status === 'ip' ? 'status-ip' : 'status-wtg',
+        tooltipHtml: `<div><strong>Task:</strong> ${t.name}<br/><strong>Status:</strong> ${statusLabel(t.status)}<br/><strong>Asset:</strong> ${t.asset.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
       }));
 
       return [...backgroundItems, ...taskItems];

@@ -154,7 +154,18 @@ def fetch_project_page(project_id: int) -> Any:
 
     # Asset取得（親: Phase）
     phase_ids = [phase["id"] for phase in phases]
-    assets = get_entities("Asset", [["phase", "in", phase_ids]]) if phase_ids else []
+    asset_fields = [
+        "id",
+        "name",
+        "phase",
+        "start_date",
+        "end_date",
+        "type",
+        "step",
+        "step.color",
+    ]
+    assets = get_entities("Asset", [["phase", "in", phase_ids]], asset_fields) if phase_ids else []
+    assets = remap_key_in_list(assets, "step.color", "color")
 
     # Task取得（親: Asset）
     asset_ids = [asset["id"] for asset in assets]
