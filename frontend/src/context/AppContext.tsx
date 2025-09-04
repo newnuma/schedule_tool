@@ -23,6 +23,7 @@ export interface ISubproject {
     department?: IForignKey | null; // Department参照
     access: "Common" | "Project Team" | "High Confidential";
     editing?: IForignKey | null; // 編集中ユーザー(Person FK)
+    pmm_status?: "planning" | "approved";
 }
 
 export interface IPhase {
@@ -58,6 +59,16 @@ export interface ITask {
     assignees: IForignKey[]; // Person参照
     status: "wtg" | "ip" | "fin";
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
+}
+
+export interface IMilestoneTask {
+    id: number;
+    name: string;
+    asset: IForignKey;
+    start_date: string;
+    end_date: string;
+    milestone_type: 'Date Receive' | 'Date Release' | 'Review' | 'DR';
+    subproject?: IForignKey;
 }
 
 export interface IPersonWorkload {
@@ -117,6 +128,9 @@ export interface IAppContext {
     addTasks: (tasks: ITask[]) => void;
     createTask: (task: Omit<ITaskForm, 'id'>) => void;
 
+    milestoneTasks: IMilestoneTask[];
+    addMilestoneTasks: (tasks: IMilestoneTask[]) => void;
+
     personWorkloads: IPersonWorkload[];
     addPersonWorkloads: (workloads: IPersonWorkload[]) => void;
     pmmWorkloads: IPMMWorkload[];
@@ -155,6 +169,8 @@ const defaultParams: IAppContext = {
     tasks: [],
     addTasks: () => { },
     createTask: () => { },
+    milestoneTasks: [],
+    addMilestoneTasks: () => { },
     personWorkloads: [],
     addPersonWorkloads: () => { },
     pmmWorkloads: [],
@@ -185,6 +201,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [phases, setPhases] = useState<IPhase[]>([]);
     const [assets, setAssets] = useState<IAsset[]>([]);
     const [tasks, setTasks] = useState<ITask[]>([]);
+    const [milestoneTasks, setMilestoneTasks] = useState<IMilestoneTask[]>([]);
     const [personWorkloads, setPersonWorkloads] = useState<IPersonWorkload[]>([]);
     const [pmmWorkloads, setPMMWorkloads] = useState<IPMMWorkload[]>([]);
     const [people, setPeople] = useState<IPerson[]>([]);
@@ -247,6 +264,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }, []);
     const addTasks = useCallback((newItems: ITask[]) => {
         setTasks((prev) => {
+            const merged = [...prev];
+            newItems.forEach((item) => {
+                const idx = merged.findIndex((e) => e.id === item.id);
+                if (idx !== -1) merged[idx] = item;
+                else merged.push(item);
+            });
+            return merged;
+        });
+    }, []);
+    const addMilestoneTasks = useCallback((newItems: IMilestoneTask[]) => {
+        setMilestoneTasks((prev) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
@@ -366,6 +394,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 tasks,
                 addTasks,
                 createTask,
+                milestoneTasks,
+                addMilestoneTasks,
                 personWorkloads,
                 addPersonWorkloads,
                 pmmWorkloads,

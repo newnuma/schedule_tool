@@ -12,6 +12,7 @@ from api.models import (
     Phase,
     Asset,
     Task,
+    MilestoneTask,
     PersonWorkload,
     PMMWorkload,
     WorkCategory,
@@ -101,6 +102,7 @@ for i in range(25):
         start_date=start,
         end_date=end,
         editing=random.choice(people),
+    pmm_status=random.choice(['planning', 'approved']),
     )
     # Assign people to subproject from the Person.subproject M2M side
     assigned = random.sample(people, k=random.randint(8, 15))
@@ -189,6 +191,22 @@ for asset in assets:
         )
         t.assignees.set(random.sample(people, k=random.randint(1, 3)))
         tasks.append(t)
+
+    # Milestone tasks per asset (0-2)
+    mcount = random.randint(0, 2)
+    for j in range(mcount):
+        if asset.start_date > asset.end_date:
+            continue
+        span_days = max(1, (asset.end_date - asset.start_date).days)
+        offset = random.randint(0, span_days - 1)
+        m_date = asset.start_date + timedelta(days=offset)
+        MilestoneTask.objects.create(
+            asset=asset,
+            name=f"{asset.name} Milestone {j+1}",
+            start_date=m_date,
+            end_date=m_date,
+            milestone_type=random.choice(['Date Receive', 'Date Release', 'Review', 'DR'])
+        )
 
 # PersonWorkloads per task (week-based man-weeks, ~1-2 entries per task)
 def monday_of(d: date) -> date:

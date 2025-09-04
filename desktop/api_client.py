@@ -132,8 +132,13 @@ def fetch_distribute_page() -> Any:
     }
 
 
-def fetch_steps() -> Any:
-    return get_entities("Step")
+def fetch_basic_data() -> Any:
+    person = get_entities("Person")
+    steps = get_entities("Step")
+    return {
+        "person": person,
+        "steps": steps,
+    }
 
 
 # 指定したIDのプロジェクトに関連する情報を取得
@@ -183,6 +188,20 @@ def fetch_project_page(project_id: int) -> Any:
     # サブプロジェクトを統一キーに
     tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
 
+    # MilestoneTask取得（親: Asset、同一サブプロジェクトに属するもののみ）
+    ms_fields = [
+        "id",
+        "name",
+        "asset",
+        "start_date",
+        "end_date",
+        "milestone_type",
+        "asset.phase.subproject",
+    ]
+    milestone_tasks = get_entities("MilestoneTask", [["asset", "in", asset_ids]], ms_fields) if asset_ids else []
+    milestone_tasks = remap_key_in_list(milestone_tasks, "asset.phase.subproject", "subproject")
+    milestone_tasks = [m for m in milestone_tasks if m.get("subproject", {}).get("id") == subproject["id"]]
+
     # PersonWorkload取得（親: Task）
     task_ids = [task["id"] for task in tasks]
     pw_fields = [
@@ -205,7 +224,8 @@ def fetch_project_page(project_id: int) -> Any:
         "assets": assets,
         "tasks": tasks,
         "personworkloads": personworkloads,
-        "pmmworkloads": pmmworkloads,
+    "pmmworkloads": pmmworkloads,
+    "milestonetasks": milestone_tasks,
     }
 
 # メンバーリストにあるpersonに関連する情報を取得
@@ -309,10 +329,10 @@ def fetch_assignment_workloads(start_iso: str, end_iso: str) -> Any:
 def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[str, str]) -> Any:
     """起動時ロード: 3ページの必要情報 + 基本情報(Step) を一括取得し、ID重複なしでマージして返す"""
     distribute = fetch_distribute_page()
-    project_page = fetch_project_page(project_id)
-    assignment_page = fetch_assignment_page(assignment_range[0], assignment_range[1])
+    # project_page = fetch_project_page(project_id)
+    # assignment_page = fetch_assignment_page(assignment_range[0], assignment_range[1])
 
-    steps = fetch_steps()
+    basic_data = fetch_basic_data()
 
     def merge_by_id(*lists, id_key="id"):
         merged = {}
@@ -321,23 +341,16 @@ def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[s
                 merged[item[id_key]] = item
         return list(merged.values())
 
-    # マージ（各ページで subproject に正規化済み）
-    merged_tasks = merge_by_id(project_page.get("tasks", []), assignment_page.get("tasks", []))
-
-    merged_pws = merge_by_id(project_page.get("personworkloads", []), assignment_page.get("personworkloads", []))
-
-    return {
-        "steps": steps,
+    res = {
+        "steps": merge_by_id(basic_data.get("steps", [])),
         "subprojects": merge_by_id(distribute.get("subprojects", [])),
-        "phases": merge_by_id(distribute.get("phases", []), project_page.get("phases", [])),
-        "assets": merge_by_id(project_page.get("assets", [])),
-        "tasks": merged_tasks,
-        "personworkloads": merged_pws,
-        "pmmworkloads": merge_by_id(project_page.get("pmmworkloads", [])),
-        "person": merge_by_id(assignment_page.get("person", [])),
+        "phases": merge_by_id(distribute.get("phases", [])),
+        "person": merge_by_id(basic_data.get("person", [])),
         "selectedSubprojectId": project_id,
         "selectedPersonList": person_list,
     }
+
+    return res
 
 
 # def get_assets() -> Any:

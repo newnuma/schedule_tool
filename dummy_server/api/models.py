@@ -41,6 +41,10 @@ class Subproject(models.Model):
         ('Project Team', 'Project Team'),
         ('High Confidential', 'High Confidential'),
     ], default='Project')
+    pmm_status = models.CharField(max_length=32, choices=[
+        ('planning', 'planning'),
+        ('approved', 'approved'),
+    ], default='planning')
 
     def __str__(self):
         return self.name
@@ -88,6 +92,21 @@ class Task(models.Model):
         ('ip', 'ip'),
         ('fin', 'fin'),
     ], default='wtg')
+
+    def __str__(self):
+        return f"{self.asset.phase.subproject.name} - {self.asset.phase.name} - {self.asset.name} - {self.name}"
+
+class MilestoneTask(models.Model):
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='milestone_tasks')
+    name = models.CharField(max_length=128)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    milestone_type = models.CharField(max_length=32, choices=[
+        ('Date Receive', 'Date Receive'),
+        ('Date Release', 'Date Release'),
+        ('Review', 'Review'),
+        ('DR', 'DR')
+    ], default='Review')
 
     def __str__(self):
         return f"{self.asset.phase.subproject.name} - {self.asset.phase.name} - {self.asset.name} - {self.name}"

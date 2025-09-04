@@ -6,10 +6,6 @@ const fetchInitialData = async (
   addSteps: any,
   addSubprojects: any,
   addPhases: any,
-  addAssets: any,
-  addTasks: any,
-  addPersonWorkloads: any,
-  addPMMWorkloads: any,
   addPeople: any,
   setLoading: any,
   setSelectedPersonList: any,
@@ -23,10 +19,6 @@ const fetchInitialData = async (
     addSteps(result.steps || []);
     addSubprojects(result.subprojects || []);
     addPhases(result.phases || []);
-    addAssets(result.assets || []);
-    addTasks(result.tasks || []);
-    addPersonWorkloads(result.personworkloads || []);
-    addPMMWorkloads(result.pmmworkloads || []);
     addPeople(result.person || []);
     setSelectedPersonList(result.selectedPersonList || []);
     setSelectedSubprojectId(result.selectedSubprojectId || undefined);
@@ -42,10 +34,6 @@ const Initializer = () => {
     addSteps,
     addSubprojects,
     addPhases,
-    addAssets,
-    addTasks,
-    addPersonWorkloads,
-    addPMMWorkloads,
     addPeople,
     setLoading,
     setSelectedPersonList,
@@ -59,10 +47,6 @@ const Initializer = () => {
         addSteps,
         addSubprojects,
         addPhases,
-        addAssets,
-        addTasks,
-        addPersonWorkloads,
-        addPMMWorkloads,
         addPeople,
         setLoading,
         setSelectedPersonList,

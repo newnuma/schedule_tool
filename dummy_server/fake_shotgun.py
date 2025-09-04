@@ -37,6 +37,7 @@ class FakeShotgun:
                 "Phase": apps.get_model("api", "Phase"),
                 "Asset": apps.get_model("api", "Asset"),
                 "Task": apps.get_model("api", "Task"),
+                "MilestoneTask": apps.get_model("api", "MilestoneTask"),
                 "PersonWorkload": apps.get_model("api", "PersonWorkload"),
                 "PMMWorkload": apps.get_model("api", "PMMWorkload"),
                 "WorkCategory": apps.get_model("api", "WorkCategory"),
