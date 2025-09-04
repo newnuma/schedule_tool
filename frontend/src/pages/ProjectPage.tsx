@@ -90,7 +90,9 @@ function a11yProps(index: number) {
 }
 
 const ProjectPage: React.FC = () => {
-  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask } = useAppContext();
+  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, 
+    addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addMilestoneTasks,
+    addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask } = useAppContext();
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -118,9 +120,11 @@ const ProjectPage: React.FC = () => {
         try {
           setLoading(true);
           const result = await fetchProjectPage(selectedSubprojectId);
+          console.log('Project page data fetched:', result);
           addPhases(result.phases || []);
           addAssets(result.assets || []);
           addTasks(result.tasks || []);
+          addMilestoneTasks(result.milestoneTasks || []);
           addPersonWorkloads(result.personworkloads || []);
           addPMMWorkloads(result.pmmworkloads || []);
           console.log('Subproject data fetched for ID:', selectedSubprojectId);

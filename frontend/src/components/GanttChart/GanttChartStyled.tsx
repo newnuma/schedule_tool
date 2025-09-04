@@ -9,38 +9,82 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
   position: "relative",
   overflowY: "auto", // 縦スクロールのみ表示
   overflowX: "hidden", // 横スクロールは隠す（パン操作はそのまま）
-  // マイルストーン（フェーズ）の表示: 丸 + テキスト
-  "& .vis-item.milestone, & .vis-item.vis-point": {
+  // マイルストーン（MilestoneTasks）用のベーススタイル
+  "& .vis-item.milestone": {
     background: "transparent !important",
     border: "none !important",
     padding: "0 !important",
     margin: "0 !important",
   },
-  "& .vis-item.milestone .vis-item-content, & .vis-item.vis-point .vis-item-content": {
+  "& .vis-item.milestone .vis-item-content": {
     display: "flex",
     alignItems: "center",
     padding: "0 !important",
     margin: "0 !important",
     background: "transparent",
     border: "none",
-  fontSize: "13px", // 文字を少し大きく
+    fontSize: "14px", // 文字を少し大きく
     lineHeight: 1.2,
     fontWeight: 500,
-    color: "#1a1a1a",
+  color: "#1a1a1a", // currentColor を図形に使用
     whiteSpace: "nowrap",
   },
-  "& .vis-item.milestone .vis-item-content::before, & .vis-item.vis-point .vis-item-content::before": {
-    content: "''",
+  // Milestone の丸マーカー
+  "& .vis-item.milestone .vis-item-content::before": {
+    content: '""',
     display: "inline-block",
-    width: "10px",
-    height: "10px",
+    width: "11px",
+    height: "11px",
     borderRadius: "50%",
-    background: "#2196f3",
-    border: "2px solid #1976d2",
+    background: "#0e69f1ff",
+    border: "none",
     boxSizing: "border-box",
     marginRight: "6px",
     flexShrink: 0,
   },
+  // ====== MilestoneTasks 形状（種類別） ======
+  // ms-receive: ダイヤ（枠のみ）♢
+  "& .vis-item.milestone.ms-receive .vis-item-content::before": {
+    background: "transparent",
+    border: "2px solid currentColor",
+    borderRadius: 0,
+    transform: "rotate(45deg)",
+    width: "10px",
+    height: "10px",
+  },
+  // ms-release: 三角 ▲
+  "& .vis-item.milestone.ms-release .vis-item-content::before": {
+    width: 0,
+    height: 0,
+    background: "transparent",
+    borderRadius: 0,
+    borderLeft: "6px solid transparent",
+    borderRight: "6px solid transparent",
+    borderBottom: "11px solid currentColor",
+    transform: "none",
+    boxSizing: "content-box",
+  },
+  // ms-review: 塗り丸 ●
+  "& .vis-item.milestone.ms-review .vis-item-content::before": {
+    background: "currentColor",
+    border: "none",
+    borderRadius: "50%",
+    width: "11px",
+    height: "11px",
+    transform: "none",
+  },
+  // ms-dr: 二重丸 ◎（
+  "& .vis-item.milestone.ms-dr .vis-item-content": {
+    position: "relative",
+  },
+  "& .vis-item.milestone.ms-dr .vis-item-content::before": {
+    background: "transparent",
+    border: "2px solid currentColor",
+    width: "11px",
+    height: "11px",
+    borderRadius: "50%",
+  },
+  // ==========================================
   // Phase行の背景色（ラベル & アイテム側）
   // vis-timeline DOM 構造に合わせて複数指定（ラベルセット/アイテムセット）
   "& .vis-labelset .vis-label[data-groupid='phase-group']": {
@@ -59,6 +103,34 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
   "& .vis-group.phase-row, & .vis-label.phase-row, & .vis-group.phase-row .vis-itemset": {
     backgroundColor: "#e8f5ff !important",
   },
+
+  // ========= Phase行専用オーバーライド =========
+  // ラベル表示（Phaseは非表示にしない）
+  "& .vis-group[data-groupid='phase-group'] .vis-item.vis-point .vis-item-content, & .vis-item.phase-point .vis-item-content": {
+    // 例: フォントを強調
+    fontSize: "11px",
+    fontWeight: 600,
+    lineHeight: 1,
+    color: "#1a1a1a",
+  },
+  // Phaseの丸アイコンを青色に
+  "& .vis-group[data-groupid='phase-group'] .vis-item.vis-point .vis-item-content::before": {
+    content: '""',
+    display: "inline-block",
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    background: "#2196f3",
+    border: "2px solid #1976d2",
+    boxSizing: "border-box",
+    marginRight: "6px",
+    flexShrink: 0,
+  },
+  // 例: Phaseのポイントアイテムの内側余白を微調整（任意）
+  "& .vis-group[data-groupid='phase-group'] .vis-item.vis-point": {
+    padding: "0 2px",
+  },
+  // ============================================
   // Status styles for items (wtg/ip/fin)
   "& .vis-item.status-fin": {
     backgroundColor: "#4caf50",

@@ -11,7 +11,7 @@ import ContextMenu from "../../components/common/ContextMenu";
 import { useContextMenu } from "../../hooks/useContextMenu";
 
 const AssetTab: React.FC = () => {
-  const { phases, assets, selectedSubprojectId, isEditMode } = useAppContext();
+  const { phases, assets, selectedSubprojectId, isEditMode, milestoneTasks } = useAppContext();
   const { getFilteredData } = useFilterContext();
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "project.assets:items";   // date range + status for items
@@ -103,7 +103,15 @@ const AssetTab: React.FC = () => {
       const phaseGroup = { id: 'phase-group', content: 'Phase', className: 'phase-row' };
       // Groups are asset types that passed the group filter
       const typeSet = new Set(assetsForGroups.map(a => a.type));
-      const typeGroups = Array.from(typeSet).map(t => ({ id: t, content: t }));
+      // Ensure subgroup ordering (milestones above bars) and stacking are controlled at group level
+      const typeGroups = Array.from(typeSet).map(t => ({
+        id: t,
+        content: t,
+        // Use the item's "subgroupOrder" field to order subgroups within this group
+        subgroupOrder: 'subgroupOrder',
+        // Control stacking per subgroup: milestones (mile) don't stack; asset bars do
+        subgroupStack: { mile: false, asset: true, milestone: false },
+      }));
       return [phaseGroup, ...typeGroups];
     },
     [assetsForGroups]
@@ -125,22 +133,56 @@ const AssetTab: React.FC = () => {
         }));
 
       // Assetアイテム
-      const statusLabel = (s?: string) => s === 'fin' ? 'Completed' : s === 'ip' ? 'In Progress' : 'Not Started';
       const assetItems = filteredAssets
         .map((a) => ({
           id: a.id,
           group: a.type, // Asset typeでグループ化
+          subgroup: "asset",
+          subgroupOrder: 1,
           content: a.name,
           start: a.start_date,
           end: a.end_date,
-          className: (a.status ?? 'wtg') === 'fin' ? 'status-fin' :
-                    (a.status ?? 'wtg') === 'ip' ? 'status-ip' : 'status-wtg',
-          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Status:</strong> ${statusLabel(a.status)}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
+          // className: (a.status ?? 'wtg') === 'fin' ? 'status-fin' :
+          //           (a.status ?? 'wtg') === 'ip' ? 'status-ip' : 'status-wtg',
+          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
         }));
 
-      return [...phaseItems, ...assetItems];
+      // 選択中Subprojectに紐づく MilestoneTasks（親のAsset.typeは asset_type に格納済み）
+      const phaseIds = filteredPhases.map(p => p.id);
+      const assetById = new Map(assets.map(a => [a.id, a]));
+      const msItems = milestoneTasks
+        .filter(ms => {
+          const parentAsset = assetById.get(ms.asset.id);
+          if (!parentAsset) return false;
+          return phaseIds.includes(parentAsset.phase.id);
+        })
+        .map(ms => {
+          // group は親Assetの type（asset_type から）
+          const groupId = ms.asset_type || assetById.get(ms.asset.id)?.type || 'Common';
+          // サブグループは親Assetごとに分け、MS はバーの上側に来るよう別サブグループを用意
+          const subGroup = "milestone";
+          // milestone_type に応じた className を付与
+          const typeClass = ms.milestone_type === 'Date Receive' ? 'ms-receive'
+            : ms.milestone_type === 'Date Release' ? 'ms-release'
+            : ms.milestone_type === 'Review' ? 'ms-review'
+            : 'ms-dr';
+          const parentName = assetById.get(ms.asset.id)?.name || '';
+          return {
+            id: `ms-${ms.id}`,
+            group: groupId,
+            subgroup: subGroup,
+            subgroupOrder: 0,
+            content: '', // 表示名は不要
+            start: ms.start_date,
+            type: 'point' as const,
+            className: `milestone ${typeClass}`,
+            tooltipHtml: `<div><strong>Asset:</strong> ${parentName}<br/><strong>Date:</strong> ${ms.start_date}</div>`
+          };
+        });
+
+      return [...phaseItems, ...assetItems, ...msItems];
     },
-    [filteredPhases, filteredAssets]
+    [filteredPhases, filteredAssets, milestoneTasks, assets]
   );
 
   if (!selectedSubprojectId) {

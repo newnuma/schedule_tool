@@ -197,9 +197,11 @@ def fetch_project_page(project_id: int) -> Any:
         "end_date",
         "milestone_type",
         "asset.phase.subproject",
+        "asset.type"
     ]
     milestone_tasks = get_entities("MilestoneTask", [["asset", "in", asset_ids]], ms_fields) if asset_ids else []
     milestone_tasks = remap_key_in_list(milestone_tasks, "asset.phase.subproject", "subproject")
+    milestone_tasks = remap_key_in_list(milestone_tasks, "asset.type", "asset_type")
     milestone_tasks = [m for m in milestone_tasks if m.get("subproject", {}).get("id") == subproject["id"]]
 
     # PersonWorkload取得（親: Task）
@@ -225,7 +227,7 @@ def fetch_project_page(project_id: int) -> Any:
         "tasks": tasks,
         "personworkloads": personworkloads,
     "pmmworkloads": pmmworkloads,
-    "milestonetasks": milestone_tasks,
+    "milestoneTasks": milestone_tasks,
     }
 
 # メンバーリストにあるpersonに関連する情報を取得

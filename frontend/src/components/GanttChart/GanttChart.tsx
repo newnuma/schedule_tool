@@ -18,6 +18,8 @@ import "vis-timeline/styles/vis-timeline-graph2d.min.css"; // 必要なCSSもimp
 export interface GanttItem {
   id: number | string;
   group: number | string;
+  subgroup?: number | string;
+  subgroupOrder?: number;
   content: string;
   start: string | Date | null | undefined;
   end?: string | Date | null | undefined;
@@ -31,6 +33,8 @@ export interface GanttItem {
 interface ValidGanttItem {
   id: number | string;
   group: number | string;
+  subgroup?: number | string;
+  subgroupOrder?: number;
   content: string;
   start: string | Date;
   end?: string | Date;
@@ -96,6 +100,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
       .map(item => ({
         id: item.id,
         group: item.group,
+  subgroup: item.subgroup,
+  subgroupOrder: item.subgroupOrder,
         content: item.content,
         start: item.start!,
         end: item.end || undefined,
@@ -139,9 +145,11 @@ const GanttChart: React.FC<GanttChartProps> = ({
           maxHeight: height,
           verticalScroll: true, // 内部に縦スクロールバーを表示
           // アイテム間余白: 横0 / 縦15px
-          margin: { item: { horizontal: 0, vertical: 15 }, axis: 5 },
+          margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
           // tooltip をマウスに追従させたい場合に有効化（必要に応じて上書き可）
           tooltip: { followMouse: true },
+          // サブグループの上下順を固定（数値で明示: 0=上, 1=下）
+          subgroupOrder: 'subgroupOrder',
           // 利用側で上書き可能（memoizedOptions が後で来ると上書きされる）
           ...memoizedOptions,
         } as TimelineOptions;

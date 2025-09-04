@@ -45,9 +45,9 @@ export interface IAsset {
     type: "EXT" | "INT" | "Common";
     work_category?: IForignKey | null; // WorkCategory
     step?: IForignKey | null; // Step
-    color?: string; // "r, g, b"
-    // Note: Asset no longer has status server-side; keep optional for UI if needed
-    status?: "wtg" | "ip" | "fin";
+
+    //参照用
+    color?: string; //Stepの色
 }
 
 export interface ITask {
@@ -58,6 +58,8 @@ export interface ITask {
     end_date: string;
     assignees: IForignKey[]; // Person参照
     status: "wtg" | "ip" | "fin";
+
+    //参照用
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
 }
 
@@ -69,6 +71,9 @@ export interface IMilestoneTask {
     end_date: string;
     milestone_type: 'Date Receive' | 'Date Release' | 'Review' | 'DR';
     subproject?: IForignKey;
+
+    //参照用
+    asset_type?: "EXT" | "INT" | "Common"; // 追加: Assetのtype（EXT/INT/Common）
 }
 
 export interface IPersonWorkload {
@@ -78,6 +83,8 @@ export interface IPersonWorkload {
     week: string; // 週の月曜日（ISO文字列）
     person: IForignKey; // Person参照
     man_week: number; // 工数(人週)
+
+    //参照用
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
 }
 
@@ -350,10 +357,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             start_date: asset.start_date || new Date().toISOString().split('T')[0],
             end_date: asset.end_date || new Date().toISOString().split('T')[0],
             type: 'Common' as const,
-        // If the form still passes human-readable statuses, map them to codes
-        status: asset.status === 'Completed' ? 'fin' :
-            asset.status === 'In Progress' ? 'ip' :
-            asset.status === 'Not Started' ? 'wtg' : undefined,
         };
         addAssets([newAsset]);
     }, [phases, addAssets]);
