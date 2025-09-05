@@ -46,25 +46,52 @@ const DistributePage: React.FC = () => {
   );
 
   // グループはAppContextのSubprojects（グループフィルタ適用後）
-  const groups = useMemo(
-    () => {
-      return filteredSubprojects.map(sp => ({ id: sp.id, content: sp.name }));
-    },
-    [filteredSubprojects]
-  );
+    // グループはAppContextのSubprojects（グループフィルタ適用後）
+    // AssetTabと同様にsubgroupOrder/subgroupStackを追加
+    const groups = useMemo(() => {
+      return filteredSubprojects.map(sp => ({
+        id: sp.id,
+        content: sp.name,
+        subgroupOrder: 'subgroupOrder', // itemsのsubgroupOrderで制御
+        subgroupStack: { milestone: false, bar: true }, // milestoneは重ならず、barは重なる
+      }));
+    }, [filteredSubprojects]);
 
-  // アイテム
-  const items = useMemo(
-    () => filteredPhases.map(t => ({
-      id: t.id,
-      group: t.subproject.id,
-      content: t.name,
-      start: t.start_date,
-      end: t.end_date,
-      tooltipHtml: `<div><strong>Phase:</strong> ${t.name}<br/><strong>Subproject:</strong> ${t.subproject.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
-    })),
-    [filteredPhases]
-  );
+  // アイテム（milestoneとバーで分割）
+  const items = useMemo(() => {
+    // milestone: true のもの
+    const milestoneItems = filteredPhases
+      .filter(p => p.milestone)
+      .map(p => ({
+        id: `ms-${p.id}`,
+        group: p.subproject.id,
+        subgroup: "milestone",
+        subgroupOrder: 0,
+        content: p.name,
+        start: p.start_date,
+        end: p.start_date,
+        type: "point" as const,
+        className: `phase-ms-${p.type.toLowerCase()}`,
+        tooltipHtml: `<div><strong>Phase:</strong> ${p.name}<br/><strong>Type:</strong> ${p.type}<br/><strong>End:</strong> ${p.end_date}</div>`
+      }));
+
+    // milestone: false のもの（バー）
+    const barItems = filteredPhases
+      .filter(p => !p.milestone)
+      .map(p => ({
+        id: p.id,
+        group: p.subproject.id,
+        subgroup: "bar",
+        subgroupOrder: 1,
+        content: p.name,
+        start: p.start_date,
+        end: p.end_date,
+        type: "range" as const,
+        className: `phase-bar-${p.type.toLowerCase()}`,
+        tooltipHtml: `<div><strong>Phase:</strong> ${p.name}<br/><strong>Type:</strong> ${p.type}<br/><strong>Start:</strong> ${p.start_date}<br/><strong>End:</strong> ${p.end_date}</div>`
+      }));
+    return [...milestoneItems, ...barItems];
+  }, [filteredPhases]);
 
   // フィルタコンポーネント
   const Filter: React.FC = () => (

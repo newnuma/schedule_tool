@@ -26,7 +26,7 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
     fontSize: "14px", // 文字を少し大きく
     lineHeight: 1.2,
     fontWeight: 500,
-  color: "#1a1a1a", // currentColor を図形に使用
+    color: "#1a1a1a", // currentColor を図形に使用
     whiteSpace: "nowrap",
   },
   // Milestone の丸マーカー
@@ -77,6 +77,53 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
   "& .vis-item.milestone.ms-dr .vis-item-content": {
     position: "relative",
   },
+  // DESIGN: 青丸
+  "& .vis-item.phase-ms-design .vis-item-content::before": {
+    background: "#2196f3",
+    border: "2px solid #1976d2",
+    borderRadius: "50%",
+    width: "12px",
+    height: "12px",
+    marginRight: "6px",
+  },
+  // PRODT: 赤三角
+  "& .vis-item.phase-ms-prodt .vis-item-content::before": {
+    width: 0,
+    height: 0,
+    background: "transparent",
+    borderLeft: "7px solid transparent",
+    borderRight: "7px solid transparent",
+    borderBottom: "13px solid #e53935",
+    marginRight: "6px",
+  },
+  // ENG: 緑四角
+  "& .vis-item.phase-ms-eng .vis-item-content::before": {
+    background: "#43a047",
+    border: "2px solid #388e3c",
+    borderRadius: "2px",
+    width: "12px",
+    height: "12px",
+    marginRight: "6px",
+  },
+
+  // ====== Phase Bar 色分け（typeごと） ======
+  // DESIGN: 青
+  "& .vis-item.phase-bar-design": {
+    backgroundColor: "#bbdefb",
+    borderColor: "#1976d2",
+  },
+  // PRODT: 赤
+  "& .vis-item.phase-bar-prodt": {
+    backgroundColor: "#ffcdd2",
+    borderColor: "#e53935",
+  },
+  // ENG: 緑
+  "& .vis-item.phase-bar-eng": {
+    backgroundColor: "#c8e6c9",
+    borderColor: "#43a047",
+  },
+
+  
   "& .vis-item.milestone.ms-dr .vis-item-content::before": {
     background: "transparent",
     border: "2px solid currentColor",

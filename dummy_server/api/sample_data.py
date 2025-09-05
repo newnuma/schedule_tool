@@ -112,23 +112,34 @@ for i in range(25):
 
 # Phases per subproject
 phases = []
-phase_names = ["Concept", "Design Development", "Final Design"]
+phase_types = ["DESIGN", "PRODT", "ENG"]
+phase_names = ["Concept", "Design Development", "Final Design", "Milestone Review"]
 for sp in subprojects:
     span = (sp.end_date - sp.start_date).days
     chunk = max(20, span // len(phase_names))
+    phases_for_sp = []
     for i, pname in enumerate(phase_names):
-        ps = sp.start_date + timedelta(days=i * chunk)
-        pe = sp.start_date + timedelta(days=(i + 1) * chunk - 1)
+        # Overlap periods intentionally
+        ps = sp.start_date + timedelta(days=max(0, i * chunk - random.randint(0, 10)))
+        pe = sp.start_date + timedelta(days=(i + 1) * chunk - 1 + random.randint(0, 10))
         if i == len(phase_names) - 1:
             pe = sp.end_date
-        # Phase.type is required; map names to a reasonable type
-        ptype = {
-            "Concept": "DESIGN",
-            "Design Development": "DESIGN",
-            "Final Design": "DESIGN",
-        }.get(pname, "DESIGN")
-        ph = Phase.objects.create(subproject=sp, name=pname, start_date=ps, end_date=pe, type=ptype)
+        ptype = random.choice(phase_types)
+        milestone_flag = (pname == "Milestone Review") or (i == 0 and random.random() < 0.5)
+        ph = Phase.objects.create(
+            subproject=sp,
+            name=pname,
+            start_date=ps,
+            end_date=pe,
+            type=ptype,
+            milestone=milestone_flag,
+        )
         phases.append(ph)
+        phases_for_sp.append(ph)
+    # Ensure at least one milestone=True per subproject
+    if not any(p.milestone for p in phases_for_sp):
+        phases_for_sp[0].milestone = True
+        phases_for_sp[0].save()
 
 # Assets per phase (e.g., body panels, interior areas)
 assets = []

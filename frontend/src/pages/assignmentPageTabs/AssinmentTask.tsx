@@ -66,6 +66,8 @@ const AssinmentTask: React.FC = () => {
           content: task.name,
           start: task.start_date,
           end: task.end_date,
+          className: task.status === 'fin' ? 'status-fin' :
+          task.status === 'ip' ? 'status-ip' : 'status-wtg',
           tooltipHtml: `<div><strong>${task.name}</strong><br/>${task.start_date} - ${task.end_date}</div>`
         });
       });

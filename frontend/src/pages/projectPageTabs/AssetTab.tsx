@@ -27,6 +27,8 @@ const AssetTab: React.FC = () => {
     handleDelete,
   } = useContextMenu();
 
+  console.log("assets:", assets);
+
   // GanttChartの期待する型に合わせてhandlerを変換
   const handleGanttRightClick = (itemId: number | string, itemName: string, event: MouseEvent) => {
     const syntheticEvent = {
@@ -136,15 +138,14 @@ const AssetTab: React.FC = () => {
       const assetItems = filteredAssets
         .map((a) => ({
           id: a.id,
-          group: a.type, // Asset typeでグループ化
+          group: a.type,
           subgroup: "asset",
           subgroupOrder: 1,
           content: a.name,
           start: a.start_date,
           end: a.end_date,
-          // className: (a.status ?? 'wtg') === 'fin' ? 'status-fin' :
-          //           (a.status ?? 'wtg') === 'ip' ? 'status-ip' : 'status-wtg',
-          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
+          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`,
+          style: a.color ? `background: rgb(${a.color});` : undefined,
         }));
 
       // 選択中Subprojectに紐づく MilestoneTasks（親のAsset.typeは asset_type に格納済み）

@@ -25,7 +25,7 @@ export interface GanttItem {
   end?: string | Date | null | undefined;
   type?: 'range' | 'point' | 'box' | 'background'; // 背景表示用のtypeも許可
   className?: string; // 色分けなど
-  // ホバー時に表示したいツールチップ（HTML可）。未指定の場合は getItemTooltip が使われる
+  style?: string; // CSS文字列
   tooltipHtml?: string;
 }
 
@@ -41,6 +41,7 @@ interface ValidGanttItem {
   type?: 'range' | 'point' | 'box' | 'background';
   className?: string;
   title?: string; // vis-timeline の hover ツールチップ用プロパティ
+  style?: string; // vis-timeline用: CSS文字列
 }
 
 export interface GanttGroup {
@@ -81,33 +82,23 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const memoizedItems = useMemo(() => {
     const validItems: ValidGanttItem[] = items
       .filter(item => {
-        // startは必須
-        if (!item.start) {
-          console.warn(`Item ${item.id} has no start date, excluding from chart`, item);
-          return false;
-        }
-        // typeがpointの場合はendは必須ではない
-        if (item.type === 'point') {
-          return true;
-        }
-        // range/boxタイプの場合はendも必要
-        if (!item.end) {
-          console.warn(`Item ${item.id} has no end date, excluding from chart`, item);
-          return false;
-        }
+        if (!item.start) return false;
+        if (item.type === 'point') return true;
+        if (!item.end) return false;
         return true;
       })
       .map(item => ({
         id: item.id,
         group: item.group,
-  subgroup: item.subgroup,
-  subgroupOrder: item.subgroupOrder,
+        subgroup: item.subgroup,
+        subgroupOrder: item.subgroupOrder,
         content: item.content,
         start: item.start!,
         end: item.end || undefined,
         type: item.type,
         className: item.className,
-        title: item.tooltipHtml || getItemTooltip?.(item)
+        title: item.tooltipHtml || getItemTooltip?.(item),
+        ...(item.style ? { style: item.style } : {}),
       }));
     return validItems;
   }, [JSON.stringify(items), getItemTooltip]);
