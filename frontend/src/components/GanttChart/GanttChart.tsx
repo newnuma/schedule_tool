@@ -79,7 +79,9 @@ const GanttChart: React.FC<GanttChartProps> = ({
 
   // データセットをメモ化して不要な再描画を防ぐ
   // start/endがnullやundefinedのアイテムを除外し、vis-timeline互換の型に変換
+  // options.stackがfalseならsubgroup/subgroupOrderを除去
   const memoizedItems = useMemo(() => {
+    const stackOption = options?.stack;
     const validItems: ValidGanttItem[] = items
       .filter(item => {
         if (!item.start) return false;
@@ -87,21 +89,30 @@ const GanttChart: React.FC<GanttChartProps> = ({
         if (!item.end) return false;
         return true;
       })
-      .map(item => ({
-        id: item.id,
-        group: item.group,
-        subgroup: item.subgroup,
-        subgroupOrder: item.subgroupOrder,
-        content: item.content,
-        start: item.start!,
-        end: item.end || undefined,
-        type: item.type,
-        className: item.className,
-        title: item.tooltipHtml || getItemTooltip?.(item),
-        ...(item.style ? { style: item.style } : {}),
-      }));
+      .map(item => {
+        const base = {
+          id: item.id,
+          group: item.group,
+          content: item.content,
+          start: item.start!,
+          end: item.end || undefined,
+          type: item.type,
+          className: item.className,
+          title: item.tooltipHtml || getItemTooltip?.(item),
+          ...(item.style ? { style: item.style } : {}),
+        };
+        if (stackOption === false) {
+          return base;
+        } else {
+          return {
+            ...base,
+            subgroup: item.subgroup,
+            subgroupOrder: item.subgroupOrder,
+          };
+        }
+      });
     return validItems;
-  }, [JSON.stringify(items), getItemTooltip]);
+  }, [JSON.stringify(items), getItemTooltip, options?.stack]);
   
   const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
   const memoizedOptions = useMemo(() => options, [JSON.stringify(options)]);
@@ -128,20 +139,16 @@ const GanttChart: React.FC<GanttChartProps> = ({
 
     if (memoizedItems.length > 0) {
       try {
-        // stack: true で同一行(同一group)内の期間重複アイテムを縦に積み上げ表示
-        // height は指定せず自動計算させ、maxHeight で上限を制御
+        // stack: true/falseをprops.optionsで制御
+        const stackValue = memoizedOptions?.stack ?? true;
         const defaultOptions: TimelineOptions = {
           orientation: "top",
-          stack: true,
+          stack: stackValue,
           maxHeight: height,
-          verticalScroll: true, // 内部に縦スクロールバーを表示
-          // アイテム間余白: 横0 / 縦15px
+          verticalScroll: true,
           margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
-          // tooltip をマウスに追従させたい場合に有効化（必要に応じて上書き可）
           tooltip: { followMouse: true },
-          // サブグループの上下順を固定（数値で明示: 0=上, 1=下）
-          subgroupOrder: 'subgroupOrder',
-          // 利用側で上書き可能（memoizedOptions が後で来ると上書きされる）
+          ...(stackValue ? { subgroupOrder: 'subgroupOrder' } : {}),
           ...memoizedOptions,
         } as TimelineOptions;
 

@@ -6,8 +6,11 @@ import GanttChart from "../components/GanttChart";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { useFilterContext } from "../context/FilterContext";
 import { CollapsibleFilterPanel, CheckboxFilter, DateRangeFilter } from "../components/filters";
+import StackSwitch from "../components/common/StackSwitch";
 
 const DistributePage: React.FC = () => {
+  // Stack表示切替
+  const [stacked, setStacked] = React.useState(true);
   const { subprojects, phases } = useAppContext();
   const { getFilteredData } = useFilterContext();
 
@@ -48,18 +51,17 @@ const DistributePage: React.FC = () => {
   // グループはAppContextのSubprojects（グループフィルタ適用後）
     // グループはAppContextのSubprojects（グループフィルタ適用後）
     // AssetTabと同様にsubgroupOrder/subgroupStackを追加
-    const groups = useMemo(() => {
-      return filteredSubprojects.map(sp => ({
-        id: sp.id,
-        content: sp.name,
-        subgroupOrder: 'subgroupOrder', // itemsのsubgroupOrderで制御
-        subgroupStack: { milestone: false, bar: true }, // milestoneは重ならず、barは重なる
-      }));
-    }, [filteredSubprojects]);
+  const groups = useMemo(() => {
+    return filteredSubprojects.map(sp => ({
+      id: sp.id,
+      content: sp.name,
+      subgroupOrder: 'subgroupOrder',
+      subgroupStack: stacked ? { milestone: false, bar: true } : { milestone: false, bar: false },
+    }));
+  }, [filteredSubprojects, stacked]);
 
   // アイテム（milestoneとバーで分割）
   const items = useMemo(() => {
-    // milestone: true のもの
     const milestoneItems = filteredPhases
       .filter(p => p.milestone)
       .map(p => ({
@@ -74,8 +76,6 @@ const DistributePage: React.FC = () => {
         className: `phase-ms-${p.type.toLowerCase()}`,
         tooltipHtml: `<div><strong>Phase:</strong> ${p.name}<br/><strong>Type:</strong> ${p.type}<br/><strong>End:</strong> ${p.end_date}</div>`
       }));
-
-    // milestone: false のもの（バー）
     const barItems = filteredPhases
       .filter(p => !p.milestone)
       .map(p => ({
@@ -122,17 +122,19 @@ const DistributePage: React.FC = () => {
       </Typography>
       {/* Counts + Filter Row */}
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="subtitle1" sx={{ mt: 0.5 }}>
-          Phases: {filteredPhases.length} / {basePhases.length}
-        </Typography>
-        <Box sx={{ position: 'relative' }}>
-          <Filter />
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+            <StackSwitch value={stacked} onChange={setStacked} label="Stack" labelPosition="top" />
+          <Box sx={{ position: 'relative' }}>
+            <Filter />
+          </Box>
         </Box>
       </Box>
       <ErrorBoundary>
         <Box sx={{ width: '100%', height: '600px' }}>
           {filteredPhases.length > 0 ? (
-            <GanttChart items={items} groups={groups} />
+            <GanttChart items={items} groups={groups} options={{ stack: stacked }} />
           ) : (
             <Typography variant="body2" color="text.secondary">
               No phases match the current filters

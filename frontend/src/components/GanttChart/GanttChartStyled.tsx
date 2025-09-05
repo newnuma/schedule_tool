@@ -2,6 +2,19 @@ import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
+  // ====== Phase行（phase-group）上のバーにも透明度を反映 ======
+  "& .vis-group[data-groupid='phase-group'] .vis-item.phase-bar-design": {
+    backgroundColor: "rgba(33, 150, 243, 0.35) !important",
+    borderColor: "#1976d2 !important",
+  },
+  "& .vis-group[data-groupid='phase-group'] .vis-item.phase-bar-prodt": {
+    backgroundColor: "rgba(229, 57, 53, 0.35) !important",
+    borderColor: "#e53935 !important",
+  },
+  "& .vis-group[data-groupid='phase-group'] .vis-item.phase-bar-eng": {
+    backgroundColor: "rgba(67, 160, 71, 0.35) !important",
+    borderColor: "#43a047 !important",
+  },
   width: "100%",
   // 指定値は最大高さとして扱い、データ量が少なければ縮む
   maxHeight: h,
@@ -107,23 +120,24 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
   },
 
   // ====== Phase Bar 色分け（typeごと） ======
-  // DESIGN: 青
+  // DESIGN: 青（透明度追加）
+  // このCSSは全ページ共通で適用されるため、他ページのバーにも自動的に反映されます。
   "& .vis-item.phase-bar-design": {
-    backgroundColor: "#bbdefb",
+    backgroundColor: "rgba(33, 150, 243, 0.35)",
     borderColor: "#1976d2",
   },
-  // PRODT: 赤
+  // PRODT: 赤（透明度追加）
   "& .vis-item.phase-bar-prodt": {
-    backgroundColor: "#ffcdd2",
+    backgroundColor: "rgba(229, 57, 53, 0.35)",
     borderColor: "#e53935",
   },
-  // ENG: 緑
+  // ENG: 緑（透明度追加）
   "& .vis-item.phase-bar-eng": {
-    backgroundColor: "#c8e6c9",
+    backgroundColor: "rgba(67, 160, 71, 0.35)",
     borderColor: "#43a047",
   },
 
-  
+
   "& .vis-item.milestone.ms-dr .vis-item-content::before": {
     background: "transparent",
     border: "2px solid currentColor",
@@ -178,18 +192,18 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
     padding: "0 2px",
   },
   // ============================================
-  // Status styles for items (wtg/ip/fin)
+  // Status styles for items (wtg/ip/fin) - rgba形式に統一
   "& .vis-item.status-fin": {
-    backgroundColor: "#4caf50",
-    borderColor: "#388e3c",
+    backgroundColor: "rgba(76, 175, 80, 0.65)", // #4caf50
+    borderColor: "rgba(56, 142, 60, 0.85)",    // #388e3c
   },
   "& .vis-item.status-ip": {
-    backgroundColor: "#ff9800",
-    borderColor: "#f57c00",
+    backgroundColor: "rgba(255, 152, 0, 0.65)", // #ff9800
+    borderColor: "rgba(245, 124, 0, 0.85)",    // #f57c00
   },
   "& .vis-item.status-wtg": {
-    backgroundColor: "#9e9e9e",
-    borderColor: "#616161",
+    backgroundColor: "rgba(158, 158, 158, 0.65)", // #9e9e9e
+    borderColor: "rgba(97, 97, 97, 0.85)",       // #616161
   },
   // 背景アイテムのスタイル（薄い色で後ろに）
   "& .vis-item.vis-background": {

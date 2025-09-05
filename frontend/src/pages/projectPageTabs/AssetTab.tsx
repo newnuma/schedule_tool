@@ -136,17 +136,25 @@ const AssetTab: React.FC = () => {
 
       // Assetアイテム
       const assetItems = filteredAssets
-        .map((a) => ({
-          id: a.id,
-          group: a.type,
-          subgroup: "asset",
-          subgroupOrder: 1,
-          content: a.name,
-          start: a.start_date,
-          end: a.end_date,
-          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`,
-          style: a.color ? `background: rgb(${a.color});` : undefined,
-        }));
+        .map((a) => {
+          let style;
+          if (a.color) {
+            // a.color: "r, g, b" → rgba形式で透明度付与
+            const rgb = a.color.split(',').map(s => s.trim()).join(',');
+            style = `background: rgba(${rgb}, 0.35); border: 1px solid rgba(${rgb}, 0.85);`;
+          }
+          return {
+            id: a.id,
+            group: a.type,
+            subgroup: "asset",
+            subgroupOrder: 1,
+            content: a.name,
+            start: a.start_date,
+            end: a.end_date,
+            tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`,
+            style,
+          };
+        });
 
       // 選択中Subprojectに紐づく MilestoneTasks（親のAsset.typeは asset_type に格納済み）
       const phaseIds = filteredPhases.map(p => p.id);
