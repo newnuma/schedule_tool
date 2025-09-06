@@ -135,9 +135,11 @@ def fetch_distribute_page() -> Any:
 def fetch_basic_data() -> Any:
     person = get_entities("Person")
     steps = get_entities("Step")
+    work_categories = get_entities("WorkCategory")
     return {
         "person": person,
         "steps": steps,
+        "workCategories": work_categories,
     }
 
 
@@ -348,6 +350,7 @@ def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[s
         "subprojects": merge_by_id(distribute.get("subprojects", [])),
         "phases": merge_by_id(distribute.get("phases", [])),
         "person": merge_by_id(basic_data.get("person", [])),
+        "workCategories": merge_by_id(basic_data.get("workCategories", [])),
         "selectedSubprojectId": project_id,
         "selectedPersonList": person_list,
     }

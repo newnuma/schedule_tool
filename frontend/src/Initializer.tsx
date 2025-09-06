@@ -7,6 +7,7 @@ const fetchInitialData = async (
   addSubprojects: any,
   addPhases: any,
   addPeople: any,
+  setWorkCategories: any,
   setLoading: any,
   setSelectedPersonList: any,
   setSelectedSubprojectId: any
@@ -20,6 +21,7 @@ const fetchInitialData = async (
     addSubprojects(result.subprojects || []);
     addPhases(result.phases || []);
     addPeople(result.person || []);
+    setWorkCategories(result.workCategories || []);
     setSelectedPersonList(result.selectedPersonList || []);
     setSelectedSubprojectId(result.selectedSubprojectId || undefined);
   } catch (e) {
@@ -36,6 +38,7 @@ const Initializer = () => {
     addPhases,
     addPeople,
     setLoading,
+    setWorkCategories,
     setSelectedPersonList,
     setSelectedSubprojectId,
   } = useAppContext();
@@ -48,6 +51,7 @@ const Initializer = () => {
         addSubprojects,
         addPhases,
         addPeople,
+        setWorkCategories,
         setLoading,
         setSelectedPersonList,
         setSelectedSubprojectId

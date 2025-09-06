@@ -149,6 +149,9 @@ export interface IAppContext {
     selectedSubprojectId?: number;
     setSelectedSubprojectId: (id?: number) => void;
 
+    workCategories?: IWorkCategory[];
+    setWorkCategories: (categories: IWorkCategory[]) => void;
+
     selectedPersonList: number[];
     setSelectedPersonList: (ids: number[]) => void;
 
@@ -185,6 +188,8 @@ const defaultParams: IAppContext = {
     people: [],
     addPeople: () => { },
     selectedSubprojectId: undefined,
+    workCategories: [],
+    setWorkCategories: () => { },
     setSelectedSubprojectId: () => { },
     selectedPersonList: [],
     setSelectedPersonList: () => { },
@@ -212,6 +217,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [personWorkloads, setPersonWorkloads] = useState<IPersonWorkload[]>([]);
     const [pmmWorkloads, setPMMWorkloads] = useState<IPMMWorkload[]>([]);
     const [people, setPeople] = useState<IPerson[]>([]);
+    const [workCategories, setWorkCategories] = useState<IWorkCategory[]>([]);
     const [selectedSubprojectId, setSelectedSubprojectId] = useState<number | undefined>(undefined);
     const [selectedPersonList, setSelectedPersonList] = useState<number[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -405,6 +411,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 addPMMWorkloads,
                 people,
                 addPeople,
+                workCategories,
+                setWorkCategories,
                 selectedSubprojectId,
                 setSelectedSubprojectId: handleSetSelectedSubprojectId,
                 selectedPersonList,
