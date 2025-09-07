@@ -1,443 +1,218 @@
 import React, { useMemo, useState } from "react";
-import { 
-  Typography, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper,
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  IconButton
-} from "@mui/material";
+import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, TextField, IconButton } from "@mui/material";
 import { ExpandMore, ChevronRight } from "@mui/icons-material";
-import { useAppContext } from "../../context/AppContext";
+import { useFilterContext } from "../../context/FilterContext";
+import DateRangeFilter from "../../components/filters/DateRangeFilter";
+import SearchDropdownFilter from "../../components/filters/SearchDropdownFilter";
 
-const WorkloadTab: React.FC = () => {
-  const { tasks, people, selectedSubprojectId, phases, assets } = useAppContext();
-  const [selectedWorkCategory, setSelectedWorkCategory] = useState<string>("category1");
-  const [startDate, setStartDate] = useState<string>("2025-06");
-  const [endDate, setEndDate] = useState<string>("2025-07");
+// 型定義
+import type { IPhase, IAsset, ITask, IPersonWorkload, IPMMWorkload, IPerson, IWorkCategory } from "../../context/AppContext";
+
+interface WorkloadTabProps {
+  phases: IPhase[];
+  assets: IAsset[];
+  tasks: ITask[];
+  personWorkloads: IPersonWorkload[];
+  pmmWorkloads: IPMMWorkload[];
+  people: IPerson[];
+  workCategories: IWorkCategory[] | undefined;
+  selectedSubprojectId: number;
+}
+
+const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, personWorkloads, pmmWorkloads, people, workCategories, selectedSubprojectId }) => {
+  // SearchDropdownFilterで選択されたwork_category.idを取得
+  const { filters, setDropdownFilter, getFilteredData, setDateRangeFilter } = useFilterContext();
   const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set());
-  const [workloadData, setWorkloadData] = useState<Record<string, number>>({});
+  const assetFilterKey = "workload:asset";
+  // SearchDropdownFilterで選択されたwork_category.idを取得
+  const selectedWorkCategoryId = filters[assetFilterKey]?.dropdown?.["work_category.id"]?.[0];
 
-  // 選択されたSubprojectに関連するPhaseのみをフィルタ
-  const filteredPhases = useMemo(
-    () => phases.filter((phase) => phase.subproject.id === selectedSubprojectId),
-    [phases, selectedSubprojectId]
-  );
-
-  // 選択されたSubprojectに関連するAssetのみをフィルタ
-  const filteredAssets = useMemo(
-    () => {
-      const phaseIds = filteredPhases.map(p => p.id);
-      return assets.filter((asset) => phaseIds.includes(asset.phase.id));
-    },
-    [assets, filteredPhases]
-  );
-
-  // 選択されたSubprojectに関連するTaskのみをフィルタ
-  const filteredTasks = useMemo(
-    () => {
-      const assetIds = filteredAssets.map(a => a.id);
-      return tasks.filter((task) => assetIds.includes(task.asset.id));
-    },
-    [tasks, filteredAssets]
-  );
-
-  // 週の日付を生成（月曜日ベース）
-  const generateWeekDates = useMemo(() => {
-    const weeks: string[] = [];
-    const start = new Date("2025-07-14"); // 7/16を含む週の月曜日
-    
-    for (let i = 0; i < 9; i++) { // 9週間分
-      const monday = new Date(start);
-      monday.setDate(start.getDate() + (i * 7));
-      const monthDay = `${monday.getMonth() + 1}/${monday.getDate()}`;
-      weeks.push(monthDay);
+  // --- テーブル本体 ---
+  // 週ラベル生成（DateRangeFilterの値に連動）
+  const assetDr = filters[assetFilterKey]?.dateRange;
+  const start = assetDr?.start;
+  const end = assetDr?.end;
+  const weekIsos = useMemo(() => {
+    if (!start || !end) return [];
+    const arr: string[] = [];
+    const s = new Date(start);
+    const e = new Date(end);
+    let cur = new Date(s);
+    while (cur <= e) {
+      arr.push(cur.toISOString().split("T")[0]);
+      cur.setDate(cur.getDate() + 7);
     }
-    return weeks;
-  }, []);
+    return arr;
+  }, [start, end]);
+  const weekLabels = useMemo(() => weekIsos.map(iso => {
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }), [weekIsos]);
 
-  // Asset展開/折りたたみ
+  // FilterContextのgetFilteredDataでフィルタ適用
+  // Assetに対してSearchDropdownFilterとDateRangeFilterを適用
+  const filteredAssets = useMemo(() => getFilteredData(assetFilterKey, assets), [getFilteredData, assetFilterKey, assets]);
+  // filteredAssetsに紐づくTaskのみ表示
+  const filteredTasks = useMemo(() => {
+    const assetIds = new Set(filteredAssets.map(a => a.id));
+    return tasks.filter(t => t.asset && typeof t.asset.id === 'number' && assetIds.has(t.asset.id));
+  }, [tasks, filteredAssets]);
+  // filteredAssets/filteredTasksに紐づくpersonWorkloadのみ表示（週もフィルタ）
+  const filteredPW = useMemo(() => {
+    const taskIds = new Set(filteredTasks.map(t => t.id));
+    return personWorkloads.filter(w =>
+      w.task && taskIds.has(w.task.id) && weekIsos.includes(w.week)
+    );
+  }, [personWorkloads, filteredTasks, weekIsos]);
+
+  // 選択workCategoryと週でPMMWorkloadをフィルタ
+  const filteredPMMW = useMemo(() => {
+    if (!selectedWorkCategoryId) return [];
+    return pmmWorkloads.filter(w =>
+      w.work_category?.id === Number(selectedWorkCategoryId) &&
+      weekIsos.includes(w.week)
+    );
+  }, [pmmWorkloads, selectedWorkCategoryId, weekIsos]);
+
+
+
+  console.log("filteredAssets:", filteredAssets);
+  console.log("filteredTasks:", filteredTasks);
+  console.log("filteredPMMW:", filteredPMMW);
+  console.log("filteredPW:", filteredPW);
+
+  // 展開トグル
   const toggleAssetExpansion = (assetId: number) => {
-    const newExpanded = new Set(expandedAssets);
-    if (newExpanded.has(assetId)) {
-      newExpanded.delete(assetId);
-    } else {
-      newExpanded.add(assetId);
-    }
-    setExpandedAssets(newExpanded);
-  };
-
-  // Workloadデータ更新
-  const updateWorkloadData = (key: string, value: number) => {
-    setWorkloadData(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-
-  // Personの名前を取得するヘルパー関数
-  const getPersonName = (personId: number) => {
-    const person = people.find(p => p.id === personId);
-    return person ? person.name : `Person ${personId}`;
-  };
-
-  // Taskの名前を取得するヘルパー関数
-  const getTaskName = (taskId: number) => {
-    const task = filteredTasks.find(t => t.id === taskId);
-    return task ? task.name : `Task ${taskId}`;
-  };
-
-  // Taskの合計値を計算
-  const calculateTaskTotal = (taskId: number, weekIndex: number) => {
-    const task = filteredTasks.find(t => t.id === taskId);
-    if (!task) return 0;
-    
-    let total = 0;
-  task.assignees.forEach(personRef => {
-      const key = `task-${taskId}-person-${personRef.id}-week-${weekIndex}`;
-      total += workloadData[key] || 0;
+    setExpandedAssets(prev => {
+      const n = new Set(prev);
+      if (n.has(assetId)) n.delete(assetId); else n.add(assetId);
+      return n;
     });
-    return total;
   };
 
-  // Assetの合計値を計算（Asset入力値 + Task配下のPerson入力値）
-  const calculateAssetTotal = (assetId: number, weekIndex: number) => {
-    // Asset自体の入力値
-    const assetInputValue = workloadData[`asset-${assetId}-week-${weekIndex}`] || 0;
-    
-    // 配下のTaskのPerson入力値の合計
+  // 値取得ヘルパー
+  const getPMMWValue = (weekIso: string): { id?: number, value: number } => {
+    const rec = filteredPMMW.find(w => w.week === weekIso);
+    return rec ? { id: rec.id, value: rec.man_week } : { value: 0 };
+  };
+
+  const getPWValue = (taskId: number, personId: number, weekIso: string): { id?: number, value: number } => {
+    const rec = filteredPW.find(w => w.task?.id === taskId && w.person?.id === personId && w.week === weekIso);
+    return rec ? { id: rec.id, value: rec.man_week } : { value: 0 };
+  };
+
+  const getTaskTotal = (taskId: number, weekIso: string) => {
+    return people.reduce((sum, p) => sum + getPWValue(taskId, p.id, weekIso).value, 0);
+  };
+  const getAssetTotal = (assetId: number, weekIso: string) => {
     const assetTasks = filteredTasks.filter(t => t.asset.id === assetId);
-    let taskTotal = 0;
-    assetTasks.forEach(task => {
-      taskTotal += calculateTaskTotal(task.id, weekIndex);
-    });
-    
-    return assetInputValue + taskTotal;
+    return assetTasks.reduce((sum, t) => sum + getTaskTotal(t.id, weekIso), 0);
   };
-
-  // Current Planの合計値を計算（全Asset値の合計）
-  const calculateCurrentPlanTotal = (weekIndex: number) => {
-    let total = 0;
-    filteredAssets.forEach(asset => {
-      total += calculateAssetTotal(asset.id, weekIndex);
-    });
-    return total;
+  const getCurrentPlanTotal = (weekIso: string) => {
+    return filteredPW.filter(w => w.week === weekIso).reduce((sum, w) => sum + w.man_week, 0);
   };
 
   if (!selectedSubprojectId) {
-    return (
-      <Typography variant="body1" color="text.secondary">
-        Please select a subproject to view workloads
-      </Typography>
-    );
+    return <Typography variant="body1" color="text.secondary">Please select a subproject to view workloads</Typography>;
   }
 
   return (
-    <div>
-      <Typography variant="h6" gutterBottom>
-        Workload Management
-      </Typography>
-      
-      {/* フィルターコントロール */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>WorkCategory</InputLabel>
-          <Select
-            value={selectedWorkCategory}
-            label="WorkCategory"
-            onChange={(e) => setSelectedWorkCategory(e.target.value)}
-          >
-            <MenuItem value="category1">category1</MenuItem>
-            <MenuItem value="category2">category2</MenuItem>
-            <MenuItem value="category3">category3</MenuItem>
-          </Select>
-        </FormControl>
-        
-        <Typography variant="body1">Date:</Typography>
-        <TextField
-          type="month"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          sx={{ minWidth: 150 }}
+    <Box>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+        <SearchDropdownFilter
+          pageKey={assetFilterKey}
+          data={assets}
+          property="work_category.id"
+          label="Work Category"
         />
-        <Typography variant="body1">to</Typography>
-        <TextField
-          type="month"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          sx={{ minWidth: 150 }}
+        <DateRangeFilter
+          pageKey={assetFilterKey}
+          label="Period (Week)"
+          startProperty="start_date"
+          endProperty="end_date"
+          alignStartToMonday
+          alignEndToFriday
+          defaultStartWeek={0}
+          defaultEndWeek={8}
         />
       </Box>
-
-      {/* Workload表 */}
       <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
-        <Table sx={{ minWidth: 1000 }}>
+        <Table sx={{ minWidth: 1000 }} size="small">
           <TableHead>
             <TableRow>
-              <TableCell 
-                sx={{ 
-                  minWidth: 200, 
-                  backgroundColor: '#f5f5f5',
-                  position: 'sticky',
-                  left: 0,
-                  zIndex: 2
-                }}
-              >
-                <strong></strong>
-              </TableCell>
-              <TableCell 
-                sx={{ 
-                  width: 1000,
-                  backgroundColor: '#f5f5f5',
-                  overflow: 'auto'
-                }}
-              >
-                <Box sx={{ display: 'flex', minWidth: 800 }}>
-                  {generateWeekDates.map((date) => (
-                    <Box 
-                      key={date} 
-                      sx={{ 
-                        minWidth: 80, 
-                        textAlign: 'center',
-                        px: 1,
-                        borderRight: '1px solid #e0e0e0',
-                        '&:last-child': { borderRight: 'none' }
-                      }}
-                    >
-                      <strong>{date}</strong>
-                    </Box>
-                  ))}
-                </Box>
-              </TableCell>
+              <TableCell sx={{ minWidth: 200, backgroundColor: '#f5f5f5', position: 'sticky', left: 0, zIndex: 2 }}></TableCell>
+              {weekLabels.map((label, idx) => (
+                <TableCell key={idx} align="center" sx={{ backgroundColor: '#f5f5f5', minWidth: 80 }}><strong>{label}</strong></TableCell>
+              ))}
             </TableRow>
           </TableHead>
           <TableBody>
             {/* Approved Plan行 */}
             <TableRow sx={{ backgroundColor: '#f9f9f9' }}>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold',
-                  position: 'sticky',
-                  left: 0,
-                  backgroundColor: '#f9f9f9',
-                  zIndex: 1
-                }}
-              >
-                Approved Plan
-              </TableCell>
-              <TableCell sx={{ p: 0 }}>
-                <Box sx={{ display: 'flex', minWidth: 800 }}>
-                  {generateWeekDates.map((_, weekIndex) => (
-                    <Box 
-                      key={weekIndex} 
-                      sx={{ 
-                        minWidth: 80, 
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        p: 1,
-                        borderRight: '1px solid #e0e0e0',
-                        '&:last-child': { borderRight: 'none' }
-                      }}
-                    >
-                      <TextField
-                        size="small"
-                        type="number"
-                        value={workloadData[`approved-week-${weekIndex}`] || ''}
-                        onChange={(e) => updateWorkloadData(`approved-week-${weekIndex}`, Number(e.target.value) || 0)}
-                        sx={{ width: 60, '& input': { textAlign: 'center' } }}
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              </TableCell>
+              <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#f9f9f9', zIndex: 1 }}>Approved Plan</TableCell>
+              {weekIsos.map((weekIso, idx) => {
+                const { id, value } = getPMMWValue(weekIso);
+                return (
+                  <TableCell key={weekIso} align="center">
+                    <TextField size="small" type="number" value={value} sx={{ width: 60, '& input': { textAlign: 'center' } }} inputProps={{ 'data-id': id ?? '', 'data-week': weekIso }} />
+                  </TableCell>
+                );
+              })}
             </TableRow>
-            
-            {/* Current Plan行（合計表示のみ） */}
+            {/* Current Plan行 */}
             <TableRow sx={{ backgroundColor: '#fff3cd' }}>
-              <TableCell 
-                sx={{ 
-                  fontWeight: 'bold',
-                  position: 'sticky',
-                  left: 0,
-                  backgroundColor: '#fff3cd',
-                  zIndex: 1
-                }}
-              >
-                Current Plan
-              </TableCell>
-              <TableCell sx={{ p: 0 }}>
-                <Box sx={{ display: 'flex', minWidth: 800 }}>
-                  {generateWeekDates.map((_, weekIndex) => (
-                    <Box 
-                      key={weekIndex} 
-                      sx={{ 
-                        minWidth: 80, 
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        p: 1,
-                        borderRight: '1px solid #e0e0e0',
-                        '&:last-child': { borderRight: 'none' }
-                      }}
-                    >
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        {calculateCurrentPlanTotal(weekIndex)}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </TableCell>
+              <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#fff3cd', zIndex: 1 }}>Current Plan</TableCell>
+              {weekIsos.map((weekIso, idx) => (
+                <TableCell key={weekIso} align="center">
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{getCurrentPlanTotal(weekIso)}</Typography>
+                </TableCell>
+              ))}
             </TableRow>
-
             {/* Asset, Task, Person階層 */}
-            {filteredAssets.map((asset) => {
+            {filteredAssets.map(asset => {
+              // Task: 親Assetに紐づくもののみ
               const assetTasks = filteredTasks.filter(t => t.asset.id === asset.id);
               const isExpanded = expandedAssets.has(asset.id);
-              
               return (
                 <React.Fragment key={asset.id}>
-                  {/* Asset行（入力可能） */}
+                  {/* Asset行 */}
                   <TableRow sx={{ backgroundColor: '#e9ecef' }}>
-                    <TableCell 
-                      sx={{ 
-                        position: 'sticky',
-                        left: 0,
-                        backgroundColor: '#e9ecef',
-                        zIndex: 1
-                      }}
-                    >
+                    <TableCell sx={{ position: 'sticky', left: 0, backgroundColor: '#e9ecef', zIndex: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => toggleAssetExpansion(asset.id)}
-                          sx={{ mr: 1 }}
-                        >
-                          {isExpanded ? <ExpandMore /> : <ChevronRight />}
+                        <IconButton size="small" onClick={() => toggleAssetExpansion(asset.id)} sx={{ mr: 1 }}>
+                          {isExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
                         </IconButton>
-                        <strong>{asset.name}{isExpanded ? '△' : '∇'}</strong>
+                        <strong>{asset.name}{isExpanded ? '△' : '▽'}</strong>
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ p: 0 }}>
-                      <Box sx={{ display: 'flex', minWidth: 800 }}>
-                        {generateWeekDates.map((_, weekIndex) => (
-                          <Box 
-                            key={weekIndex} 
-                            sx={{ 
-                              minWidth: 80, 
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              p: 1,
-                              borderRight: '1px solid #e0e0e0',
-                              '&:last-child': { borderRight: 'none' }
-                            }}
-                          >
-                            <TextField
-                              size="small"
-                              type="number"
-                              value={workloadData[`asset-${asset.id}-week-${weekIndex}`] || ''}
-                              onChange={(e) => updateWorkloadData(`asset-${asset.id}-week-${weekIndex}`, Number(e.target.value) || 0)}
-                              sx={{ width: 60, '& input': { textAlign: 'center' } }}
-                            />
-                          </Box>
-                        ))}
-                      </Box>
-                    </TableCell>
+                    {weekIsos.map(weekIso => (
+                      <TableCell key={weekIso} align="center">{getAssetTotal(asset.id, weekIso)}</TableCell>
+                    ))}
                   </TableRow>
-
                   {/* Task・Person行（展開時のみ） */}
-                  {isExpanded && assetTasks.map((task) => (
+                  {isExpanded && assetTasks.map(task => (
                     <React.Fragment key={task.id}>
-                      {/* Task行（合計表示） */}
+                      {/* Task行 */}
                       <TableRow sx={{ backgroundColor: '#d1ecf1' }}>
-                        <TableCell 
-                          sx={{ 
-                            pl: 4,
-                            position: 'sticky',
-                            left: 0,
-                            backgroundColor: '#d1ecf1',
-                            zIndex: 1
-                          }}
-                        >
+                        <TableCell sx={{ position: 'sticky', left: 0, backgroundColor: '#d1ecf1', zIndex: 1, pl: 4 }}>
                           <strong>{task.name}</strong>
                         </TableCell>
-                        <TableCell sx={{ p: 0 }}>
-                          <Box sx={{ display: 'flex', minWidth: 800 }}>
-                            {generateWeekDates.map((_, weekIndex) => (
-                              <Box 
-                                key={weekIndex} 
-                                sx={{ 
-                                  minWidth: 80, 
-                                  display: 'flex',
-                                  justifyContent: 'center',
-                                  alignItems: 'center',
-                                  p: 1,
-                                  borderRight: '1px solid #e0e0e0',
-                                  '&:last-child': { borderRight: 'none' }
-                                }}
-                              >
-                                <Typography variant="body2" color="text.secondary">
-                                  {calculateTaskTotal(task.id, weekIndex)}
-                                </Typography>
-                              </Box>
-                            ))}
-                          </Box>
-                        </TableCell>
+                        {weekIsos.map(weekIso => (
+                          <TableCell key={weekIso} align="center">{getTaskTotal(task.id, weekIso)}</TableCell>
+                        ))}
                       </TableRow>
-                      
-                      {/* Person行（入力可能） */}
-                      {task.assignees.map((personRef) => (
-                        <TableRow key={`${task.id}-${personRef.id}`}>
-                          <TableCell 
-                            sx={{ 
-                              pl: 6,
-                              position: 'sticky',
-                              left: 0,
-                              backgroundColor: 'white',
-                              zIndex: 1
-                            }}
-                          >
-                            {getPersonName(personRef.id)}
-                          </TableCell>
-                          <TableCell sx={{ p: 0 }}>
-                            <Box sx={{ display: 'flex', minWidth: 800 }}>
-                              {generateWeekDates.map((_, weekIndex) => (
-                                <Box 
-                                  key={weekIndex} 
-                                  sx={{ 
-                                    minWidth: 80, 
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    p: 1,
-                                    borderRight: '1px solid #e0e0e0',
-                                    '&:last-child': { borderRight: 'none' }
-                                  }}
-                                >
-                                  <TextField
-                                    size="small"
-                                    type="number"
-                                    value={workloadData[`task-${task.id}-person-${personRef.id}-week-${weekIndex}`] || ''}
-                                    onChange={(e) => updateWorkloadData(
-                                      `task-${task.id}-person-${personRef.id}-week-${weekIndex}`, 
-                                      Number(e.target.value) || 0
-                                    )}
-                                    sx={{ width: 60, '& input': { textAlign: 'center' } }}
-                                  />
-                                </Box>
-                              ))}
-                            </Box>
-                          </TableCell>
+                      {/* Person行: task.assigneesのみ表示 */}
+                      {task.assignees && task.assignees.map(personFk => (
+                        <TableRow key={`${task.id}-${personFk.id}`}>
+                          <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, pl: 8 }}>{personFk.name}</TableCell>
+                          {weekIsos.map(weekIso => {
+                            const { id, value } = getPWValue(task.id, personFk.id, weekIso);
+                            return (
+                              <TableCell key={weekIso} align="center">
+                                <TextField size="small" type="number" value={value} sx={{ width: 60, '& input': { textAlign: 'center' } }} inputProps={{ 'data-id': id ?? '', 'data-task': task.id, 'data-person': personFk.id, 'data-week': weekIso }} />
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))}
                     </React.Fragment>
@@ -448,8 +223,7 @@ const WorkloadTab: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-    </div>
+    </Box>
   );
-};
-
+}
 export default WorkloadTab;

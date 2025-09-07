@@ -61,6 +61,7 @@ export interface ITask {
 
     //参照用
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
+    work_category?: IForignKey | null; // 追加: AssetのWorkCategory（サーバ埋め込み or 正規化）
 }
 
 export interface IMilestoneTask {

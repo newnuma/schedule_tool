@@ -168,6 +168,7 @@ def fetch_project_page(project_id: int) -> Any:
         "start_date",
         "end_date",
         "type",
+        "work_category",
         "step",
         "step.color",
     ]
@@ -185,10 +186,12 @@ def fetch_project_page(project_id: int) -> Any:
         "status",
         "assignees",
         "asset.phase.subproject",
+        "asset.work_category",
     ]
     tasks = get_entities("Task", [["asset", "in", asset_ids]], task_fields) if asset_ids else []
     # サブプロジェクトを統一キーに
     tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
+    tasks = remap_key_in_list(tasks, "asset.work_category", "work_category")
 
     # MilestoneTask取得（親: Asset、同一サブプロジェクトに属するもののみ）
     ms_fields = [

@@ -47,20 +47,28 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
     }
     // 今日
     const today = new Date();
-    const day = today.getDay();
-    // 今週の月曜
-    const monday = new Date(today);
-    const diffToMonday = (day === 0 ? -6 : 1 - day);
-    monday.setDate(monday.getDate() + diffToMonday + defaultStartWeek * 7);
+    let monday: Date;
+    if (alignStartToMonday) {
+      // 今日からdefaultStartWeek分ずらした日付の週の月曜
+      const base = new Date(today);
+      base.setDate(base.getDate() + defaultStartWeek * 7);
+      monday = floorToMonday(base);
+    } else {
+      // 月曜揃えしない場合
+      monday = new Date(today);
+      monday.setDate(monday.getDate() + defaultStartWeek * 7);
+    }
     // 終了日（月曜＋(defaultEndWeek×7)-1日）
     const end = new Date(monday);
     end.setDate(end.getDate() + defaultEndWeek * 7 - 1);
-    const toIso = (d: Date) => d.toISOString().slice(0, 10);
-    setStartValue(toIso(monday));
-    setEndValue(toIso(end));
-    // Contextにも反映
-    setDateRangeFilter(pageKey, toIso(monday), toIso(end), startProperty, endProperty);
-  }, [currentDateRange, defaultStartWeek, defaultEndWeek, pageKey, setDateRangeFilter, startProperty, endProperty]);
+  // ISO変換をfmtISOに統一（handleStartDateChangeと同じ）
+  setStartValue(fmtISO(monday));
+  setEndValue(fmtISO(end));
+  // Contextにも反映
+  console.log("monday",monday)
+  console.log("fmtISO(monday)",fmtISO(monday))
+  setDateRangeFilter(pageKey, fmtISO(monday), fmtISO(end), startProperty, endProperty);
+  }, [currentDateRange, defaultStartWeek, defaultEndWeek, pageKey, setDateRangeFilter, startProperty, endProperty, alignStartToMonday]);
 
   // utils
   const parseISO = (v?: string) => {
