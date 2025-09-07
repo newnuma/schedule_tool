@@ -31,12 +31,11 @@ function TabPanel(props: TabPanelProps) {
   return (
     <div
       role="tabpanel"
-      hidden={value !== index}
       id={`project-tabpanel-${index}`}
       aria-labelledby={`project-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      <Box sx={{ p: 3, display: value === index ? 'block' : 'none' }}>{children}</Box>
     </div>
   );
 }
@@ -92,14 +91,13 @@ function a11yProps(index: number) {
 const ProjectPage: React.FC = () => {
   const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, 
     addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addMilestoneTasks,
-    addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask } = useAppContext();
+    addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask,
+    phases, assets, tasks, milestoneTasks, personWorkloads, pmmWorkloads, people, workCategories } = useAppContext();
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
-  console.log("Selected Subproject ID:", selectedSubprojectId);
 
   // 選択されたSubprojectオブジェクトを取得
   const selectedSubproject = subprojects.find(sp => sp.id === selectedSubprojectId);
@@ -120,14 +118,12 @@ const ProjectPage: React.FC = () => {
         try {
           setLoading(true);
           const result = await fetchProjectPage(selectedSubprojectId);
-          console.log('Project page data fetched:', result);
           addPhases(result.phases || []);
           addAssets(result.assets || []);
           addTasks(result.tasks || []);
           addMilestoneTasks(result.milestoneTasks || []);
           addPersonWorkloads(result.personworkloads || []);
           addPMMWorkloads(result.pmmworkloads || []);
-          console.log('Subproject data fetched for ID:', selectedSubprojectId);
         } catch (error) {
           console.error('Failed to fetch subproject data:', error);
         } finally {
@@ -135,9 +131,31 @@ const ProjectPage: React.FC = () => {
         }
       }
     };
-
     fetchData();
   }, [selectedSubprojectId, setLoading]);
+
+  // --- サブプロジェクト関連データのフィルタリング ---
+  // Phase
+  const filteredPhases = phases.filter(p => p.subproject.id === selectedSubprojectId);
+  // Asset（Phaseに紐づく）
+  const filteredAssets = assets.filter(a => filteredPhases.map(p => p.id).includes(a.phase.id));
+  // Task（Assetに紐づく）
+  const filteredTasks = tasks.filter(t => filteredAssets.map(a => a.id).includes(t.asset.id));
+  // MilestoneTask（AssetのPhaseに紐づく）
+  const assetById = new Map(assets.map(a => [a.id, a]));
+  const filteredMilestoneTasks = milestoneTasks.filter(ms => {
+    const parentAsset = assetById.get(ms.asset.id);
+    return parentAsset && filteredPhases.map(p => p.id).includes(parentAsset.phase.id);
+  });
+  // PersonWorkload（Task, Subprojectに紐づく）
+  const filteredPersonWorkloads = personWorkloads.filter(w => {
+    return w.subproject?.id === selectedSubprojectId && w.task && filteredTasks.map(t => t.id).includes(w.task.id);
+  });
+  // PMMWorkload（Subprojectに紐づく）
+  const filteredPMMWorkloads = pmmWorkloads.filter(w => w.subproject.id === selectedSubprojectId);
+
+  console.log("Filtered PersonWorkloads:", filteredPersonWorkloads);
+  console.log("Filtered PMMWorkloads:", filteredPMMWorkloads);
 
   return (
     <FormProvider
@@ -165,13 +183,34 @@ const ProjectPage: React.FC = () => {
             </Box>
 
             <TabPanel value={tabValue} index={0}>
-              <AssetTab />
+              <AssetTab
+                phases={filteredPhases}
+                assets={filteredAssets}
+                milestoneTasks={filteredMilestoneTasks}
+                isEditMode={isEditMode}
+                selectedSubprojectId={selectedSubprojectId}
+              />
             </TabPanel>
             <TabPanel value={tabValue} index={1}>
-              <TaskTab />
+              <TaskTab
+                phases={filteredPhases}
+                assets={filteredAssets}
+                tasks={filteredTasks}
+                isEditMode={isEditMode}
+                selectedSubprojectId={selectedSubprojectId}
+              />
             </TabPanel>
             <TabPanel value={tabValue} index={2}>
-              <WorkloadTab />
+              <WorkloadTab
+                phases={filteredPhases}
+                assets={filteredAssets}
+                tasks={filteredTasks}
+                personWorkloads={filteredPersonWorkloads}
+                pmmWorkloads={filteredPMMWorkloads}
+                people={people}
+                workCategories={workCategories}
+                selectedSubprojectId={selectedSubprojectId}
+              />
             </TabPanel>
           </ErrorBoundary>
         ) : (
@@ -179,7 +218,6 @@ const ProjectPage: React.FC = () => {
             Please select a subproject to view details
           </Typography>
         )}
-        
         <FormManager />
       </Main>
     </FormProvider>

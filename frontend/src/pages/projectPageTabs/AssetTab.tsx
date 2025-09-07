@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { Typography, Box } from "@mui/material";
 import { Folder as FolderIcon, Assignment as AssignmentIcon } from "@mui/icons-material";
-import { useAppContext } from "../../context/AppContext";
 import { useFilterContext } from "../../context/FilterContext";
 import { useFormContext } from "../../context/FormContext";
 import GanttChart from "../../components/GanttChart";
@@ -10,8 +9,18 @@ import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu from "../../components/common/ContextMenu";
 import { useContextMenu } from "../../hooks/useContextMenu";
 
-const AssetTab: React.FC = () => {
-  const { phases, assets, selectedSubprojectId, isEditMode, milestoneTasks } = useAppContext();
+// 型定義
+import type { IPhase, IAsset, IMilestoneTask } from "../../context/AppContext";
+
+interface AssetTabProps {
+  phases: IPhase[];
+  assets: IAsset[];
+  milestoneTasks: IMilestoneTask[];
+  isEditMode: boolean;
+  selectedSubprojectId: number;
+}
+
+const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isEditMode, selectedSubprojectId }) => {
   const { getFilteredData } = useFilterContext();
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "project.assets:items";   // date range + status for items
@@ -27,7 +36,6 @@ const AssetTab: React.FC = () => {
     handleDelete,
   } = useContextMenu();
 
-  console.log("assets:", assets);
 
   // GanttChartの期待する型に合わせてhandlerを変換
   const handleGanttRightClick = (itemId: number | string, itemName: string, event: MouseEvent) => {
@@ -63,20 +71,9 @@ const AssetTab: React.FC = () => {
     }
   ];
 
-  // 選択されたSubprojectに関連するPhaseのみをフィルタ
-  const filteredPhases = useMemo(
-    () => phases.filter((phase) => phase.subproject.id === selectedSubprojectId),
-    [phases, selectedSubprojectId]
-  );
-
-  // 選択されたSubprojectに関連するAssetのみをフィルタ（基本フィルタリング）
-  const basicFilteredAssets = useMemo(
-    () => {
-      const phaseIds = filteredPhases.map(p => p.id);
-      return assets.filter((asset) => phaseIds.includes(asset.phase.id));
-    },
-    [assets, filteredPhases]
-  );
+  // ProjectPageからpropsで受け取ったデータをそのまま使う
+  const filteredPhases = phases;
+  const basicFilteredAssets = assets;
 
   // Apply group filters to determine visible type groups
   const assetsForGroups = useMemo(

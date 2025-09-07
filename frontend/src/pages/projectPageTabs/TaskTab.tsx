@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { Typography, Box } from "@mui/material";
 import { Assignment as AssignmentIcon, Task as TaskIcon } from "@mui/icons-material";
-import { useAppContext } from "../../context/AppContext";
 import { useFilterContext } from "../../context/FilterContext";
 import { useFormContext } from "../../context/FormContext";
 import GanttChart from "../../components/GanttChart";
@@ -10,8 +9,18 @@ import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu from "../../components/common/ContextMenu";
 import { useContextMenu } from "../../hooks/useContextMenu";
 
-const TaskTab: React.FC = () => {
-  const { assets, tasks, selectedSubprojectId, phases, isEditMode } = useAppContext();
+// 型定義
+import type { IPhase, IAsset, ITask } from "../../context/AppContext";
+
+interface TaskTabProps {
+  phases: IPhase[];
+  assets: IAsset[];
+  tasks: ITask[];
+  isEditMode: boolean;
+  selectedSubprojectId: number;
+}
+
+const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, selectedSubprojectId }) => {
   const { getFilteredData, filters } = useFilterContext();
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "project.tasks:items";   // date range etc. for items
@@ -61,48 +70,25 @@ const TaskTab: React.FC = () => {
     }
   ];
 
-  // 選択されたSubprojectに関連するPhaseのみをフィルタ
-  const filteredPhases = useMemo(
-    () => phases.filter((phase) => phase.subproject.id === selectedSubprojectId),
-    [phases, selectedSubprojectId]
-  );
-
-  // 選択されたSubprojectに関連するAssetのみをフィルタ（基本フィルタリング）
-  const basicFilteredAssets = useMemo(
-    () => {
-      const phaseIds = filteredPhases.map(p => p.id);
-      return assets.filter((asset) => phaseIds.includes(asset.phase.id));
-    },
-    [assets, filteredPhases]
-  );
-
+  // ProjectPageからpropsで受け取ったデータをそのまま使う
+  const filteredPhases = phases;
+  const basicFilteredAssets = assets;
+  const baseTasksForSubproject = tasks;
   // Apply group filters (asset type, etc.) to decide visible groups
   const assetsForGroups = useMemo(
     () => getFilteredData(groupsPageKey, basicFilteredAssets),
     [basicFilteredAssets, getFilteredData]
   );
-
-  // Base tasks within the selected subproject (by basicFilteredAssets)
-  const baseTasksForSubproject = useMemo(
-    () => {
-      const assetIds = new Set(basicFilteredAssets.map(a => a.id));
-      return tasks.filter(t => assetIds.has(t.asset.id));
-    },
-    [tasks, basicFilteredAssets]
-  );
-
   // Apply item filters (date range etc.) to tasks
   const tasksForItems = useMemo(
     () => getFilteredData(itemsPageKey, baseTasksForSubproject),
     [baseTasksForSubproject, getFilteredData]
   );
-
   // items側フィルタ結果をそのまま採用（グループとは独立）
   const filteredTasks = useMemo(
     () => tasksForItems,
     [tasksForItems]
   );
-
   // groups側フィルタ結果をそのまま採用（タスクが無いアセットもグループ表示）
   const filteredAssets = useMemo(
     () => assetsForGroups,
