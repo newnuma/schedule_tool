@@ -188,6 +188,8 @@ const AssinmentWorkload: React.FC = () => {
 					endProperty="week"
 					alignStartToMonday
 					alignEndToFriday
+					defaultStartWeek={0}
+					defaultEndWeek={8}
 				/>
 				{/* 右上: 行に作用するフィルタ群 */}
 				<Box sx={{ ml: 'auto' }}>

@@ -42,34 +42,6 @@ const AssignmentPage: React.FC = () => {
     setTabValue(newValue);
   };
 
-  // 初期デフォルト期間（今週月曜〜8週間後-1日）を投入（未設定時のみ）
-  useEffect(() => {
-  // Use split pageKeys: items-only hold date ranges (groups have checkbox etc.)
-  const taskKey = "assignment:task:items";
-  const workloadKey = "assignment:workload:items";
-    const alreadyTask = !!filters[taskKey]?.dateRange;
-    const alreadyWorkload = !!filters[workloadKey]?.dateRange;
-    if (alreadyTask && alreadyWorkload) return;
-
-    const today = new Date();
-    const monday = new Date(today);
-    const day = monday.getDay();
-    const diffToMonday = (day === 0 ? -6 : 1 - day); // Monday=1, Sunday=0
-    monday.setDate(monday.getDate() + diffToMonday);
-    const end = new Date(monday);
-    end.setDate(end.getDate() + 8 * 7 - 1);
-    const toIso = (d: Date) => d.toISOString().slice(0, 10);
-    const startIso = toIso(monday);
-    const endIso = toIso(end);
-
-    if (!alreadyTask) {
-      setDateRangeFilter(taskKey, startIso, endIso, "start_date", "end_date");
-    }
-    if (!alreadyWorkload) {
-      setDateRangeFilter(workloadKey, startIso, endIso, "week", "week");
-    }
-  }, [filters, setDateRangeFilter]);
-
   return (
     <Main component="main">
       <Typography variant="h4" gutterBottom>

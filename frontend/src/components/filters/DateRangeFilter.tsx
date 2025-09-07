@@ -15,6 +15,8 @@ interface DateRangeFilterProps {
   compact?: boolean;
   alignStartToMonday?: boolean;
   alignEndToFriday?: boolean;
+  defaultStartWeek?: number; // 例: -1
+  defaultEndWeek?: number;   // 例: 8
 }
 
 const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
@@ -26,13 +28,39 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   compact = false,
   alignStartToMonday = false,
   alignEndToFriday = false,
+  defaultStartWeek = 0,
+  defaultEndWeek = 8,
 }) => {
   const { filters, setDateRangeFilter } = useFilterContext();
   
   // 現在の日付範囲設定を取得
   const currentDateRange = filters[pageKey]?.dateRange;
-  const startValue = currentDateRange?.start || "";
-  const endValue = currentDateRange?.end || "";
+  const [startValue, setStartValue] = React.useState<string>("");
+  const [endValue, setEndValue] = React.useState<string>("");
+
+  // 初期値計算: 月曜基準
+  React.useEffect(() => {
+    if (currentDateRange?.start && currentDateRange?.end) {
+      setStartValue(currentDateRange.start);
+      setEndValue(currentDateRange.end);
+      return;
+    }
+    // 今日
+    const today = new Date();
+    const day = today.getDay();
+    // 今週の月曜
+    const monday = new Date(today);
+    const diffToMonday = (day === 0 ? -6 : 1 - day);
+    monday.setDate(monday.getDate() + diffToMonday + defaultStartWeek * 7);
+    // 終了日（月曜＋(defaultEndWeek×7)-1日）
+    const end = new Date(monday);
+    end.setDate(end.getDate() + defaultEndWeek * 7 - 1);
+    const toIso = (d: Date) => d.toISOString().slice(0, 10);
+    setStartValue(toIso(monday));
+    setEndValue(toIso(end));
+    // Contextにも反映
+    setDateRangeFilter(pageKey, toIso(monday), toIso(end), startProperty, endProperty);
+  }, [currentDateRange, defaultStartWeek, defaultEndWeek, pageKey, setDateRangeFilter, startProperty, endProperty]);
 
   // utils
   const parseISO = (v?: string) => {
@@ -68,6 +96,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       const dt = parseISO(start);
       if (dt) start = fmtISO(floorToMonday(dt));
     }
+    setStartValue(start);
     setDateRangeFilter(pageKey, start, endValue, startProperty, endProperty);
   };
 
@@ -77,6 +106,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       const dt = parseISO(end);
       if (dt) end = fmtISO(toFridayOfWeek(dt));
     }
+    setEndValue(end);
     setDateRangeFilter(pageKey, startValue, end, startProperty, endProperty);
   };
 

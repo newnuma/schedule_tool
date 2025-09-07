@@ -80,7 +80,7 @@ const AssinmentTask: React.FC = () => {
       {/* Top bar: Date range on the left, filters on the right */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
         <Box>
-          <DateRangeFilter pageKey={itemsPageKey} label="Period" compact />
+          <DateRangeFilter pageKey={itemsPageKey} label="Period" compact defaultStartWeek={0} defaultEndWeek={8} />
         </Box>
         <CollapsibleFilterPanel pageKey={groupsPageKey} sx={{ ml: 2 }}>
           <CheckboxFilter
