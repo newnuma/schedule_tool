@@ -28,8 +28,8 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   compact = false,
   alignStartToMonday = false,
   alignEndToFriday = false,
-  defaultStartWeek = 0,
-  defaultEndWeek = 8,
+  defaultStartWeek,
+  defaultEndWeek,
 }) => {
   const { filters, setDateRangeFilter } = useFilterContext();
   
@@ -43,6 +43,10 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
     if (currentDateRange?.start && currentDateRange?.end) {
       setStartValue(currentDateRange.start);
       setEndValue(currentDateRange.end);
+      return;
+    }
+    // currentDateRangeが未設定の場合、defaultStartWeek, defaultEndWeekで初期値を決定
+    if (defaultStartWeek === undefined || defaultEndWeek === undefined) {
       return;
     }
     // 今日
@@ -61,13 +65,11 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
     // 終了日（月曜＋(defaultEndWeek×7)-1日）
     const end = new Date(monday);
     end.setDate(end.getDate() + defaultEndWeek * 7 - 1);
-  // ISO変換をfmtISOに統一（handleStartDateChangeと同じ）
-  setStartValue(fmtISO(monday));
-  setEndValue(fmtISO(end));
-  // Contextにも反映
-  console.log("monday",monday)
-  console.log("fmtISO(monday)",fmtISO(monday))
-  setDateRangeFilter(pageKey, fmtISO(monday), fmtISO(end), startProperty, endProperty);
+    // ISO変換をfmtISOに統一（handleStartDateChangeと同じ）
+    setStartValue(fmtISO(monday));
+    setEndValue(fmtISO(end));
+    // Contextにも反映
+    setDateRangeFilter(pageKey, fmtISO(monday), fmtISO(end), startProperty, endProperty);
   }, [currentDateRange, defaultStartWeek, defaultEndWeek, pageKey, setDateRangeFilter, startProperty, endProperty, alignStartToMonday]);
 
   // utils
