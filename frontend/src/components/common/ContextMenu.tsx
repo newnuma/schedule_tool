@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import {
   Menu,
   MenuItem,
@@ -6,38 +7,33 @@ import {
   ListItemText,
   Divider,
 } from '@mui/material';
-import {
-  Info as DetailIcon,
-  Edit as EditIcon,
-  ContentCopy as CopyIcon,
-  Delete as DeleteIcon,
-} from '@mui/icons-material';
+
+export interface ContextMenuItem {
+  label: string;
+  icon?: React.ReactNode;
+  action?: () => void;
+  disable?: boolean;
+  dividerBefore?: boolean;
+  color?: string; // e.g. 'error.main' for delete
+}
 
 export interface ContextMenuProps {
   anchorEl: HTMLElement | null;
   open: boolean;
   onClose: () => void;
-  onDetail?: () => void;
-  onEdit?: () => void;
-  onCopy?: () => void;
-  onDelete?: () => void;
-  itemName?: string;
+  items: ContextMenuItem[];
+  header?: React.ReactNode; // optional header (e.g. item name)
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
   anchorEl,
   open,
   onClose,
-  onDetail,
-  onEdit,
-  onCopy,
-  onDelete,
-  itemName,
+  items,
+  header,
 }) => {
-  const handleMenuItemClick = (callback?: () => void) => {
-    if (callback) {
-      callback();
-    }
+  const handleMenuItemClick = (action?: () => void) => {
+    if (action) action();
     onClose();
   };
 
@@ -46,14 +42,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       anchorEl={anchorEl}
       open={open}
       onClose={onClose}
-      anchorOrigin={{
-        vertical: 'bottom',
-        horizontal: 'right',
-      }}
-      transformOrigin={{
-        vertical: 'top',
-        horizontal: 'right',
-      }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       PaperProps={{
         elevation: 3,
         sx: {
@@ -65,47 +55,27 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         },
       }}
     >
-      {itemName && (
+      {header && (
         <>
           <MenuItem disabled sx={{ fontWeight: 'bold', opacity: 1 }}>
-            {itemName}
+            {header}
           </MenuItem>
           <Divider />
         </>
       )}
-      
-      <MenuItem onClick={() => handleMenuItemClick(onDetail)}>
-        <ListItemIcon>
-          <DetailIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText primary="Detail" />
-      </MenuItem>
-      
-      <MenuItem onClick={() => handleMenuItemClick(onEdit)}>
-        <ListItemIcon>
-          <EditIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText primary="Edit" />
-      </MenuItem>
-      
-      <MenuItem onClick={() => handleMenuItemClick(onCopy)}>
-        <ListItemIcon>
-          <CopyIcon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText primary="Copy" />
-      </MenuItem>
-      
-      <Divider />
-      
-      <MenuItem 
-        onClick={() => handleMenuItemClick(onDelete)}
-        sx={{ color: 'error.main' }}
-      >
-        <ListItemIcon>
-          <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />
-        </ListItemIcon>
-        <ListItemText primary="Delete" />
-      </MenuItem>
+      {items.map((item, idx) => (
+        <React.Fragment key={item.label + idx}>
+          {item.dividerBefore && <Divider />}
+          <MenuItem
+            onClick={() => handleMenuItemClick(item.action)}
+            disabled={item.disable}
+            sx={item.color ? { color: item.color } : undefined}
+          >
+            {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+            <ListItemText primary={item.label} />
+          </MenuItem>
+        </React.Fragment>
+      ))}
     </Menu>
   );
 };

@@ -6,8 +6,7 @@ import { useFormContext } from "../../context/FormContext";
 import GanttChart from "../../components/GanttChart";
 import { DropdownFilter, CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../components/filters";
 import AddButton, { AddButtonItem } from "../../components/common/AddButton";
-import ContextMenu from "../../components/common/ContextMenu";
-import { useContextMenu } from "../../hooks/useContextMenu";
+import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
 
 // 型定義
 import type { IPhase, IAsset, IMilestoneTask } from "../../context/AppContext";
@@ -26,27 +25,64 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   const itemsPageKey = "project.assets:items";   // date range + status for items
   const groupsPageKey = "project.assets:groups"; // type for groups
   const { openCreateForm } = useFormContext();
-  const {
-    contextMenu,
-    handleContextMenu: originalHandleContextMenu,
-    handleClose,
-    handleDetail,
-    handleEdit,
-    handleCopy,
-    handleDelete,
-  } = useContextMenu();
 
+  // ContextMenuの状態管理
+  const [menuState, setMenuState] = React.useState<{
+    anchorEl: HTMLElement | null;
+    open: boolean;
+    itemName?: string;
+  }>({ anchorEl: null, open: false });
 
-  // GanttChartの期待する型に合わせてhandlerを変換
-  const handleGanttRightClick = (itemId: number | string, itemName: string, event: MouseEvent) => {
-    const syntheticEvent = {
-      preventDefault: () => event.preventDefault(),
-      stopPropagation: () => event.stopPropagation(),
-      currentTarget: event.target as HTMLElement,
-    } as React.MouseEvent<HTMLElement>;
-    
-    originalHandleContextMenu(syntheticEvent, Number(itemId), itemName, 'asset');
+  // 右クリック時のハンドラ
+  const handleGanttRightClick = (
+    itemId: number | string,
+    itemName: string,
+    event: MouseEvent
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMenuState({
+      anchorEl: event.target as HTMLElement,
+      open: true,
+      itemName,
+    });
   };
+
+  const handleMenuClose = () => {
+    setMenuState({ anchorEl: null, open: false });
+  };
+
+  // メニュー項目定義（actionは空関数）
+  const contextMenuItems: ContextMenuItem[] = [
+    {
+      label: "Detail",
+      icon: null,
+      action: () => {},
+    },
+    {
+      label: "Edit",
+      icon: null,
+      action: () => {},
+      disable: !isEditMode,
+    },
+    {
+      label: "Copy",
+      icon: null,
+      action: () => {},
+      disable: !isEditMode,
+    },
+    {
+      dividerBefore: true,
+      label: "Delete",
+      icon: null,
+      action: () => {},
+      disable: !isEditMode,
+      color: "error.main",
+    },
+  ];
+
+
+  // ...existing code...
 
   // Add menu handlers
   const handleAddPhase = () => {
@@ -258,14 +294,11 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       
       {/* Context Menu */}
       <ContextMenu
-        anchorEl={contextMenu.anchorEl}
-        open={contextMenu.open}
-        onClose={handleClose}
-        onDetail={handleDetail}
-        onEdit={handleEdit}
-        onCopy={handleCopy}
-        onDelete={handleDelete}
-        itemName={contextMenu.itemName}
+        anchorEl={menuState.anchorEl}
+        open={menuState.open}
+        onClose={handleMenuClose}
+        items={contextMenuItems}
+        header={menuState.itemName}
       />
     </div>
   );
