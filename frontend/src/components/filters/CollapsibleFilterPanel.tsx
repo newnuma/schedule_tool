@@ -15,14 +15,16 @@ import { useFilterContext } from "../../context/FilterContext";
 interface CollapsibleFilterPanelProps {
   pageKey: string;
   children: React.ReactNode;
-  defaultExpanded?: boolean;
+  expanded?: boolean;
+  onChange?: (expanded: boolean) => void;
   sx?: SxProps<Theme>;
 }
 
 const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
   pageKey,
   children,
-  defaultExpanded = false,
+  expanded,
+  onChange,
   sx,
 }) => {
   const { filters } = useFilterContext();
@@ -31,9 +33,7 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
   const activeFilterCount = React.useMemo(() => {
     const pageFilters = filters[pageKey];
     if (!pageFilters) return 0;
-    
     let count = 0;
-    
     // Dropdown/Checkbox filters
     if (pageFilters.dropdown) {
       Object.values(pageFilters.dropdown).forEach(values => {
@@ -42,16 +42,25 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
         }
       });
     }
-    
     // DateRange filter
     if (pageFilters.dateRange && (pageFilters.dateRange.start || pageFilters.dateRange.end)) {
       count++;
     }
-    
     return count;
   }, [filters, pageKey]);
 
   const title = `Filter (${activeFilterCount})`;
+  // expanded/onChangeがpropsで渡された場合は制御、なければローカルで管理
+  const [localExpanded, setLocalExpanded] = React.useState(false);
+  const isControlled = typeof expanded === 'boolean' && typeof onChange === 'function';
+  const panelExpanded = isControlled ? expanded : localExpanded;
+  const handlePanelChange = (_: any, newExpanded: boolean) => {
+    if (isControlled) {
+      onChange?.(newExpanded);
+    } else {
+      setLocalExpanded(newExpanded);
+    }
+  };
 
   return (
     <Box
@@ -63,7 +72,8 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
       }}
     >
       <Accordion 
-        defaultExpanded={defaultExpanded}
+  expanded={panelExpanded}
+  onChange={handlePanelChange}
         sx={{ 
           backgroundColor: 'white',
           border: '1px solid #e0e0e0',

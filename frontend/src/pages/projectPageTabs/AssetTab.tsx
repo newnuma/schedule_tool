@@ -20,6 +20,8 @@ interface AssetTabProps {
 }
 
 const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isEditMode, selectedSubprojectId }) => {
+  // CollapsibleFilterPanel展開状態管理
+  const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   const { getFilteredData } = useFilterContext();
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "project.assets:items";   // date range + status for items
@@ -237,9 +239,10 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
 
   // Filter component
   const Filter: React.FC = () => (
-    <CollapsibleFilterPanel 
+    <CollapsibleFilterPanel
       pageKey={groupsPageKey}
-      defaultExpanded={false}
+      expanded={filterPanelExpanded}
+      onChange={setFilterPanelExpanded}
     >
       <DropdownFilter
         pageKey={groupsPageKey}

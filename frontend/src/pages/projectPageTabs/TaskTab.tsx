@@ -20,6 +20,8 @@ interface TaskTabProps {
 }
 
 const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, selectedSubprojectId }) => {
+  // CollapsibleFilterPanel展開状態管理
+  const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   const { getFilteredData, filters } = useFilterContext();
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "project.tasks:items";   // date range etc. for items
@@ -183,7 +185,8 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, se
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel
       pageKey={groupsPageKey}
-      defaultExpanded={false}
+      expanded={filterPanelExpanded}
+      onChange={setFilterPanelExpanded}
     >
       <CheckboxFilter
         pageKey={groupsPageKey}

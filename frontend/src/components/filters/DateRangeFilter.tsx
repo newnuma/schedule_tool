@@ -40,13 +40,18 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
 
   // 初期値計算: 月曜基準
   React.useEffect(() => {
-    if (currentDateRange?.start && currentDateRange?.end) {
-      setStartValue(currentDateRange.start);
-      setEndValue(currentDateRange.end);
+    if (
+      currentDateRange &&
+      ((currentDateRange.start && currentDateRange.start !== "") || (currentDateRange.end && currentDateRange.end !== ""))
+    ) {
+      setStartValue(currentDateRange.start ?? "");
+      setEndValue(currentDateRange.end ?? "");
       return;
     }
     // currentDateRangeが未設定の場合、defaultStartWeek, defaultEndWeekで初期値を決定
     if (defaultStartWeek === undefined || defaultEndWeek === undefined) {
+      setStartValue("");
+      setEndValue("");
       return;
     }
     // 今日

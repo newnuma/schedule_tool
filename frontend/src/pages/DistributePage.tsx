@@ -9,6 +9,8 @@ import { CollapsibleFilterPanel, CheckboxFilter, DateRangeFilter } from "../comp
 import StackSwitch from "../components/common/StackSwitch";
 
 const DistributePage: React.FC = () => {
+  // CollapsibleFilterPanel展開状態管理
+  const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   // Stack表示切替
   const [stacked, setStacked] = React.useState(true);
   const { subprojects, phases } = useAppContext();
@@ -97,7 +99,8 @@ const DistributePage: React.FC = () => {
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel
       pageKey={groupsPageKey}
-      defaultExpanded={false}
+      expanded={filterPanelExpanded}
+      onChange={setFilterPanelExpanded}
     >
       <CheckboxFilter
         pageKey={groupsPageKey}
