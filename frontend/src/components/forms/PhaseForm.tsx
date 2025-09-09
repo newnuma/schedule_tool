@@ -8,99 +8,94 @@ import {
   Box,
   Stack,
 } from '@mui/material';
-import { IPhaseForm } from '../../context/FormContext';
-import { useAppContext } from '../../context/AppContext';
-
+import { IPhase } from '../../context/AppContext';
 import { FormMode } from '../../context/FormContext';
 
 interface PhaseFormProps {
-  initialValues?: Partial<IPhaseForm>;
+  initialValues?: Partial<IPhase>;
   candidates?: Record<string, any[]>;
   mode: FormMode;
-  onSubmit: (phase: Omit<IPhaseForm, 'id'>) => void;
+  onSubmit: (phase: Omit<IPhase, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
-  submitTrigger?: number;
+  onClose?: () => void;
+  cancelText?: string;
 }
 
-const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, submitTrigger }) => {
-  // subproject候補はcandidatesから取得（未使用ならselectedSubprojectIdで初期化）
-  const subproject_id = initialValues?.subproject_id ?? 1;
 
-  const [formData, setFormData] = useState({
+const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, onClose, cancelText }) => {
+  // サブプロジェクト候補はcandidatesから取得（なければ空）
+  const subprojects = candidates?.subprojects ?? [];
+  const defaultSubprojectObj = initialValues?.subproject ?? (subprojects.length > 0 ? subprojects[0] : { id: 1, name: '', type: 'subproject' });
+  const [formData, setFormData] = useState<Omit<IPhase, 'id'>>({
     name: initialValues?.name ?? '',
-    description: initialValues?.description ?? '',
+    subproject: defaultSubprojectObj,
     start_date: initialValues?.start_date ?? '',
     end_date: initialValues?.end_date ?? '',
-    status: initialValues?.status ?? 'Not Started',
-    priority: initialValues?.priority ?? 'Medium',
-    subproject_id,
+    milestone: initialValues?.milestone ?? false,
+    type: initialValues?.type ?? 'DESIGN',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
 
   useEffect(() => {
+    const subprojectObj = initialValues?.subproject ?? (subprojects.length > 0 ? subprojects[0] : { id: 1, name: '', type: 'subproject' });
     setFormData({
       name: initialValues?.name ?? '',
-      description: initialValues?.description ?? '',
+      subproject: subprojectObj,
       start_date: initialValues?.start_date ?? '',
       end_date: initialValues?.end_date ?? '',
-      status: initialValues?.status ?? 'Not Started',
-      priority: initialValues?.priority ?? 'Medium',
-      subproject_id: initialValues?.subproject_id ?? 1,
+      milestone: initialValues?.milestone ?? false,
+      type: initialValues?.type ?? 'DESIGN',
     });
-  }, [initialValues]);
+  }, [initialValues, subprojects]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.name.trim()) {
       newErrors.name = 'Phase name is required';
     }
-
+    if (!formData.subproject || !formData.subproject.id) {
+      newErrors.subproject = 'Subproject selection is required';
+    }
     if (formData.start_date && formData.end_date && formData.start_date > formData.end_date) {
       newErrors.end_date = 'End date must be after start date';
     }
-
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
-    
     if (onValidationChange) {
       onValidationChange(isValid);
     }
-
     return isValid;
   };
 
   useEffect(() => {
-    validateForm();
+    const valid = validateForm();
+    setIsFormValid(valid);
   }, [formData]);
 
   const handleSubmit = () => {
     if (validateForm()) {
       onSubmit({
         name: formData.name.trim(),
-        description: formData.description.trim(),
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
-        status: formData.status,
-        priority: formData.priority,
-        subproject_id: formData.subproject_id,
+        subproject: formData.subproject,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        milestone: formData.milestone,
+        type: formData.type,
       });
     }
   };
 
-  // submitTriggerが変更されたときにフォームを送信
-  useEffect(() => {
-    if (submitTrigger && submitTrigger > 0) {
-      handleSubmit();
-    }
-  }, [submitTrigger]);
+  // submitTrigger関連のuseEffectは不要
 
-  const handleFieldChange = (field: keyof typeof formData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+  const handleFieldChange = (field: keyof Omit<IPhase, 'id'>, value: any) => {
+    setFormData(prev => {
+      if (field === 'subproject') {
+        return { ...prev, subproject: value };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   return (
@@ -116,14 +111,29 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, 
           required
         />
 
-        <TextField
-          fullWidth
-          label="Description"
-          value={formData.description}
-          onChange={(e) => handleFieldChange('description', e.target.value)}
-          multiline
-          rows={3}
-        />
+        <FormControl fullWidth error={!!errors.subproject}>
+          <InputLabel>Subproject</InputLabel>
+          <Select
+            value={formData.subproject.id}
+            label="Subproject"
+            onChange={(e) => {
+              const subObj = subprojects.find(s => s.id === e.target.value) || { id: e.target.value, name: '', type: 'subproject' };
+              handleFieldChange('subproject', subObj);
+            }}
+            required
+          >
+            {subprojects.map((subproject) => (
+              <MenuItem key={subproject.id} value={subproject.id}>
+                {subproject.name}
+              </MenuItem>
+            ))}
+          </Select>
+          {errors.subproject && (
+            <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
+              {errors.subproject}
+            </Box>
+          )}
+        </FormControl>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
@@ -149,34 +159,49 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, 
           />
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={formData.status}
-              label="Status"
-              onChange={(e) => handleFieldChange('status', e.target.value as IPhaseForm['status'])}
-            >
-              <MenuItem value="Not Started">Not Started</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Completed">Completed</MenuItem>
-              <MenuItem value="On Hold">On Hold</MenuItem>
-            </Select>
-          </FormControl>
+        <FormControl fullWidth>
+          <InputLabel>Type</InputLabel>
+          <Select
+            value={formData.type}
+            label="Type"
+            onChange={(e) => handleFieldChange('type', e.target.value as IPhase['type'])}
+            required
+          >
+            <MenuItem value="DESIGN">DESIGN</MenuItem>
+            <MenuItem value="PRODT">PRODT</MenuItem>
+            <MenuItem value="ENG">ENG</MenuItem>
+          </Select>
+        </FormControl>
 
-          <FormControl fullWidth>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={formData.priority}
-              label="Priority"
-              onChange={(e) => handleFieldChange('priority', e.target.value as IPhaseForm['priority'])}
-            >
-              <MenuItem value="Low">Low</MenuItem>
-              <MenuItem value="Medium">Medium</MenuItem>
-              <MenuItem value="High">High</MenuItem>
-              <MenuItem value="Critical">Critical</MenuItem>
-            </Select>
-          </FormControl>
+        <FormControl fullWidth>
+          <InputLabel>Milestone</InputLabel>
+          <Select
+            value={formData.milestone ? 'true' : 'false'}
+            label="Milestone"
+            onChange={(e) => handleFieldChange('milestone', e.target.value === 'true')}
+            required
+          >
+            <MenuItem value="true">True</MenuItem>
+            <MenuItem value="false">False</MenuItem>
+          </Select>
+        </FormControl>
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ padding: '8px 24px', fontSize: '1rem', background: '#888', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            {cancelText || 'キャンセル'}
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!isFormValid}
+            style={{ padding: '8px 24px', fontSize: '1rem', background: '#1976d2', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: !isFormValid ? 0.5 : 1 }}
+          >
+            保存
+          </button>
         </Box>
       </Stack>
     </Box>

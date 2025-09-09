@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { FormModal, PhaseForm, AssetForm, TaskForm } from '../forms';
-import { useFormContext, IPhaseForm, IAssetForm, ITaskForm, FormMode, FormType } from '../../context/FormContext';
+import { useFormContext, FormMode, FormType } from '../../context/FormContext';
+import { IPhase, IAsset, ITask } from '../../context/AppContext';
 
 const FormManager: React.FC = () => {
   const { formState, closeForm, handleFormSubmit } = useFormContext();
-  const [isFormValid, setIsFormValid] = useState(false);
-  const [submitTrigger, setSubmitTrigger] = useState(0);
+  // submit関連のstateは不要
 
   const getFormTitle = () => {
     let action = '';
@@ -28,9 +28,7 @@ const FormManager: React.FC = () => {
     return `${action} ${entityName}`;
   };
 
-  const handleFormModalSubmit = () => {
-    setSubmitTrigger(prev => prev + 1);
-  };
+  // submitは各Form側で制御
 
   const getFormComponent = () => {
     const { initialValues, candidates, mode } = formState;
@@ -38,34 +36,31 @@ const FormManager: React.FC = () => {
       case 'phase':
         return (
           <PhaseForm
-            initialValues={initialValues as Partial<IPhaseForm>}
+            initialValues={initialValues as Partial<IPhase>}
             candidates={candidates}
             mode={mode}
             onSubmit={handleFormSubmit}
-            onValidationChange={setIsFormValid}
-            submitTrigger={submitTrigger}
+            onClose={closeForm}
           />
         );
       case 'asset':
         return (
           <AssetForm
-            initialValues={initialValues as Partial<IAssetForm>}
+            initialValues={initialValues as Partial<IAsset>}
             candidates={candidates}
             mode={mode}
             onSubmit={handleFormSubmit}
-            onValidationChange={setIsFormValid}
-            submitTrigger={submitTrigger}
+            onClose={closeForm}
           />
         );
       case 'task':
         return (
           <TaskForm
-            initialValues={initialValues as Partial<ITaskForm>}
+            initialValues={initialValues as Partial<ITask>}
             candidates={candidates}
             mode={mode}
             onSubmit={handleFormSubmit}
-            onValidationChange={setIsFormValid}
-            submitTrigger={submitTrigger}
+            onClose={closeForm}
           />
         );
       default:
@@ -73,34 +68,19 @@ const FormManager: React.FC = () => {
     }
   };
 
+  // submitTriggerリセット不要
+
   if (!formState.isOpen || !formState.type) {
     return null;
   }
 
-  // ボタンラベル分岐
-  let submitText = '';
-  switch (formState.mode) {
-    case 'create':
-      submitText = 'Create';
-      break;
-    case 'edit':
-      submitText = 'Update';
-      break;
-    case 'copy':
-      submitText = 'Copy & Create';
-      break;
-    default:
-      submitText = 'Submit';
-  }
+  // submitText不要
 
   return (
     <FormModal
       open={formState.isOpen}
       onClose={closeForm}
       title={getFormTitle()}
-      onSubmit={handleFormModalSubmit}
-      submitDisabled={!isFormValid}
-      submitText={submitText}
     >
       {getFormComponent()}
     </FormModal>

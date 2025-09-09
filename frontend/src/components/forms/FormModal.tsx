@@ -15,11 +15,8 @@ interface FormModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  onSubmit: () => void;
   onCancel?: () => void;
-  submitText?: string;
   cancelText?: string;
-  submitDisabled?: boolean;
 }
 
 const FormModal: React.FC<FormModalProps> = ({
@@ -27,11 +24,7 @@ const FormModal: React.FC<FormModalProps> = ({
   onClose,
   title,
   children,
-  onSubmit,
   onCancel,
-  submitText = 'Save',
-  cancelText = 'Cancel',
-  submitDisabled = false,
 }) => {
   const handleCancel = () => {
     if (onCancel) {
@@ -70,19 +63,7 @@ const FormModal: React.FC<FormModalProps> = ({
       <DialogContent dividers>
         {children}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleCancel} color="secondary">
-          {cancelText}
-        </Button>
-        <Button
-          onClick={onSubmit}
-          variant="contained"
-          color="primary"
-          disabled={submitDisabled}
-        >
-          {submitText}
-        </Button>
-      </DialogActions>
+  {/* 各Form側でsubmit/cancelボタンを設置するため、DialogActionsはchildren側で制御 */}
     </Dialog>
   );
 };

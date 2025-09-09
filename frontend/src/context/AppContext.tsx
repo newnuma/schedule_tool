@@ -6,7 +6,6 @@ import React, {
     ReactNode,
 } from "react";
 import type { IPage } from "../types";
-import { IPhaseForm, IAssetForm, ITaskForm } from "./FormContext";
 
 export interface IForignKey {
     type: "subproject" | "phase" | "asset" | "task" | "workload" | "person" | "workCategory" | "department" | "step";
@@ -126,15 +125,12 @@ export interface IAppContext {
 
     phases: IPhase[];
     addPhases: (phases: IPhase[]) => void;
-    createPhase: (phase: Omit<IPhaseForm, 'id'>) => void;
 
     assets: IAsset[];
     addAssets: (assets: IAsset[]) => void;
-    createAsset: (asset: Omit<IAssetForm, 'id'>) => void;
 
     tasks: ITask[];
     addTasks: (tasks: ITask[]) => void;
-    createTask: (task: Omit<ITaskForm, 'id'>) => void;
 
     milestoneTasks: IMilestoneTask[];
     addMilestoneTasks: (tasks: IMilestoneTask[]) => void;
@@ -173,13 +169,10 @@ const defaultParams: IAppContext = {
     addSubprojects: () => { },
     phases: [],
     addPhases: () => { },
-    createPhase: () => { },
     assets: [],
     addAssets: () => { },
-    createAsset: () => { },
     tasks: [],
     addTasks: () => { },
-    createTask: () => { },
     milestoneTasks: [],
     addMilestoneTasks: () => { },
     personWorkloads: [],
@@ -332,61 +325,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
     }, []);
 
-    // 新しいアイテム作成関数
-    const generateId = () => Math.max(0, ...phases.map(p => p.id), ...assets.map(a => a.id), ...tasks.map(t => t.id)) + 1;
-
-    const createPhase = useCallback((phase: Omit<IPhaseForm, 'id'>) => {
-        const newPhase: IPhase = {
-            id: generateId(),
-            name: phase.name,
-            subproject: {
-                type: 'subproject',
-                id: phase.subproject_id,
-                name: subprojects.find(s => s.id === phase.subproject_id)?.name || 'Unknown'
-            },
-            start_date: phase.start_date || new Date().toISOString().split('T')[0],
-            end_date: phase.end_date || new Date().toISOString().split('T')[0],
-            milestone: false,
-            type: 'DESIGN',
-        };
-        addPhases([newPhase]);
-    }, [subprojects, addPhases]);
-
-    const createAsset = useCallback((asset: Omit<IAssetForm, 'id'>) => {
-        const newAsset: IAsset = {
-            id: generateId(),
-            name: asset.name,
-            phase: {
-                type: 'phase',
-                id: asset.phase_id,
-                name: phases.find(p => p.id === asset.phase_id)?.name || 'Unknown'
-            },
-            start_date: asset.start_date || new Date().toISOString().split('T')[0],
-            end_date: asset.end_date || new Date().toISOString().split('T')[0],
-            type: 'Common' as const,
-        };
-        addAssets([newAsset]);
-    }, [phases, addAssets]);
-
-    const createTask = useCallback((task: Omit<ITaskForm, 'id'>) => {
-        const newTask: ITask = {
-            id: generateId(),
-            name: task.name,
-            asset: {
-                type: 'asset',
-                id: task.asset_id,
-                name: assets.find(a => a.id === task.asset_id)?.name || 'Unknown'
-            },
-            start_date: task.start_date || new Date().toISOString().split('T')[0],
-            end_date: task.end_date || new Date().toISOString().split('T')[0],
-            assignees: [],
-            // Map human-readable to code, fallback to 'wtg'
-            status: task.status === 'Completed' ? 'fin' :
-                   task.status === 'In Progress' ? 'ip' :
-                   task.status === 'Not Started' ? 'wtg' : 'wtg',
-        };
-        addTasks([newTask]);
-    }, [assets, addTasks]);
+    
 
     return (
         <AppContext.Provider
@@ -397,13 +336,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 addSubprojects,
                 phases,
                 addPhases,
-                createPhase,
                 assets,
                 addAssets,
-                createAsset,
                 tasks,
                 addTasks,
-                createTask,
                 milestoneTasks,
                 addMilestoneTasks,
                 personWorkloads,

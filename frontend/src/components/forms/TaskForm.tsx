@@ -8,114 +8,100 @@ import {
   Box,
   Stack,
 } from '@mui/material';
-import { ITaskForm } from '../../context/FormContext';
+import { ITask } from '../../context/AppContext';
 import { FormMode } from '../../context/FormContext';
 import { useAppContext } from '../../context/AppContext';
 
 interface TaskFormProps {
-  initialValues?: Partial<ITaskForm>;
+  initialValues?: Partial<ITask>;
   candidates?: Record<string, any[]>;
   mode: FormMode;
-  onSubmit: (task: Omit<ITaskForm, 'id'>) => void;
+  onSubmit: (task: Omit<ITask, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
-  submitTrigger?: number;
+  onClose?: () => void;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, submitTrigger }) => {
-  // useAppContextは必ずトップレベルで呼び出す
-  const appContext = useAppContext();
-  // assets候補はcandidatesから取得（なければAppContext）
-  const assetsList = candidates?.assets ?? appContext.assets;
 
-  const [formData, setFormData] = useState({
+const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, onClose}) => {
+  // assets候補はcandidatesから取得（なければAppContext）
+  const appContext = useAppContext();
+  const assetsList = candidates?.assets ?? appContext.assets;
+  const defaultAssetObj = initialValues?.asset ?? (assetsList.length > 0 ? assetsList[0] : { id: 0, name: '', type: 'asset' });
+  const [formData, setFormData] = useState<Omit<ITask, 'id'>>({
     name: initialValues?.name ?? '',
-    description: initialValues?.description ?? '',
+    asset: defaultAssetObj,
     start_date: initialValues?.start_date ?? '',
     end_date: initialValues?.end_date ?? '',
-    status: initialValues?.status ?? 'Not Started',
-    priority: initialValues?.priority ?? 'Medium',
-    asset_id: initialValues?.asset_id ?? (assetsList.length > 0 ? assetsList[0].id : 0),
-    assignee: initialValues?.assignee ?? '',
-    estimated_hours: initialValues?.estimated_hours?.toString() ?? '',
+    assignees: initialValues?.assignees ?? [],
+    status: initialValues?.status ?? 'wtg',
+    subproject: initialValues?.subproject ?? undefined,
+    work_category: initialValues?.work_category ?? null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
 
   useEffect(() => {
+    const assetObj = initialValues?.asset ?? (assetsList.length > 0 ? assetsList[0] : { id: 0, name: '', type: 'asset' });
     setFormData({
       name: initialValues?.name ?? '',
-      description: initialValues?.description ?? '',
+      asset: assetObj,
       start_date: initialValues?.start_date ?? '',
       end_date: initialValues?.end_date ?? '',
-      status: initialValues?.status ?? 'Not Started',
-      priority: initialValues?.priority ?? 'Medium',
-      asset_id: initialValues?.asset_id ?? (assetsList.length > 0 ? assetsList[0].id : 0),
-      assignee: initialValues?.assignee ?? '',
-      estimated_hours: initialValues?.estimated_hours?.toString() ?? '',
+      assignees: initialValues?.assignees ?? [],
+      status: initialValues?.status ?? 'wtg',
+      subproject: initialValues?.subproject ?? undefined,
+      work_category: initialValues?.work_category ?? null,
     });
   }, [initialValues, assetsList]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.name.trim()) {
       newErrors.name = 'Task name is required';
     }
-
-    if (!formData.asset_id) {
-      newErrors.asset_id = 'Asset selection is required';
+    if (!formData.asset || !formData.asset.id) {
+      newErrors.asset = 'Asset selection is required';
     }
-
     if (formData.start_date && formData.end_date && formData.start_date > formData.end_date) {
       newErrors.end_date = 'End date must be after start date';
     }
-
-    if (formData.estimated_hours && isNaN(Number(formData.estimated_hours))) {
-      newErrors.estimated_hours = 'Estimated hours must be a valid number';
-    }
-
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
-    
     if (onValidationChange) {
       onValidationChange(isValid);
     }
-
     return isValid;
   };
 
   useEffect(() => {
-    validateForm();
+    const valid = validateForm();
+    setIsFormValid(valid);
   }, [formData]);
 
   const handleSubmit = () => {
     if (validateForm()) {
       onSubmit({
         name: formData.name.trim(),
-        description: formData.description.trim(),
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
+        asset: formData.asset,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        assignees: formData.assignees,
         status: formData.status,
-        priority: formData.priority,
-        asset_id: formData.asset_id,
-        assignee: formData.assignee.trim() || undefined,
-        estimated_hours: formData.estimated_hours ? Number(formData.estimated_hours) : undefined,
+        subproject: formData.subproject,
+        work_category: formData.work_category,
       });
     }
   };
 
-  // submitTriggerが変更されたときにフォームを送信
-  useEffect(() => {
-    if (submitTrigger && submitTrigger > 0) {
-      handleSubmit();
-    }
-  }, [submitTrigger]);
 
-  const handleFieldChange = (field: keyof typeof formData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+  const handleFieldChange = (field: keyof Omit<ITask, 'id'>, value: any) => {
+    setFormData(prev => {
+      if (field === 'asset') {
+        return { ...prev, asset: value };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   return (
@@ -131,12 +117,15 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
           required
         />
 
-        <FormControl fullWidth error={!!errors.asset_id}>
+        <FormControl fullWidth error={!!errors.asset}>
           <InputLabel>Asset</InputLabel>
           <Select
-            value={formData.asset_id}
+            value={formData.asset.id}
             label="Asset"
-            onChange={(e) => handleFieldChange('asset_id', e.target.value as number)}
+            onChange={(e) => {
+              const assetObj = assetsList.find(a => a.id === e.target.value) || { id: e.target.value, name: '', type: 'asset' };
+              handleFieldChange('asset', assetObj);
+            }}
             required
           >
             {assetsList.map((asset) => (
@@ -145,41 +134,12 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
               </MenuItem>
             ))}
           </Select>
-          {errors.asset_id && (
+          {errors.asset && (
             <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
-              {errors.asset_id}
+              {errors.asset}
             </Box>
           )}
         </FormControl>
-
-        <TextField
-          fullWidth
-          label="Description"
-          value={formData.description}
-          onChange={(e) => handleFieldChange('description', e.target.value)}
-          multiline
-          rows={3}
-        />
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            fullWidth
-            label="Assignee"
-            value={formData.assignee}
-            onChange={(e) => handleFieldChange('assignee', e.target.value)}
-          />
-
-          <TextField
-            fullWidth
-            label="Estimated Hours"
-            type="number"
-            value={formData.estimated_hours}
-            onChange={(e) => handleFieldChange('estimated_hours', e.target.value)}
-            error={!!errors.estimated_hours}
-            helperText={errors.estimated_hours}
-            inputProps={{ min: 0, step: 0.5 }}
-          />
-        </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
@@ -205,35 +165,36 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
           />
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={formData.status}
-              label="Status"
-              onChange={(e) => handleFieldChange('status', e.target.value as ITaskForm['status'])}
-            >
-              <MenuItem value="Not Started">Not Started</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Completed">Completed</MenuItem>
-              <MenuItem value="On Hold">On Hold</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={formData.priority}
-              label="Priority"
-              onChange={(e) => handleFieldChange('priority', e.target.value as ITaskForm['priority'])}
-            >
-              <MenuItem value="Low">Low</MenuItem>
-              <MenuItem value="Medium">Medium</MenuItem>
-              <MenuItem value="High">High</MenuItem>
-              <MenuItem value="Critical">Critical</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+        <FormControl fullWidth>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={formData.status}
+            label="Status"
+            onChange={(e) => handleFieldChange('status', e.target.value as ITask['status'])}
+            required
+          >
+            <MenuItem value="wtg">Waiting</MenuItem>
+            <MenuItem value="ip">In Progress</MenuItem>
+            <MenuItem value="fin">Finished</MenuItem>
+          </Select>
+        </FormControl>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ padding: '8px 24px', fontSize: '1rem', background: '#888', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!isFormValid}
+                style={{ padding: '8px 24px', fontSize: '1rem', background: '#1976d2', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: !isFormValid ? 0.5 : 1 }}
+              >
+                {mode === 'create' || mode === 'copy' ? 'Create Task' : 'Edit Task'}
+              </button>
+            </Box>
       </Stack>
     </Box>
   );

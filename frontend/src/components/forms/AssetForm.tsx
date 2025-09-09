@@ -8,49 +8,56 @@ import {
   Box,
   Stack,
 } from '@mui/material';
-import { IAssetForm } from '../../context/FormContext';
+import { IAsset } from '../../context/AppContext';
 import { useAppContext } from '../../context/AppContext';
 
 import { FormMode } from '../../context/FormContext';
 
+import { IForignKey } from '../../context/AppContext';
+
+
 interface AssetFormProps {
-  initialValues?: Partial<IAssetForm>;
+  initialValues?: Partial<IAsset>;
   candidates?: Record<string, any[]>;
   mode: FormMode;
-  onSubmit: (asset: Omit<IAssetForm, 'id'>) => void;
+  onSubmit: (asset: Omit<IAsset, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
-  submitTrigger?: number;
+  onClose?: () => void;
 }
 
-const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, submitTrigger }) => {
+
+const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, onClose }) => {
   // 候補リストはprops優先、なければAppContext
   const { phases: contextPhases } = useAppContext();
   const phases = candidates?.phases ?? contextPhases;
 
-  const [formData, setFormData] = useState({
+  const defaultPhaseObj = initialValues?.phase ?? (phases.length > 0 ? phases[0] : { id: 0, name: '', type: 'phase' });
+  const [formData, setFormData] = useState<Omit<IAsset, 'id'>>({
     name: initialValues?.name ?? '',
-    description: initialValues?.description ?? '',
+    phase: defaultPhaseObj,
     start_date: initialValues?.start_date ?? '',
     end_date: initialValues?.end_date ?? '',
-    status: initialValues?.status ?? 'Not Started',
-    priority: initialValues?.priority ?? 'Medium',
-    phase_id: initialValues?.phase_id ?? (phases.length > 0 ? phases[0].id : 0),
-    assignee: initialValues?.assignee ?? '',
+    type: initialValues?.type ?? 'EXT',
+    work_category: initialValues?.work_category ?? null,
+    step: initialValues?.step ?? null,
+    color: initialValues?.color ?? '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
 
   useEffect(() => {
     // initialValuesが変わったら再セット
+    const phaseObj = initialValues?.phase ?? (phases.length > 0 ? phases[0] : { id: 0, name: '', type: 'phase' });
     setFormData({
       name: initialValues?.name ?? '',
-      description: initialValues?.description ?? '',
+      phase: phaseObj,
       start_date: initialValues?.start_date ?? '',
       end_date: initialValues?.end_date ?? '',
-      status: initialValues?.status ?? 'Not Started',
-      priority: initialValues?.priority ?? 'Medium',
-      phase_id: initialValues?.phase_id ?? (phases.length > 0 ? phases[0].id : 0),
-      assignee: initialValues?.assignee ?? '',
+      type: initialValues?.type ?? 'EXT',
+      work_category: initialValues?.work_category ?? null,
+      step: initialValues?.step ?? null,
+      color: initialValues?.color ?? '',
     });
   }, [initialValues, phases]);
 
@@ -60,11 +67,9 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
     if (!formData.name.trim()) {
       newErrors.name = 'Asset name is required';
     }
-
-    if (!formData.phase_id) {
-      newErrors.phase_id = 'Phase selection is required';
+    if (!formData.phase || !formData.phase.id) {
+      newErrors.phase = 'Phase selection is required';
     }
-
     if (formData.start_date && formData.end_date && formData.start_date > formData.end_date) {
       newErrors.end_date = 'End date must be after start date';
     }
@@ -80,36 +85,32 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
   };
 
   useEffect(() => {
-    validateForm();
+    const valid = validateForm();
+    setIsFormValid(valid);
   }, [formData]);
 
   const handleSubmit = () => {
-    if (validateForm()) {
-      onSubmit({
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
-        status: formData.status,
-        priority: formData.priority,
-        phase_id: formData.phase_id,
-        assignee: formData.assignee.trim() || undefined,
-      });
-    }
+    onSubmit({
+      name: formData.name.trim(),
+      phase: formData.phase,
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      type: formData.type,
+      work_category: formData.work_category,
+      step: formData.step,
+      color: formData.color,
+    });
   };
 
-  // submitTriggerが変更されたときにフォームを送信
-  useEffect(() => {
-    if (submitTrigger && submitTrigger > 0) {
-      handleSubmit();
-    }
-  }, [submitTrigger]);
+  // submitTrigger関連のuseEffectは不要
 
-  const handleFieldChange = (field: keyof typeof formData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+  const handleFieldChange = (field: keyof Omit<IAsset, 'id'>, value: any) => {
+    setFormData(prev => {
+      if (field === 'phase') {
+        return { ...prev, phase: value };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   return (
@@ -125,12 +126,15 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
           required
         />
 
-        <FormControl fullWidth error={!!errors.phase_id}>
+        <FormControl fullWidth error={!!errors.phase}>
           <InputLabel>Phase</InputLabel>
           <Select
-            value={formData.phase_id}
+            value={formData.phase.id}
             label="Phase"
-            onChange={(e) => handleFieldChange('phase_id', e.target.value as number)}
+            onChange={(e) => {
+              const phaseObj = phases.find(p => p.id === e.target.value) || { id: e.target.value, name: '', type: 'phase' };
+              handleFieldChange('phase', phaseObj);
+            }}
             required
           >
             {phases.map((phase) => (
@@ -139,28 +143,12 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
               </MenuItem>
             ))}
           </Select>
-          {errors.phase_id && (
+          {errors.phase && (
             <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
-              {errors.phase_id}
+              {errors.phase}
             </Box>
           )}
         </FormControl>
-
-        <TextField
-          fullWidth
-          label="Description"
-          value={formData.description}
-          onChange={(e) => handleFieldChange('description', e.target.value)}
-          multiline
-          rows={3}
-        />
-
-        <TextField
-          fullWidth
-          label="Assignee"
-          value={formData.assignee}
-          onChange={(e) => handleFieldChange('assignee', e.target.value)}
-        />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
@@ -185,35 +173,22 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
             helperText={errors.end_date}
           />
         </Box>
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={formData.status}
-              label="Status"
-              onChange={(e) => handleFieldChange('status', e.target.value as IAssetForm['status'])}
-            >
-              <MenuItem value="Not Started">Not Started</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Completed">Completed</MenuItem>
-              <MenuItem value="On Hold">On Hold</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              value={formData.priority}
-              label="Priority"
-              onChange={(e) => handleFieldChange('priority', e.target.value as IAssetForm['priority'])}
-            >
-              <MenuItem value="Low">Low</MenuItem>
-              <MenuItem value="Medium">Medium</MenuItem>
-              <MenuItem value="High">High</MenuItem>
-              <MenuItem value="Critical">Critical</MenuItem>
-            </Select>
-          </FormControl>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ padding: '8px 24px', fontSize: '1rem', background: '#888', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!isFormValid}
+            style={{ padding: '8px 24px', fontSize: '1rem', background: '#1976d2', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: !isFormValid ? 0.5 : 1 }}
+          >
+            {mode === 'create' || mode === 'copy' ? 'Create Asset' : 'Edit Asset'}
+          </button>
         </Box>
       </Stack>
     </Box>
