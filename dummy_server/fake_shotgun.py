@@ -286,16 +286,74 @@ class FakeShotgun:
                 qs = qs[:limit]
         return [self._serialize(obj, fields) for obj in qs]
 
-    def create(self, entity_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create(self, entity_type: str, data: Dict[str, Any], return_fields: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Shotgun-like create method.
+        Args:
+            entity_type: Entity type string (e.g., 'Asset')
+            data: Dictionary of field values
+            return_fields: List of fields to return (optional)
+        Returns:
+            Dict in Shotgun format (id, type, ...fields)
+        """
         Model = self._model(entity_type)
+        # Handle link fields: convert dicts to model instances
+        for k, v in data.items():
+            field_obj = None
+            try:
+                field_obj = Model._meta.get_field(k)
+            except Exception:
+                continue
+            # ForeignKey
+            if hasattr(field_obj, 'related_model') and isinstance(v, dict) and 'id' in v:
+                data[k] = field_obj.related_model.objects.get(id=v['id'])
+            # ManyToMany: accept list of dicts
+            if field_obj.many_to_many and isinstance(v, list):
+                data[k] = [field_obj.related_model.objects.get(id=link['id']) for link in v if isinstance(link, dict) and 'id' in link]
+        # Remove M2M fields for create
+        m2m_fields = [f.name for f in Model._meta.many_to_many]
+        m2m_data = {k: data.pop(k) for k in m2m_fields if k in data}
         obj = Model.objects.create(**data)
-        return self._serialize(obj)
+        # Set M2M after creation
+        for k, v in m2m_data.items():
+            getattr(obj, k).set(v)
+        return self._serialize(obj, return_fields)
 
-    def update(self, entity_type: str, entity_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+    def update(self, entity_type: str, entity_id: int, data: Dict[str, Any], return_fields: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Shotgun-like update method.
+        Args:
+            entity_type: Entity type string
+            entity_id: ID of the entity to update
+            data: Dictionary of field values
+            return_fields: List of fields to return (optional)
+        Returns:
+            Dict in Shotgun format (id, type, ...fields)
+        """
         Model = self._model(entity_type)
-        Model.objects.filter(id=entity_id).update(**data)
+        # Handle link fields: convert dicts to model instances
+        update_data = data.copy()
+        for k, v in data.items():
+            field_obj = None
+            try:
+                field_obj = Model._meta.get_field(k)
+            except Exception:
+                continue
+            # ForeignKey
+            if hasattr(field_obj, 'related_model') and isinstance(v, dict) and 'id' in v:
+                update_data[k] = field_obj.related_model.objects.get(id=v['id'])
+            # ManyToMany: accept list of dicts
+            if field_obj.many_to_many and isinstance(v, list):
+                update_data[k] = [field_obj.related_model.objects.get(id=link['id']) for link in v if isinstance(link, dict) and 'id' in link]
+        # Remove M2M fields for update
+        m2m_fields = [f.name for f in Model._meta.many_to_many]
+        m2m_data = {k: update_data.pop(k) for k in m2m_fields if k in update_data}
+        Model.objects.filter(id=entity_id).update(**update_data)
         obj = Model.objects.get(id=entity_id)
-        return self._serialize(obj)
+        # Set M2M after update
+        for k, v in m2m_data.items():
+            getattr(obj, k).set(v)
+        return self._serialize(obj, return_fields)
 
     def summarize(self, entity_type: str, filters: Optional[List] = None,
                   summary_fields: Optional[List[Dict[str, str]]] = None) -> Any:
