@@ -7,14 +7,15 @@ import {
   MenuItem,
   Box,
   Stack,
+  Autocomplete
 } from '@mui/material';
 import { ITask } from '../../context/AppContext';
-import { FormMode } from '../../context/FormContext';
-import { useAppContext } from '../../context/AppContext';
+import { FormMode,TaskCandidates} from '../../context/FormContext';
+import { useAppContext, IForignKey, TaskStatusArray } from '../../context/AppContext';
 
 interface TaskFormProps {
   initialValues?: Partial<ITask>;
-  candidates?: Record<string, any[]>;
+  candidates?: TaskCandidates;
   mode: FormMode;
   onSubmit: (task: Omit<ITask, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
@@ -23,37 +24,34 @@ interface TaskFormProps {
 
 
 const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, onClose}) => {
-  // assets候補はcandidatesから取得（なければAppContext）
-  const appContext = useAppContext();
-  const assetsList = candidates?.assets ?? appContext.assets;
-  const defaultAssetObj = initialValues?.asset ?? (assetsList.length > 0 ? assetsList[0] : { id: 0, name: '', type: 'asset' });
-  const [formData, setFormData] = useState<Omit<ITask, 'id'>>({
+  // Nameに[Type]を付与
+  const candidatesAssets: IForignKey[] = (candidates?.assets ?? []).map((a: any) => (
+    { type: 'Asset', id: a.id, name: `${a.name} [${a.type}]` }
+  ));
+  const candidatesPeople: IForignKey[] = (candidates?.people ?? []).map((p: any) => ({ type: 'Person', id: p.id, name: p.name }));
+
+  const [formData, setFormData] = useState<Omit<ITask, 'id' | 'subproject' | 'work_category'>>({
     name: initialValues?.name ?? '',
-    asset: defaultAssetObj,
+    asset: initialValues?.asset ?? { type: 'Asset', id: 0, name: '' },
     start_date: initialValues?.start_date ?? '',
     end_date: initialValues?.end_date ?? '',
     assignees: initialValues?.assignees ?? [],
-    status: initialValues?.status ?? 'wtg',
-    subproject: initialValues?.subproject ?? undefined,
-    work_category: initialValues?.work_category ?? null,
+    status: initialValues?.status ?? TaskStatusArray[0],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isFormValid, setIsFormValid] = useState(false);
 
   useEffect(() => {
-    const assetObj = initialValues?.asset ?? (assetsList.length > 0 ? assetsList[0] : { id: 0, name: '', type: 'asset' });
     setFormData({
       name: initialValues?.name ?? '',
-      asset: assetObj,
+      asset: initialValues?.asset ?? { type: 'Asset', id: 0, name: '' },
       start_date: initialValues?.start_date ?? '',
       end_date: initialValues?.end_date ?? '',
       assignees: initialValues?.assignees ?? [],
-      status: initialValues?.status ?? 'wtg',
-      subproject: initialValues?.subproject ?? undefined,
-      work_category: initialValues?.work_category ?? null,
+      status: initialValues?.status ?? TaskStatusArray[0],
     });
-  }, [initialValues, assetsList]);
+  }, [initialValues]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -62,6 +60,12 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
     }
     if (!formData.asset || !formData.asset.id) {
       newErrors.asset = 'Asset selection is required';
+    }
+    if (!formData.start_date) {
+      newErrors.start_date = 'Start date is required';
+    }
+    if (!formData.end_date) {
+      newErrors.end_date = 'End date is required';
     }
     if (formData.start_date && formData.end_date && formData.start_date > formData.end_date) {
       newErrors.end_date = 'End date must be after start date';
@@ -88,8 +92,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
         end_date: formData.end_date,
         assignees: formData.assignees,
         status: formData.status,
-        subproject: formData.subproject,
-        work_category: formData.work_category,
       });
     }
   };
@@ -117,30 +119,25 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
           required
         />
 
-        <FormControl fullWidth error={!!errors.asset}>
-          <InputLabel>Asset</InputLabel>
-          <Select
-            value={formData.asset.id}
-            label="Asset"
-            onChange={(e) => {
-              const assetObj = assetsList.find(a => a.id === e.target.value) || { id: e.target.value, name: '', type: 'asset' };
-              handleFieldChange('asset', assetObj);
-            }}
-            required
-          >
-            {assetsList.map((asset) => (
-              <MenuItem key={asset.id} value={asset.id}>
-                {asset.name}
-              </MenuItem>
-            ))}
-          </Select>
-          {errors.asset && (
-            <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
-              {errors.asset}
-            </Box>
+        {/* Asset Selection */}
+        <Autocomplete
+          options={candidatesAssets}
+          getOptionLabel={(option: IForignKey) => option.name ?? ''}
+          value={formData.asset}
+          onChange={(_event: any, newValue: IForignKey | null) => handleFieldChange('asset', newValue || { id: 0, name: '', type: 'asset' })}
+          renderInput={(params: any) => (
+            <TextField
+              {...params}
+              label="Asset"
+              error={!!errors.asset}
+              helperText={errors.asset}
+              required
+            />
           )}
-        </FormControl>
+          isOptionEqualToValue={(opt: IForignKey, val: IForignKey) => opt.id === val.id}
+        />
 
+        {/* Date Fields */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             fullWidth
@@ -165,6 +162,23 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
           />
         </Box>
 
+        {/* Assignees (multiple Autocomplete) */}
+        <Autocomplete
+          multiple
+          options={candidatesPeople}
+          getOptionLabel={(option: IForignKey) => option.name ?? ''}
+          value={formData.assignees}
+          onChange={(_event: any, newValue: IForignKey[]) => handleFieldChange('assignees', newValue)}
+          renderInput={(params: any) => (
+            <TextField
+              {...params}
+              label="Assign To"
+              required
+            />
+          )}
+          isOptionEqualToValue={(opt: IForignKey, val: IForignKey) => opt.id === val.id}
+        />
+
         <FormControl fullWidth>
           <InputLabel>Status</InputLabel>
           <Select
@@ -173,9 +187,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
             onChange={(e) => handleFieldChange('status', e.target.value as ITask['status'])}
             required
           >
-            <MenuItem value="wtg">Waiting</MenuItem>
-            <MenuItem value="ip">In Progress</MenuItem>
-            <MenuItem value="fin">Finished</MenuItem>
+            {TaskStatusArray.map((status) => (
+              <MenuItem key={status} value={status}>
+                {status}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>

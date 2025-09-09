@@ -40,7 +40,7 @@ class Subproject(models.Model):
         ('Common', 'Common'),
         ('Project Team', 'Project Team'),
         ('High Confidential', 'High Confidential'),
-    ], default='Project')
+    ], default='Project Team')
     pmm_status = models.CharField(max_length=32, choices=[
         ('planning', 'planning'),
         ('approved', 'approved'),

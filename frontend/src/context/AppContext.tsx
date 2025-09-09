@@ -7,10 +7,20 @@ import React, {
 } from "react";
 import type { IPage } from "../types";
 
+
+export const AssetTypeArray = ['EXT', 'INT', 'Common', 'COL'] as const;
+export type AssetType = typeof AssetTypeArray[number];
+export const PhaseTypeArray = ["DESIGN", "PRODT", "ENG"] as const;
+export type PhaseType = typeof PhaseTypeArray[number];
+export const MilestoneTaskTypeArray = ['Date Receive', 'Date Release', 'Review', 'DR'] as const;
+export type MilestoneTaskType = typeof MilestoneTaskTypeArray[number];
+export const TaskStatusArray = ['wtg', 'ip', 'fin'] as const;
+export type TaskStatus = typeof TaskStatusArray[number];
+
 export interface IForignKey {
-    type: "subproject" | "phase" | "asset" | "task" | "workload" | "person" | "workCategory" | "department" | "step";
+    type: "Subproject" | "Phase" | "Asset" | "Task" | "Workload" | "Person" | "WorkCategory" | "Department" | "Step";
     id: number;
-    name: string;
+    name?: string;
 }
 
 export interface ISubproject {
@@ -25,6 +35,8 @@ export interface ISubproject {
     pmm_status?: "planning" | "approved";
 }
 
+
+
 export interface IPhase {
     id: number;
     name: string;
@@ -32,7 +44,7 @@ export interface IPhase {
     start_date: string;
     end_date: string;
     milestone: boolean;
-    type: "DESIGN" | "PRODT" | "ENG";
+    type: PhaseType;
 }
 
 export interface IAsset {
@@ -41,7 +53,7 @@ export interface IAsset {
     phase: IForignKey; // 親PhaseのID
     start_date: string;
     end_date: string;
-    type: "EXT" | "INT" | "Common";
+    type: AssetType;
     work_category?: IForignKey | null; // WorkCategory
     step?: IForignKey | null; // Step
 
@@ -56,7 +68,7 @@ export interface ITask {
     start_date: string;
     end_date: string;
     assignees: IForignKey[]; // Person参照
-    status: "wtg" | "ip" | "fin";
+    status: TaskStatus;
 
     //参照用
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
@@ -69,11 +81,11 @@ export interface IMilestoneTask {
     asset: IForignKey;
     start_date: string;
     end_date: string;
-    milestone_type: 'Date Receive' | 'Date Release' | 'Review' | 'DR';
+    milestone_type: MilestoneTaskType;
     subproject?: IForignKey;
 
     //参照用
-    asset_type?: "EXT" | "INT" | "Common"; // 追加: Assetのtype（EXT/INT/Common）
+    asset_type?: AssetType; // 追加: Assetのtype（EXT/INT/Common）
 }
 
 export interface IPersonWorkload {
@@ -103,6 +115,7 @@ export interface IPerson {
     email?: string;
     department?: IForignKey | null;
     manager?: IForignKey | null;
+    project?: IForignKey[]
 }
 
 export interface IWorkCategory {

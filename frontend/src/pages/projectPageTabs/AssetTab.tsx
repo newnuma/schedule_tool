@@ -44,10 +44,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    console.log("Right click on itemId:", itemId, "itemName:", itemName);
-    // assetIdからassetオブジェクトを検索
     const assetObj = assets.find(a => a.id === Number(itemId));
-    console.log("Found asset object:", assetObj);
     setMenuState({
       anchorEl: event.target as HTMLElement,
       open: true,
@@ -63,16 +60,14 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   // メニュー項目定義（新しいForm形式で起動）
   const contextMenuItems: ContextMenuItem[] = [
     {
-      label: "Detail",
-      icon: null,
+      label: "Jump to Flow-PT",
       action: () => {
         // asset情報を利用
-        console.log("Detail", menuState.asset);
+        console.log("Jump to Flow-PT", menuState.asset);
       },
     },
     {
       label: "Edit",
-      icon: null,
       action: () => {
         if (menuState.asset) {
           openForm({
@@ -81,7 +76,6 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
             initialValues: menuState.asset,
             candidates: {
               phases: phases,
-              // 他に必要な候補リストがあれば追加
             },
           });
         }
@@ -90,7 +84,6 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     },
     {
       label: "Copy",
-      icon: null,
       action: () => {
         if (menuState.asset) {
           // idを除外して新規作成用初期値
@@ -101,7 +94,6 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
             initialValues: copyData,
             candidates: {
               phases: phases,
-              // 他に必要な候補リストがあれば追加
             },
           });
         }
@@ -111,7 +103,6 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     {
       dividerBefore: true,
       label: "Delete",
-      icon: null,
       action: () => {
         console.log("Delete", menuState.asset);
       },
@@ -129,9 +120,6 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       type: 'phase',
       mode: 'create',
       initialValues: {},
-      candidates: {
-        subprojects: [], // 必要ならpropsから渡す
-      },
     });
   };
 

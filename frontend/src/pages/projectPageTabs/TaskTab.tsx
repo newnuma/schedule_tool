@@ -9,17 +9,18 @@ import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
 
 // 型定義
-import type { IPhase, IAsset, ITask } from "../../context/AppContext";
+import type { IPhase, IAsset, ITask, IPerson } from "../../context/AppContext";
 
 interface TaskTabProps {
   phases: IPhase[];
   assets: IAsset[];
   tasks: ITask[];
+  people: IPerson[];
   isEditMode: boolean;
   selectedSubprojectId: number;
 }
 
-const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, selectedSubprojectId }) => {
+const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEditMode, selectedSubprojectId }) => {
   // CollapsibleFilterPanel展開状態管理
   const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   const { getFilteredData, filters } = useFilterContext();
@@ -33,6 +34,7 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, se
     anchorEl: HTMLElement | null;
     open: boolean;
     itemName?: string;
+    task?: ITask;
   }>({ anchorEl: null, open: false });
 
   // 右クリック時のハンドラ
@@ -43,10 +45,12 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, se
   ) => {
     event.preventDefault();
     event.stopPropagation();
+    const taskObj = tasks.find(t => t.id === Number(itemId));
     setMenuState({
       anchorEl: event.target as HTMLElement,
       open: true,
       itemName,
+      task: taskObj,
     });
   };
 
@@ -57,26 +61,46 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, se
   // メニュー項目定義（actionは空関数）
   const contextMenuItems: ContextMenuItem[] = [
     {
-      label: "Detail",
-      icon: null,
+      label: "Jump to Flow-PT",
       action: () => {},
     },
     {
       label: "Edit",
-      icon: null,
-      action: () => {},
+      action: () => {
+        if (menuState.task) {
+          openForm({
+            type: 'task',
+            mode: 'edit',
+            initialValues: menuState.task,
+            candidates: {
+              assets: assets,
+              people: people,
+            },
+          });
+        }
+      },
       disable: !isEditMode,
     },
     {
       label: "Copy",
-      icon: null,
-      action: () => {},
+      action: () => {
+        if (menuState.task) {
+          openForm({
+            type: 'task',
+            mode: 'copy',
+            initialValues: menuState.task,
+            candidates: {
+              assets: assets,
+              people: people,
+            },
+          });
+        }
+      },
       disable: !isEditMode,
     },
     {
       dividerBefore: true,
       label: "Delete",
-      icon: null,
       action: () => {},
       disable: !isEditMode,
       color: "error.main",
@@ -87,13 +111,26 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, se
 
   // Add menu handlers
   const handleAddAsset = () => {
-    openForm ({type: 'asset',
-            mode: 'create'});
+    openForm({
+      type: 'asset',
+      mode: 'create',
+      initialValues: {},
+      candidates: {
+        phases: phases,
+      },
+    });
   };
 
   const handleAddTask = () => {
-    openForm ({type: 'task',
-            mode: 'create'});
+    openForm({
+      type: 'task',
+      mode: 'create',
+      initialValues: {},
+      candidates: {
+        assets: assets,
+        people: people,
+      },
+    });
   };
 
   // Add button items configuration

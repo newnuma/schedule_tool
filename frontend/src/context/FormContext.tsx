@@ -1,10 +1,19 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { IPhase, IAsset, ITask } from '../context/AppContext';
+import { IPhase, IAsset, ITask, IPerson } from '../context/AppContext';
 
 
 export type FormType = 'phase' | 'asset' | 'task';
 export type FormMode = 'create' | 'edit' | 'copy';
+
+export interface AssetCandidates {
+  phases: IPhase[];
+}
+
+export interface TaskCandidates {
+  assets: IAsset[];
+  people: IPerson[];
+}
 
 // FormState: initialValuesはPartial型で拡張可能
 export interface FormState {
@@ -12,8 +21,9 @@ export interface FormState {
   type: FormType | null;
   mode: FormMode;
   initialValues?: Partial<IPhase> | Partial<IAsset> | Partial<ITask>;
-  candidates?: Record<string, any[]>; // 各Formで使う候補リスト
+  candidates?: TaskCandidates | AssetCandidates | undefined; // 各Formで使う候補リスト
 }
+
 
 export interface FormContextType {
   formState: FormState;
@@ -21,7 +31,7 @@ export interface FormContextType {
     type: FormType;
     mode: FormMode;
     initialValues?: Partial<IPhase> | Partial<IAsset> | Partial<ITask>;
-    candidates?: Record<string, any[]>;
+    candidates?: TaskCandidates | AssetCandidates | undefined;
   }) => void;
   closeForm: () => void;
   handleFormSubmit: (data: any) => void;
@@ -71,7 +81,7 @@ export const FormProvider: React.FC<FormProviderProps> = ({
     type: FormType;
     mode: FormMode;
     initialValues?: Partial<IPhase | IAsset | ITask>;
-    candidates?: Record<string, any[]>;
+    candidates?: TaskCandidates | AssetCandidates | undefined;
   }) => {
     setFormState({
       isOpen: true,

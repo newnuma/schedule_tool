@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FormModal, PhaseForm, AssetForm, TaskForm } from '../forms';
-import { useFormContext, FormMode, FormType } from '../../context/FormContext';
+import { useFormContext, AssetCandidates, TaskCandidates } from '../../context/FormContext';
 import { IPhase, IAsset, ITask } from '../../context/AppContext';
 
 const FormManager: React.FC = () => {
@@ -37,7 +37,6 @@ const FormManager: React.FC = () => {
         return (
           <PhaseForm
             initialValues={initialValues as Partial<IPhase>}
-            candidates={candidates}
             mode={mode}
             onSubmit={handleFormSubmit}
             onClose={closeForm}
@@ -47,7 +46,7 @@ const FormManager: React.FC = () => {
         return (
           <AssetForm
             initialValues={initialValues as Partial<IAsset>}
-            candidates={candidates}
+            candidates={candidates as AssetCandidates}
             mode={mode}
             onSubmit={handleFormSubmit}
             onClose={closeForm}
@@ -57,7 +56,7 @@ const FormManager: React.FC = () => {
         return (
           <TaskForm
             initialValues={initialValues as Partial<ITask>}
-            candidates={candidates}
+            candidates={candidates as TaskCandidates}
             mode={mode}
             onSubmit={handleFormSubmit}
             onClose={closeForm}

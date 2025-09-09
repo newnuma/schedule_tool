@@ -7,59 +7,53 @@ import {
   MenuItem,
   Box,
   Stack,
+  Autocomplete,
 } from '@mui/material';
-import { IAsset } from '../../context/AppContext';
-import { useAppContext } from '../../context/AppContext';
-
-import { FormMode } from '../../context/FormContext';
-
-import { IForignKey } from '../../context/AppContext';
+import { IAsset, IForignKey } from '../../context/AppContext';
+import { useAppContext, AssetTypeArray } from '../../context/AppContext';
+import { AssetCandidates, FormMode } from '../../context/FormContext';
 
 
 interface AssetFormProps {
   initialValues?: Partial<IAsset>;
-  candidates?: Record<string, any[]>;
+  candidates: AssetCandidates;
   mode: FormMode;
   onSubmit: (asset: Omit<IAsset, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
   onClose?: () => void;
 }
 
-
 const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, onClose }) => {
-  // 候補リストはprops優先、なければAppContext
-  const { phases: contextPhases } = useAppContext();
-  const phases = candidates?.phases ?? contextPhases;
+  // IPhase[] → IForignKey[]（nameあり）に変換
+  const { steps, workCategories } = useAppContext();
+  const candidatesPhases: IForignKey[] = (candidates?.phases ?? []).map((p: any) => ({ type: 'Phase', id: p.id, name: p.name }));
+  const candidatesSteps: IForignKey[] = (steps ?? []).map((s: any) => ({ type: 'Step', id: s.id, name: s.name }));
+  const candidatesWorkCategories: IForignKey[] = (workCategories ?? []).map((wc: any) => ({ type: 'WorkCategory', id: wc.id, name: wc.name }));
 
-  const defaultPhaseObj = initialValues?.phase ?? (phases.length > 0 ? phases[0] : { id: 0, name: '', type: 'phase' });
-  const [formData, setFormData] = useState<Omit<IAsset, 'id'>>({
+  const [formData, setFormData] = useState<Omit<IAsset, 'id' | 'color'>>({
     name: initialValues?.name ?? '',
-    phase: defaultPhaseObj,
+    phase: initialValues?.phase ?? { type: 'Phase', id: 0, name: '' },
     start_date: initialValues?.start_date ?? '',
     end_date: initialValues?.end_date ?? '',
     type: initialValues?.type ?? 'EXT',
     work_category: initialValues?.work_category ?? null,
     step: initialValues?.step ?? null,
-    color: initialValues?.color ?? '',
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isFormValid, setIsFormValid] = useState(false);
 
   useEffect(() => {
     // initialValuesが変わったら再セット
-    const phaseObj = initialValues?.phase ?? (phases.length > 0 ? phases[0] : { id: 0, name: '', type: 'phase' });
     setFormData({
       name: initialValues?.name ?? '',
-      phase: phaseObj,
+      phase: initialValues?.phase ?? { type: 'Phase', id: 0, name: '' },
       start_date: initialValues?.start_date ?? '',
       end_date: initialValues?.end_date ?? '',
-      type: initialValues?.type ?? 'EXT',
+      type: initialValues?.type ?? AssetTypeArray[0],
       work_category: initialValues?.work_category ?? null,
       step: initialValues?.step ?? null,
-      color: initialValues?.color ?? '',
     });
-  }, [initialValues, phases]);
+  }, [initialValues]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -70,13 +64,25 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
     if (!formData.phase || !formData.phase.id) {
       newErrors.phase = 'Phase selection is required';
     }
+    if (!formData.start_date) {
+      newErrors.start_date = 'Start date is required';
+    }
+    if (!formData.end_date) {
+      newErrors.end_date = 'End date is required';
+    }
     if (formData.start_date && formData.end_date && formData.start_date > formData.end_date) {
       newErrors.end_date = 'End date must be after start date';
+    }
+    if (!formData.work_category || !formData.work_category.id) {
+      newErrors.work_category = 'Work category selection is required';
+    }
+    if (!formData.type) {
+      newErrors.type = 'Type selection is required';
     }
 
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
-    
+
     if (onValidationChange) {
       onValidationChange(isValid);
     }
@@ -98,15 +104,13 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
       type: formData.type,
       work_category: formData.work_category,
       step: formData.step,
-      color: formData.color,
     });
   };
-
-  // submitTrigger関連のuseEffectは不要
 
   const handleFieldChange = (field: keyof Omit<IAsset, 'id'>, value: any) => {
     setFormData(prev => {
       if (field === 'phase') {
+        // valueはIForignKey型
         return { ...prev, phase: value };
       }
       return { ...prev, [field]: value };
@@ -116,6 +120,7 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
   return (
     <Box component="form" noValidate>
       <Stack spacing={3}>
+        {/* Asset Name */}
         <TextField
           fullWidth
           label="Asset Name"
@@ -126,30 +131,25 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
           required
         />
 
-        <FormControl fullWidth error={!!errors.phase}>
-          <InputLabel>Phase</InputLabel>
-          <Select
-            value={formData.phase.id}
-            label="Phase"
-            onChange={(e) => {
-              const phaseObj = phases.find(p => p.id === e.target.value) || { id: e.target.value, name: '', type: 'phase' };
-              handleFieldChange('phase', phaseObj);
-            }}
-            required
-          >
-            {phases.map((phase) => (
-              <MenuItem key={phase.id} value={phase.id}>
-                {phase.name}
-              </MenuItem>
-            ))}
-          </Select>
-          {errors.phase && (
-            <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
-              {errors.phase}
-            </Box>
+        {/* Phase */}
+        <Autocomplete
+          options={candidatesPhases}
+          getOptionLabel={(option: IForignKey) => option.name ?? ''}
+          value={formData.phase}
+          onChange={(_event: any, newValue: IForignKey | null) => handleFieldChange('phase', newValue || { id: 0, name: '', type: 'phase' })}
+          renderInput={(params: any) => (
+            <TextField
+              {...params}
+              label="Phase"
+              error={!!errors.phase}
+              helperText={errors.phase}
+              required
+            />
           )}
-        </FormControl>
+          isOptionEqualToValue={(opt: IForignKey, val: IForignKey) => opt.id === val.id}
+        />
 
+        {/* Date Fields */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             fullWidth
@@ -173,6 +173,60 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
             helperText={errors.end_date}
           />
         </Box>
+
+        {/* Work Category */}
+        <Autocomplete
+          options={candidatesWorkCategories}
+          getOptionLabel={(option: IForignKey) => option.name ?? ''}
+          value={formData.work_category}
+          onChange={(_event: any, newValue: IForignKey | null) => handleFieldChange('work_category', newValue || { id: 0, name: '', type: 'work_category' })}
+          renderInput={(params: any) => (
+            <TextField
+              {...params}
+              label="Work Category"
+              error={!!errors.work_category}
+              helperText={errors.work_category}
+              required
+            />
+          )}
+          isOptionEqualToValue={(opt: IForignKey, val: IForignKey) => opt.id === val.id}
+        />
+
+        {/* Type Select */}
+        <Autocomplete
+          options={AssetTypeArray}
+          getOptionLabel={(option) => option}
+          value={formData.type}
+          onChange={(_event: any, newValue: string | null) => handleFieldChange('type', newValue || '')}
+          renderInput={(params: any) => (
+            <TextField
+              {...params}
+              label="Type"
+              error={!!errors.type}
+              helperText={errors.type}
+              required
+            />
+          )}
+          isOptionEqualToValue={(opt: string, val: string) => opt === val}
+        />
+
+        {/* Step */}
+        <Autocomplete
+          options={candidatesSteps}
+          getOptionLabel={(option: IForignKey) => option.name ?? ''}
+          value={formData.step}
+          onChange={(_event: any, newValue: IForignKey | null) => handleFieldChange('step', newValue || { id: 0, name: '', type: 'step' })}
+          renderInput={(params: any) => (
+            <TextField
+              {...params}
+              label="Step"
+              error={!!errors.step}
+              helperText={errors.step}
+              required
+            />
+          )}
+          isOptionEqualToValue={(opt: IForignKey, val: IForignKey) => opt.id === val.id}
+        />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
           <button
             type="button"

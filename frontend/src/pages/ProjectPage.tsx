@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Typography, Box, Tabs, Tab, Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
 import { Main } from "../components/StyledComponents";
-import { useAppContext } from "../context/AppContext";
+import { useAppContext, IPerson } from "../context/AppContext";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { fetchProjectPage } from "../api/bridgeApi";
 import AssetTab from "../pages/projectPageTabs/AssetTab";
@@ -91,7 +91,7 @@ function a11yProps(index: number) {
 const ProjectPage: React.FC = () => {
   const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, 
     addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addMilestoneTasks,
-    addPeople, setSelectedPersonList, isEditMode, setEditMode, createPhase, createAsset, createTask,
+    addPeople, setSelectedPersonList, isEditMode, setEditMode, 
     phases, assets, tasks, milestoneTasks, personWorkloads, pmmWorkloads, people, workCategories } = useAppContext();
   const [tabValue, setTabValue] = useState(0);
 
@@ -135,6 +135,7 @@ const ProjectPage: React.FC = () => {
   }, [selectedSubprojectId, setLoading]);
 
   // --- サブプロジェクト関連データのフィルタリング ---
+  const currentSubproject = subprojects.find(sp => sp.id === selectedSubprojectId);
   // Phase
   const filteredPhases = phases.filter(p => p.subproject.id === selectedSubprojectId);
   // Asset（Phaseに紐づく）
@@ -154,15 +155,20 @@ const ProjectPage: React.FC = () => {
   // PMMWorkload（Subprojectに紐づく）
   const filteredPMMWorkloads = pmmWorkloads.filter(w => w.subproject.id === selectedSubprojectId);
 
-  console.log("Filtered PersonWorkloads:", filteredPersonWorkloads);
-  console.log("Filtered PMMWorkloads:", filteredPMMWorkloads);
+  // アクセス権に基づくアサイン可能なユーザーリスト
+  let assignablePeople = [] as IPerson[];
+  if (currentSubproject?.access === "Common") {
+    assignablePeople = people
+  } else if (currentSubproject?.access === "Project Team") {
+    const departmentPeople = people.filter(p => p.department === currentSubproject?.department);
+    const projectPeople = people.filter(p => p.project?.some(proj => proj.id === currentSubproject.id));
+    assignablePeople = [...departmentPeople, ...projectPeople];
+  } else if (currentSubproject?.access === "High Confidential") {
+    assignablePeople = people.filter(p => p.project?.some(proj => proj.id === currentSubproject.id));
+  }
 
   return (
-    <FormProvider
-      onPhaseSubmit={createPhase}
-      onAssetSubmit={createAsset}
-      onTaskSubmit={createTask}
-    >
+    <FormProvider>
       <Main component="main">
         <SubprojectSelector
           selectedSubproject={selectedSubproject}
@@ -198,6 +204,7 @@ const ProjectPage: React.FC = () => {
                 tasks={filteredTasks}
                 isEditMode={isEditMode}
                 selectedSubprojectId={selectedSubprojectId}
+                people={assignablePeople}
               />
             </TabPanel>
             <TabPanel value={tabValue} index={2}>
