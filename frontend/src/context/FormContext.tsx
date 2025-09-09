@@ -37,20 +37,25 @@ export interface ITaskForm {
   estimated_hours?: number;
 }
 
-type FormType = 'phase' | 'asset' | 'task';
-type FormMode = 'create' | 'edit';
+export type FormType = 'phase' | 'asset' | 'task';
+export type FormMode = 'create' | 'edit' | 'copy';
 
-interface FormState {
+export interface FormState {
   isOpen: boolean;
   type: FormType | null;
   mode: FormMode;
-  data?: IPhaseForm | IAssetForm | ITaskForm;
+  initialValues?: Partial<IPhaseForm | IAssetForm | ITaskForm>;
+  candidates?: Record<string, any[]>; // 各Formで使う候補リスト
 }
 
-interface FormContextType {
+export interface FormContextType {
   formState: FormState;
-  openCreateForm: (type: FormType) => void;
-  openEditForm: (type: FormType, data: IPhaseForm | IAssetForm | ITaskForm) => void;
+  openForm: (params: {
+    type: FormType;
+    mode: FormMode;
+    initialValues?: Partial<IPhaseForm | IAssetForm | ITaskForm>;
+    candidates?: Record<string, any[]>;
+  }) => void;
   closeForm: () => void;
   handleFormSubmit: (data: any) => void;
 }
@@ -75,6 +80,7 @@ interface FormProviderProps {
   onTaskUpdate?: (id: number, task: Partial<ITaskForm>) => void;
 }
 
+
 export const FormProvider: React.FC<FormProviderProps> = ({
   children,
   onPhaseSubmit,
@@ -88,22 +94,23 @@ export const FormProvider: React.FC<FormProviderProps> = ({
     isOpen: false,
     type: null,
     mode: 'create',
+    initialValues: undefined,
+    candidates: undefined,
   });
 
-  const openCreateForm = useCallback((type: FormType) => {
+  // 汎用Form起動関数
+  const openForm = useCallback((params: {
+    type: FormType;
+    mode: FormMode;
+    initialValues?: Partial<IPhaseForm | IAssetForm | ITaskForm>;
+    candidates?: Record<string, any[]>;
+  }) => {
     setFormState({
       isOpen: true,
-      type,
-      mode: 'create',
-    });
-  }, []);
-
-  const openEditForm = useCallback((type: FormType, data: IPhaseForm | IAssetForm | ITaskForm) => {
-    setFormState({
-      isOpen: true,
-      type,
-      mode: 'edit',
-      data,
+      type: params.type,
+      mode: params.mode,
+      initialValues: params.initialValues,
+      candidates: params.candidates,
     });
   }, []);
 
@@ -112,55 +119,59 @@ export const FormProvider: React.FC<FormProviderProps> = ({
       isOpen: false,
       type: null,
       mode: 'create',
+      initialValues: undefined,
+      candidates: undefined,
     });
   }, []);
 
+  // Python側APIは未定なので空関数
+  const submitPhase = (data: Omit<IPhaseForm, 'id'>) => {
+    // TODO: Python API連携
+  };
+  const updatePhase = (id: number, data: Partial<IPhaseForm>) => {
+    // TODO: Python API連携
+  };
+  const submitAsset = (data: Omit<IAssetForm, 'id'>) => {
+    // TODO: Python API連携
+  };
+  const updateAsset = (id: number, data: Partial<IAssetForm>) => {
+    // TODO: Python API連携
+  };
+  const submitTask = (data: Omit<ITaskForm, 'id'>) => {
+    // TODO: Python API連携
+  };
+  const updateTask = (id: number, data: Partial<ITaskForm>) => {
+    // TODO: Python API連携
+  };
+
+  // mode分岐でsubmit
   const handleFormSubmit = useCallback((data: any) => {
-    const { type, mode } = formState;
-    
-    if (mode === 'create') {
-      switch (type) {
-        case 'phase':
-          onPhaseSubmit?.(data);
-          break;
-        case 'asset':
-          onAssetSubmit?.(data);
-          break;
-        case 'task':
-          onTaskSubmit?.(data);
-          break;
+    const { type, mode, initialValues } = formState;
+    if (type === 'phase') {
+      if (mode === 'create' || mode === 'copy') {
+        submitPhase(data);
+      } else if (mode === 'edit' && initialValues?.id) {
+        updatePhase(initialValues.id, data);
       }
-    } else if (mode === 'edit' && formState.data) {
-      const id = formState.data.id;
-      switch (type) {
-        case 'phase':
-          onPhaseUpdate?.(id, data);
-          break;
-        case 'asset':
-          onAssetUpdate?.(id, data);
-          break;
-        case 'task':
-          onTaskUpdate?.(id, data);
-          break;
+    } else if (type === 'asset') {
+      if (mode === 'create' || mode === 'copy') {
+        submitAsset(data);
+      } else if (mode === 'edit' && initialValues?.id) {
+        updateAsset(initialValues.id, data);
+      }
+    } else if (type === 'task') {
+      if (mode === 'create' || mode === 'copy') {
+        submitTask(data);
+      } else if (mode === 'edit' && initialValues?.id) {
+        updateTask(initialValues.id, data);
       }
     }
-    
     closeForm();
-  }, [
-    formState,
-    onPhaseSubmit,
-    onAssetSubmit,
-    onTaskSubmit,
-    onPhaseUpdate,
-    onAssetUpdate,
-    onTaskUpdate,
-    closeForm,
-  ]);
+  }, [formState, closeForm]);
 
   const contextValue: FormContextType = {
     formState,
-    openCreateForm,
-    openEditForm,
+    openForm,
     closeForm,
     handleFormSubmit,
   };

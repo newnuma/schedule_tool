@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Typography, Box } from "@mui/material";
 import { Folder as FolderIcon, Assignment as AssignmentIcon } from "@mui/icons-material";
 import { useFilterContext } from "../../context/FilterContext";
-import { useFormContext } from "../../context/FormContext";
+import { useFormContext, FormType, FormMode } from "../../context/FormContext";
 import GanttChart from "../../components/GanttChart";
 import { DropdownFilter, CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../components/filters";
 import AddButton, { AddButtonItem } from "../../components/common/AddButton";
@@ -26,13 +26,14 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "project.assets:items";   // date range + status for items
   const groupsPageKey = "project.assets:groups"; // type for groups
-  const { openCreateForm } = useFormContext();
+  const { openForm } = useFormContext();
 
   // ContextMenuの状態管理
   const [menuState, setMenuState] = React.useState<{
     anchorEl: HTMLElement | null;
     open: boolean;
     itemName?: string;
+    asset?: IAsset;
   }>({ anchorEl: null, open: false });
 
   // 右クリック時のハンドラ
@@ -43,10 +44,15 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   ) => {
     event.preventDefault();
     event.stopPropagation();
+    console.log("Right click on itemId:", itemId, "itemName:", itemName);
+    // assetIdからassetオブジェクトを検索
+    const assetObj = assets.find(a => a.id === Number(itemId));
+    console.log("Found asset object:", assetObj);
     setMenuState({
       anchorEl: event.target as HTMLElement,
       open: true,
       itemName,
+      asset: assetObj,
     });
   };
 
@@ -54,30 +60,61 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     setMenuState({ anchorEl: null, open: false });
   };
 
-  // メニュー項目定義（actionは空関数）
+  // メニュー項目定義（新しいForm形式で起動）
   const contextMenuItems: ContextMenuItem[] = [
     {
       label: "Detail",
       icon: null,
-      action: () => {},
+      action: () => {
+        // asset情報を利用
+        console.log("Detail", menuState.asset);
+      },
     },
     {
       label: "Edit",
       icon: null,
-      action: () => {},
+      action: () => {
+        if (menuState.asset) {
+          openForm({
+            type: 'asset',
+            mode: 'edit',
+            initialValues: menuState.asset,
+            candidates: {
+              phases: phases,
+              // 他に必要な候補リストがあれば追加
+            },
+          });
+        }
+      },
       disable: !isEditMode,
     },
     {
       label: "Copy",
       icon: null,
-      action: () => {},
+      action: () => {
+        if (menuState.asset) {
+          // idを除外して新規作成用初期値
+          const { id, ...copyData } = menuState.asset;
+          openForm({
+            type: 'asset',
+            mode: 'copy',
+            initialValues: copyData,
+            candidates: {
+              phases: phases,
+              // 他に必要な候補リストがあれば追加
+            },
+          });
+        }
+      },
       disable: !isEditMode,
     },
     {
       dividerBefore: true,
       label: "Delete",
       icon: null,
-      action: () => {},
+      action: () => {
+        console.log("Delete", menuState.asset);
+      },
       disable: !isEditMode,
       color: "error.main",
     },
@@ -86,13 +123,28 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
 
   // ...existing code...
 
-  // Add menu handlers
+  // Add menu handlers（新しいForm形式）
   const handleAddPhase = () => {
-    openCreateForm('phase');
+    openForm({
+      type: 'phase',
+      mode: 'create',
+      initialValues: {},
+      candidates: {
+        subprojects: [], // 必要ならpropsから渡す
+      },
+    });
   };
 
   const handleAddAsset = () => {
-    openCreateForm('asset');
+    openForm({
+      type: 'asset',
+      mode: 'create',
+      initialValues: {},
+      candidates: {
+        phases: phases,
+        // 他に必要な候補リストがあれば追加
+      },
+    });
   };
 
   // Add button items configuration

@@ -75,12 +75,6 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
   }, [pmmWorkloads, selectedWorkCategoryId, weekIsos]);
 
 
-
-  console.log("filteredAssets:", filteredAssets);
-  console.log("filteredTasks:", filteredTasks);
-  console.log("filteredPMMW:", filteredPMMW);
-  console.log("filteredPW:", filteredPW);
-
   // 展開トグル
   const toggleAssetExpansion = (assetId: number) => {
     setExpandedAssets(prev => {

@@ -9,52 +9,51 @@ import {
   Stack,
 } from '@mui/material';
 import { ITaskForm } from '../../context/FormContext';
+import { FormMode } from '../../context/FormContext';
 import { useAppContext } from '../../context/AppContext';
 
 interface TaskFormProps {
-  task?: ITaskForm;
+  initialValues?: Partial<ITaskForm>;
+  candidates?: Record<string, any[]>;
+  mode: FormMode;
   onSubmit: (task: Omit<ITaskForm, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
   submitTrigger?: number;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onValidationChange, submitTrigger }) => {
-  const { assets } = useAppContext();
-  
+const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, submitTrigger }) => {
+  // useAppContextは必ずトップレベルで呼び出す
+  const appContext = useAppContext();
+  // assets候補はcandidatesから取得（なければAppContext）
+  const assetsList = candidates?.assets ?? appContext.assets;
+
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    start_date: '',
-    end_date: '',
-    status: 'Not Started' as ITaskForm['status'],
-    priority: 'Medium' as ITaskForm['priority'],
-    asset_id: 0,
-    assignee: '',
-    estimated_hours: '',
+    name: initialValues?.name ?? '',
+    description: initialValues?.description ?? '',
+    start_date: initialValues?.start_date ?? '',
+    end_date: initialValues?.end_date ?? '',
+    status: initialValues?.status ?? 'Not Started',
+    priority: initialValues?.priority ?? 'Medium',
+    asset_id: initialValues?.asset_id ?? (assetsList.length > 0 ? assetsList[0].id : 0),
+    assignee: initialValues?.assignee ?? '',
+    estimated_hours: initialValues?.estimated_hours?.toString() ?? '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (task) {
-      setFormData({
-        name: task.name,
-        description: task.description || '',
-        start_date: task.start_date || '',
-        end_date: task.end_date || '',
-        status: task.status,
-        priority: task.priority,
-        asset_id: task.asset_id,
-        assignee: task.assignee || '',
-        estimated_hours: task.estimated_hours?.toString() || '',
-      });
-    } else if (assets.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        asset_id: assets[0].id,
-      }));
-    }
-  }, [task, assets]);
+    setFormData({
+      name: initialValues?.name ?? '',
+      description: initialValues?.description ?? '',
+      start_date: initialValues?.start_date ?? '',
+      end_date: initialValues?.end_date ?? '',
+      status: initialValues?.status ?? 'Not Started',
+      priority: initialValues?.priority ?? 'Medium',
+      asset_id: initialValues?.asset_id ?? (assetsList.length > 0 ? assetsList[0].id : 0),
+      assignee: initialValues?.assignee ?? '',
+      estimated_hours: initialValues?.estimated_hours?.toString() ?? '',
+    });
+  }, [initialValues, assetsList]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -140,7 +139,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onValidationChange,
             onChange={(e) => handleFieldChange('asset_id', e.target.value as number)}
             required
           >
-            {assets.map((asset) => (
+            {assetsList.map((asset) => (
               <MenuItem key={asset.id} value={asset.id}>
                 {asset.name}
               </MenuItem>

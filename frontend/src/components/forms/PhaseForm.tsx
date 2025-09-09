@@ -11,41 +11,44 @@ import {
 import { IPhaseForm } from '../../context/FormContext';
 import { useAppContext } from '../../context/AppContext';
 
+import { FormMode } from '../../context/FormContext';
+
 interface PhaseFormProps {
-  phase?: IPhaseForm;
+  initialValues?: Partial<IPhaseForm>;
+  candidates?: Record<string, any[]>;
+  mode: FormMode;
   onSubmit: (phase: Omit<IPhaseForm, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
-  submitTrigger?: number; // 外部からの送信トリガー
+  submitTrigger?: number;
 }
 
-const PhaseForm: React.FC<PhaseFormProps> = ({ phase, onSubmit, onValidationChange, submitTrigger }) => {
-  const { selectedSubprojectId } = useAppContext();
-  
+const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, submitTrigger }) => {
+  // subproject候補はcandidatesから取得（未使用ならselectedSubprojectIdで初期化）
+  const subproject_id = initialValues?.subproject_id ?? 1;
+
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    start_date: '',
-    end_date: '',
-    status: 'Not Started' as IPhaseForm['status'],
-    priority: 'Medium' as IPhaseForm['priority'],
-    subproject_id: selectedSubprojectId || 1,
+    name: initialValues?.name ?? '',
+    description: initialValues?.description ?? '',
+    start_date: initialValues?.start_date ?? '',
+    end_date: initialValues?.end_date ?? '',
+    status: initialValues?.status ?? 'Not Started',
+    priority: initialValues?.priority ?? 'Medium',
+    subproject_id,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (phase) {
-      setFormData({
-        name: phase.name,
-        description: phase.description || '',
-        start_date: phase.start_date || '',
-        end_date: phase.end_date || '',
-        status: phase.status,
-        priority: phase.priority,
-        subproject_id: phase.subproject_id,
-      });
-    }
-  }, [phase]);
+    setFormData({
+      name: initialValues?.name ?? '',
+      description: initialValues?.description ?? '',
+      start_date: initialValues?.start_date ?? '',
+      end_date: initialValues?.end_date ?? '',
+      status: initialValues?.status ?? 'Not Started',
+      priority: initialValues?.priority ?? 'Medium',
+      subproject_id: initialValues?.subproject_id ?? 1,
+    });
+  }, [initialValues]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};

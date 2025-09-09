@@ -11,48 +11,48 @@ import {
 import { IAssetForm } from '../../context/FormContext';
 import { useAppContext } from '../../context/AppContext';
 
+import { FormMode } from '../../context/FormContext';
+
 interface AssetFormProps {
-  asset?: IAssetForm;
+  initialValues?: Partial<IAssetForm>;
+  candidates?: Record<string, any[]>;
+  mode: FormMode;
   onSubmit: (asset: Omit<IAssetForm, 'id'>) => void;
   onValidationChange?: (isValid: boolean) => void;
   submitTrigger?: number;
 }
 
-const AssetForm: React.FC<AssetFormProps> = ({ asset, onSubmit, onValidationChange, submitTrigger }) => {
-  const { phases } = useAppContext();
-  
+const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, onSubmit, onValidationChange, submitTrigger }) => {
+  // 候補リストはprops優先、なければAppContext
+  const { phases: contextPhases } = useAppContext();
+  const phases = candidates?.phases ?? contextPhases;
+
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    start_date: '',
-    end_date: '',
-    status: 'Not Started' as IAssetForm['status'],
-    priority: 'Medium' as IAssetForm['priority'],
-    phase_id: 0,
-    assignee: '',
+    name: initialValues?.name ?? '',
+    description: initialValues?.description ?? '',
+    start_date: initialValues?.start_date ?? '',
+    end_date: initialValues?.end_date ?? '',
+    status: initialValues?.status ?? 'Not Started',
+    priority: initialValues?.priority ?? 'Medium',
+    phase_id: initialValues?.phase_id ?? (phases.length > 0 ? phases[0].id : 0),
+    assignee: initialValues?.assignee ?? '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (asset) {
-      setFormData({
-        name: asset.name,
-        description: asset.description || '',
-        start_date: asset.start_date || '',
-        end_date: asset.end_date || '',
-        status: asset.status,
-        priority: asset.priority,
-        phase_id: asset.phase_id,
-        assignee: asset.assignee || '',
-      });
-    } else if (phases.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        phase_id: phases[0].id,
-      }));
-    }
-  }, [asset, phases]);
+    // initialValuesが変わったら再セット
+    setFormData({
+      name: initialValues?.name ?? '',
+      description: initialValues?.description ?? '',
+      start_date: initialValues?.start_date ?? '',
+      end_date: initialValues?.end_date ?? '',
+      status: initialValues?.status ?? 'Not Started',
+      priority: initialValues?.priority ?? 'Medium',
+      phase_id: initialValues?.phase_id ?? (phases.length > 0 ? phases[0].id : 0),
+      assignee: initialValues?.assignee ?? '',
+    });
+  }, [initialValues, phases]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};

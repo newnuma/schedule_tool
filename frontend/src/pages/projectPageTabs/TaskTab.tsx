@@ -26,7 +26,7 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, se
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "project.tasks:items";   // date range etc. for items
   const groupsPageKey = "project.tasks:groups"; // group-level filter (asset type)
-  const { openCreateForm } = useFormContext();
+  const { openForm } = useFormContext();
 
   // ContextMenuの状態管理
   const [menuState, setMenuState] = React.useState<{
@@ -87,11 +87,13 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, isEditMode, se
 
   // Add menu handlers
   const handleAddAsset = () => {
-    openCreateForm('asset');
+    openForm ({type: 'asset',
+            mode: 'create'});
   };
 
   const handleAddTask = () => {
-    openCreateForm('task');
+    openForm ({type: 'task',
+            mode: 'create'});
   };
 
   // Add button items configuration
