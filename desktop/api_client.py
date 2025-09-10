@@ -372,42 +372,32 @@ def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[s
     return res
 
 
-# def get_assets() -> Any:
-#     return _find("Asset")
+def create_entity(entity_type: str, data: dict, fields: Optional[List[str]] = None) -> Any:
+    """
+    新規エンティティ作成（ShotgunAPI互換）
+    Args:
+        entity_type: エンティティ種別（例: 'Asset'）
+        data: 作成データ（フィールド値）
+        fields: 返却フィールド（省略可）
+    Returns:
+        作成されたエンティティ（辞書形式）
+    """
+    result = sg.create(entity_type, data, fields)
+    return _format_dict(result)
 
-
-# def get_asset(asset_id: int) -> Any:
-#     return _find("Asset", [["id", "is", asset_id]])[0]
-
-
-# def get_tasks() -> Any:
-#     return _find("Task")
-
-
-# def get_task(task_id: int) -> Any:
-#     return _find("Task", [["id", "is", task_id]])[0]
-
-
-# def get_workloads() -> Any:
-#     return _find("Workload")
-
-
-# def get_workload(workload_id: int) -> Any:
-#     return _find("Workload", [["id", "is", workload_id]])[0]
-
-
-# def get_people() -> Any:
-#     return _find("Person")
-
-
-# def get_person(person_id: int) -> Any:
-#     return _find("Person", [["id", "is", person_id]])[0]
-
-
-# def get_workcategories() -> Any:
-#     return _find("WorkCategory")
-
-
-# def get_workcategory(category_id: int) -> Any:
-#     return _find("WorkCategory", [["id", "is", category_id]])[0]
-
+    
+def create_asset(asset_data: dict) -> Any:
+    """Asset作成ユーティリティ"""
+    field = [
+        "id",
+        "name",
+        "phase",
+        "start_date",
+        "end_date",
+        "asset_type",
+        "work_category",
+        "step",
+        "step.color",
+    ]
+    result = create_entity('Asset', asset_data, field)
+    return _format_dict(result)

@@ -1,6 +1,8 @@
 // Utilities for accessing the Qt WebChannel dataBridge object.
 // Always `await channelReady` before calling any bridge API.
 
+import { IAsset } from "../context/AppContext";
+
 type BridgeObject = any;
 
 let bridgePromise: Promise<BridgeObject | null> | null = null;
@@ -98,6 +100,11 @@ export function fetchAssignmentWorkloads(startIso: string, endIso: string) {
 export function fetchSteps() {
   console.log("call fetchSteps");
   return callBridge('fetchSteps');
+}
+
+export function createAsset(assetData: Omit<IAsset, 'id'>) {
+  console.log("call createAsset");
+  return callBridge('createAsset', assetData);
 }
 
 // export function fetchSubproject(id: number) {

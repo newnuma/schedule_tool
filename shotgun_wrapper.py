@@ -33,8 +33,8 @@ class ShotgunClient:
              fields: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         return self._impl.find(entity_type, filters or [], fields or None)
 
-    def create(self, entity_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        return self._impl.create(entity_type, data)
+    def create(self, entity_type: str, data: Dict[str, Any], return_fields: Optional[List[str]] = None) -> Dict[str, Any]:
+        return self._impl.create(entity_type, data, return_fields)
 
     def update(self, entity_type: str, entity_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         return self._impl.update(entity_type, entity_id, data)

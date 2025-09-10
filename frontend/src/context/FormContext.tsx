@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { IPhase, IAsset, ITask, IPerson } from '../context/AppContext';
-
+import { IPhase, IAsset, ITask, IPerson, useAppContext } from '../context/AppContext';
+import { createAsset } from '../api/bridgeApi';
 
 export type FormType = 'phase' | 'asset' | 'task';
 export type FormMode = 'create' | 'edit' | 'copy';
@@ -103,6 +103,7 @@ export const FormProvider: React.FC<FormProviderProps> = ({
   }, []);
 
 
+  const { addAssets } = useAppContext();
   // Python側APIは未定なので空関数
   const submitPhase = (data: Omit<IPhase, 'id'>) => {
     // TODO: Python API連携
@@ -110,10 +111,19 @@ export const FormProvider: React.FC<FormProviderProps> = ({
   const updatePhase = (id: number, data: Partial<IPhase>) => {
     // TODO: Python API連携
   };
+
   const submitAsset = (data: Omit<IAsset, 'id'>) => {
     console.log('Submitting asset:', data);
-    // TODO: Python API連携
+    createAsset(data).then((result) => {
+      if (result && (result as IAsset).id) {
+        addAssets([result as IAsset]);
+      }
+      console.log('Asset created:', result);
+    }).catch((error) => {
+      console.error('Failed to create asset:', error);
+    });
   };
+
   const updateAsset = (id: number, data: Partial<IAsset>) => {
     // TODO: Python API連携
   };

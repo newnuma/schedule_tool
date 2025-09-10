@@ -50,6 +50,10 @@ class DataBridge(QObject):
     @Slot(str, str, result="QVariant")
     def fetchAssignmentWorkloads(self, start: str, end: str) -> Any:
         return api_client.fetch_assignment_workloads(start, end)
+    
+    @Slot(dict, result="QVariant")
+    def createAsset(self, asset_data: dict) -> Any:
+        return api_client.create_asset(asset_data)
 
     # @Slot(int, result="QVariant")
     # def getSubproject(self, subproject_id: int) -> Any:  # noqa: N802
