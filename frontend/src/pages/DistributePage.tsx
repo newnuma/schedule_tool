@@ -75,8 +75,8 @@ const DistributePage: React.FC = () => {
         start: p.start_date,
         end: p.start_date,
         type: "point" as const,
-        className: `phase-ms-${p.type.toLowerCase()}`,
-        tooltipHtml: `<div><strong>Phase:</strong> ${p.name}<br/><strong>Type:</strong> ${p.type}<br/><strong>End:</strong> ${p.end_date}</div>`
+        className: p.phase_type ? `phase-ms-${p.phase_type.toLowerCase()}` : 'phase-ms-default',
+        tooltipHtml: `<div><strong>Phase:</strong> ${p.name}<br/><strong>Type:</strong> ${p.phase_type}<br/><strong>End:</strong> ${p.end_date}</div>`
       }));
     const barItems = filteredPhases
       .filter(p => !p.milestone)
@@ -89,8 +89,8 @@ const DistributePage: React.FC = () => {
         start: p.start_date,
         end: p.end_date,
         type: "range" as const,
-        className: `phase-bar-${p.type.toLowerCase()}`,
-        tooltipHtml: `<div><strong>Phase:</strong> ${p.name}<br/><strong>Type:</strong> ${p.type}<br/><strong>Start:</strong> ${p.start_date}<br/><strong>End:</strong> ${p.end_date}</div>`
+        className: p.phase_type ? `phase-bar-${p.phase_type.toLowerCase()}` : 'phase-bar-default',
+        tooltipHtml: `<div><strong>Phase:</strong> ${p.name}<br/><strong>Type:</strong> ${p.phase_type}<br/><strong>Start:</strong> ${p.start_date}<br/><strong>End:</strong> ${p.end_date}</div>`
       }));
     return [...milestoneItems, ...barItems];
   }, [filteredPhases]);

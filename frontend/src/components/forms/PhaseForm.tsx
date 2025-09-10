@@ -27,12 +27,13 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, 
   const subprojects = candidates?.subprojects ?? [];
   const defaultSubprojectObj = initialValues?.subproject ?? (subprojects.length > 0 ? subprojects[0] : { id: 1, name: '', type: 'subproject' });
   const [formData, setFormData] = useState<Omit<IPhase, 'id'>>({
+    type: 'Phase',
     name: initialValues?.name ?? '',
     subproject: defaultSubprojectObj,
     start_date: initialValues?.start_date ?? '',
     end_date: initialValues?.end_date ?? '',
     milestone: initialValues?.milestone ?? false,
-    type: initialValues?.type ?? 'DESIGN',
+    phase_type: initialValues?.phase_type ?? 'DESIGN',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,12 +42,13 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, 
   useEffect(() => {
     const subprojectObj = initialValues?.subproject ?? (subprojects.length > 0 ? subprojects[0] : { id: 1, name: '', type: 'subproject' });
     setFormData({
+      type: 'Phase',
       name: initialValues?.name ?? '',
       subproject: subprojectObj,
       start_date: initialValues?.start_date ?? '',
       end_date: initialValues?.end_date ?? '',
       milestone: initialValues?.milestone ?? false,
-      type: initialValues?.type ?? 'DESIGN',
+      phase_type: initialValues?.phase_type ?? 'DESIGN',
     });
   }, [initialValues, subprojects]);
 
@@ -77,12 +79,13 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, 
   const handleSubmit = () => {
     if (validateForm()) {
       onSubmit({
+        type: 'Phase',
         name: formData.name.trim(),
         subproject: formData.subproject,
         start_date: formData.start_date,
         end_date: formData.end_date,
         milestone: formData.milestone,
-        type: formData.type,
+        phase_type: formData.phase_type,
       });
     }
   };
@@ -162,9 +165,9 @@ const PhaseForm: React.FC<PhaseFormProps> = ({ initialValues, candidates, mode, 
         <FormControl fullWidth>
           <InputLabel>Type</InputLabel>
           <Select
-            value={formData.type}
+            value={formData.phase_type}
             label="Type"
-            onChange={(e) => handleFieldChange('type', e.target.value as IPhase['type'])}
+            onChange={(e) => handleFieldChange('phase_type', e.target.value as IPhase['phase_type'])}
             required
           >
             <MenuItem value="DESIGN">DESIGN</MenuItem>

@@ -55,7 +55,7 @@ class Phase(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     milestone = models.BooleanField(default=False)
-    type = models.CharField(max_length=32, choices=[
+    phase_type = models.CharField(max_length=32, choices=[
         ('DESIGN', 'DESIGN'),
         ('PRODT', 'PRODT'),
         ('ENG', 'ENG'),
@@ -70,7 +70,7 @@ class Asset(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     #Type EXT INT Commonの三種類
-    type = models.CharField(max_length=32, choices=[
+    asset_type = models.CharField(max_length=32, choices=[
         ('EXT', 'EXT'),
         ('INT', 'INT'),
         ('Common', 'Common')

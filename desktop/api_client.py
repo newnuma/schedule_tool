@@ -49,7 +49,7 @@ def _format_value(value):
     
     # 辞書形式の外部キー
     if isinstance(value, dict) and 'id' in value and 'name' in value:
-        return {'id': value['id'], 'name': value['name']}
+        return {'id': value['id'], 'name': value['name'], 'type': model_name}
     
     return value
 
@@ -61,9 +61,20 @@ def _format_dict(d):
         if isinstance(v, list):
             result[k] = [_format_dict(i) if isinstance(i, dict) else _format_value(i) for i in v]
         elif isinstance(v, dict):
-            # 外部キーはid,nameのみ抽出
-            if 'id' in v and 'name' in v and len(v) <= 3:
-                result[k] = {'id': v['id'], 'name': v['name']}
+            # 外部キーはid,name,typeを抽出
+            if 'id' in v and 'name' in v:
+                # typeがなければ推測
+                type_val = v.get('type')
+                if not type_val:
+                    # Django model instanceの場合
+                    if hasattr(v, '_meta'):
+                        type_val = v['_meta'].model_name.capitalize()
+                    else:
+                        type_val = None
+                fk = {'id': v['id'], 'name': v['name']}
+                if type_val:
+                    fk['type'] = type_val
+                result[k] = fk
             else:
                 result[k] = _format_dict(v)
         else:
@@ -167,7 +178,7 @@ def fetch_project_page(project_id: int) -> Any:
         "phase",
         "start_date",
         "end_date",
-        "type",
+        "asset_type",
         "work_category",
         "step",
         "step.color",

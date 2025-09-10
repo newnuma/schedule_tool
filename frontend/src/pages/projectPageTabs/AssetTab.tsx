@@ -159,7 +159,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     [basicFilteredAssets, getFilteredData]
   );
   const allowedTypes = useMemo(
-    () => new Set(assetsForGroups.map(a => a.type)),
+    () => new Set(assetsForGroups.map(a => a.asset_type)),
     [assetsForGroups]
   );
 
@@ -169,7 +169,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     [basicFilteredAssets, getFilteredData]
   );
   const filteredAssets = useMemo(
-    () => assetsForItems.filter(a => allowedTypes.has(a.type)),
+    () => assetsForItems.filter(a => allowedTypes.has(a.asset_type)),
     [assetsForItems, allowedTypes]
   );
 
@@ -179,7 +179,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       // 最初にPhaseグループを追加（固定）
       const phaseGroup = { id: 'phase-group', content: 'Phase', className: 'phase-row' };
       // Groups are asset types that passed the group filter
-      const typeSet = new Set(assetsForGroups.map(a => a.type));
+      const typeSet = new Set(assetsForGroups.map(a => a.asset_type));
       // Ensure subgroup ordering (milestones above bars) and stacking are controlled at group level
       const typeGroups = Array.from(typeSet).map(t => ({
         id: t,
@@ -220,13 +220,13 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
           }
           return {
             id: a.id,
-            group: a.type,
+            group: a.asset_type,
             subgroup: "asset",
             subgroupOrder: 1,
             content: a.name,
             start: a.start_date,
             end: a.end_date,
-            tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`,
+            tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.asset_type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`,
             style,
           };
         });
@@ -242,7 +242,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
         })
         .map(ms => {
           // group は親Assetの type（asset_type から）
-          const groupId = ms.asset_type || assetById.get(ms.asset.id)?.type || 'Common';
+          const groupId = ms.asset_type || assetById.get(ms.asset.id)?.asset_type || 'Common';
           // サブグループは親Assetごとに分け、MS はバーの上側に来るよう別サブグループを用意
           const subGroup = "milestone";
           // milestone_type に応じた className を付与

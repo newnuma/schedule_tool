@@ -31,6 +31,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
   const candidatesPeople: IForignKey[] = (candidates?.people ?? []).map((p: any) => ({ type: 'Person', id: p.id, name: p.name }));
 
   const [formData, setFormData] = useState<Omit<ITask, 'id' | 'subproject' | 'work_category'>>({
+    type: 'Task',
     name: initialValues?.name ?? '',
     asset: initialValues?.asset ?? { type: 'Asset', id: 0, name: '' },
     start_date: initialValues?.start_date ?? '',
@@ -44,6 +45,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
 
   useEffect(() => {
     setFormData({
+      type: 'Task',
       name: initialValues?.name ?? '',
       asset: initialValues?.asset ?? { type: 'Asset', id: 0, name: '' },
       start_date: initialValues?.start_date ?? '',
@@ -86,6 +88,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialValues, candidates, mode, on
   const handleSubmit = () => {
     if (validateForm()) {
       onSubmit({
+        type: 'Task',
         name: formData.name.trim(),
         asset: formData.asset,
         start_date: formData.start_date,

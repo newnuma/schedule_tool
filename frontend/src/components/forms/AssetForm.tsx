@@ -31,11 +31,12 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
   const candidatesWorkCategories: IForignKey[] = (workCategories ?? []).map((wc: any) => ({ type: 'WorkCategory', id: wc.id, name: wc.name }));
 
   const [formData, setFormData] = useState<Omit<IAsset, 'id' | 'color'>>({
+    type: 'Asset',
     name: initialValues?.name ?? '',
     phase: initialValues?.phase ?? { type: 'Phase', id: 0, name: '' },
     start_date: initialValues?.start_date ?? '',
     end_date: initialValues?.end_date ?? '',
-    type: initialValues?.type ?? 'EXT',
+    asset_type: initialValues?.asset_type ?? 'EXT',
     work_category: initialValues?.work_category ?? null,
     step: initialValues?.step ?? null,
   });
@@ -45,11 +46,12 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
   useEffect(() => {
     // initialValuesが変わったら再セット
     setFormData({
+      type: 'Asset',
       name: initialValues?.name ?? '',
       phase: initialValues?.phase ?? { type: 'Phase', id: 0, name: '' },
       start_date: initialValues?.start_date ?? '',
       end_date: initialValues?.end_date ?? '',
-      type: initialValues?.type ?? AssetTypeArray[0],
+      asset_type: initialValues?.asset_type ?? AssetTypeArray[0],
       work_category: initialValues?.work_category ?? null,
       step: initialValues?.step ?? null,
     });
@@ -76,8 +78,8 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
     if (!formData.work_category || !formData.work_category.id) {
       newErrors.work_category = 'Work category selection is required';
     }
-    if (!formData.type) {
-      newErrors.type = 'Type selection is required';
+    if (!formData.asset_type) {
+      newErrors.asset_type = 'Type selection is required';
     }
 
     setErrors(newErrors);
@@ -97,11 +99,12 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
 
   const handleSubmit = () => {
     onSubmit({
+      type: 'Asset',
       name: formData.name.trim(),
       phase: formData.phase,
       start_date: formData.start_date,
       end_date: formData.end_date,
-      type: formData.type,
+      asset_type: formData.asset_type,
       work_category: formData.work_category,
       step: formData.step,
     });
@@ -196,14 +199,14 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialValues, candidates, mode, 
         <Autocomplete
           options={AssetTypeArray}
           getOptionLabel={(option) => option}
-          value={formData.type}
-          onChange={(_event: any, newValue: string | null) => handleFieldChange('type', newValue || '')}
+          value={formData.asset_type}
+          onChange={(_event: any, newValue: string | null) => handleFieldChange('asset_type', newValue || '')}
           renderInput={(params: any) => (
             <TextField
               {...params}
               label="Type"
-              error={!!errors.type}
-              helperText={errors.type}
+              error={!!errors.asset_type}
+              helperText={errors.asset_type}
               required
             />
           )}

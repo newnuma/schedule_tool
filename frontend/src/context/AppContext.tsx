@@ -25,6 +25,7 @@ export interface IForignKey {
 
 export interface ISubproject {
     id: number;
+    type: "Subproject";
     name: string;
     start_date: string; // ISO日付文字列
     end_date: string;   // ISO日付文字列
@@ -39,21 +40,23 @@ export interface ISubproject {
 
 export interface IPhase {
     id: number;
+    type: "Phase";
     name: string;
     subproject: IForignKey; 
     start_date: string;
     end_date: string;
     milestone: boolean;
-    type: PhaseType;
+    phase_type: PhaseType;
 }
 
 export interface IAsset {
     id: number;
+    type: "Asset";
     name: string;
     phase: IForignKey; // 親PhaseのID
     start_date: string;
     end_date: string;
-    type: AssetType;
+    asset_type: AssetType;
     work_category?: IForignKey | null; // WorkCategory
     step?: IForignKey | null; // Step
 
@@ -63,6 +66,7 @@ export interface IAsset {
 
 export interface ITask {
     id: number;
+    type: "Task";
     name: string;
     asset: IForignKey; // 親AssetのID
     start_date: string;
@@ -77,6 +81,7 @@ export interface ITask {
 
 export interface IMilestoneTask {
     id: number;
+    type: "MilestoneTask";
     name: string;
     asset: IForignKey;
     start_date: string;
@@ -90,6 +95,7 @@ export interface IMilestoneTask {
 
 export interface IPersonWorkload {
     id: number;
+    type: "PersonWorkload";
     task: IForignKey; // 親TaskのID
     name: string;
     week: string; // 週の月曜日（ISO文字列）
@@ -102,6 +108,7 @@ export interface IPersonWorkload {
 
 export interface IPMMWorkload {
     id: number;
+    type: "PMMWorkload";
     subproject: IForignKey; // Subproject参照
     work_category?: IForignKey | null; // WorkCategory参照
     name: string;
@@ -111,6 +118,7 @@ export interface IPMMWorkload {
 
 export interface IPerson {
     id: number;
+    type: "Person";
     name: string;
     email?: string;
     department?: IForignKey | null;
