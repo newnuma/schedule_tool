@@ -9,6 +9,10 @@ class Department(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def type(self):
+        return self.__class__.__name__
+
 class Step(models.Model):
     name = models.CharField(max_length=128)
     # rgb, "255, 255, 255"
@@ -16,6 +20,10 @@ class Step(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def type(self):
+        return self.__class__.__name__
 
 
 class Person(models.Model):
@@ -28,6 +36,10 @@ class Person(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def type(self):
+        return self.__class__.__name__
 
 class Subproject(models.Model):
     name = models.CharField(max_length=128)
@@ -49,6 +61,10 @@ class Subproject(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def type(self):
+        return self.__class__.__name__
+
 class Phase(models.Model):
     subproject = models.ForeignKey(Subproject, on_delete=models.CASCADE, related_name='phases')
     name = models.CharField(max_length=128)
@@ -63,6 +79,10 @@ class Phase(models.Model):
 
     def __str__(self):
         return f"{self.subproject.name} - {self.name}"
+
+    @property
+    def type(self):
+        return self.__class__.__name__
 
 class Asset(models.Model):
     phase = models.ForeignKey(Phase, on_delete=models.CASCADE, related_name='assets')
@@ -81,6 +101,10 @@ class Asset(models.Model):
     def __str__(self):
         return f"{self.phase.subproject.name} - {self.phase.name} - {self.name}"
 
+    @property
+    def type(self):
+        return self.__class__.__name__
+
 class Task(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='tasks')
     name = models.CharField(max_length=128)
@@ -95,6 +119,10 @@ class Task(models.Model):
 
     def __str__(self):
         return f"{self.asset.phase.subproject.name} - {self.asset.phase.name} - {self.asset.name} - {self.name}"
+
+    @property
+    def type(self):
+        return self.__class__.__name__
 
 class MilestoneTask(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='milestone_tasks')
@@ -111,6 +139,10 @@ class MilestoneTask(models.Model):
     def __str__(self):
         return f"{self.asset.phase.subproject.name} - {self.asset.phase.name} - {self.asset.name} - {self.name}"
 
+    @property
+    def type(self):
+        return self.__class__.__name__
+
 # Taskにアサインされている人ごとの工数（週単位）
 class PersonWorkload(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='workloads')
@@ -121,6 +153,10 @@ class PersonWorkload(models.Model):
 
     def __str__(self):
         return f"{self.task.asset.phase.subproject.name} - {self.task.asset.phase.name} - {self.task.asset.name} - {self.task.name} - {self.name}"
+
+    @property
+    def type(self):
+        return self.__class__.__name__
 
 # SubProjectのWorkCategory毎に与えられている工数（週単位）
 class PMMWorkload(models.Model):
@@ -134,9 +170,17 @@ class PMMWorkload(models.Model):
         wc = self.work_category.name if self.work_category else "(No Category)"
         return f"{self.subproject.name} - {wc} - {self.name}"
 
+    @property
+    def type(self):
+        return self.__class__.__name__
+
 class WorkCategory(models.Model):
     name = models.CharField(max_length=128)
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.name
+
+    @property
+    def type(self):
+        return self.__class__.__name__

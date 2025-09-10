@@ -146,20 +146,27 @@ export interface IAppContext {
 
     phases: IPhase[];
     addPhases: (phases: IPhase[]) => void;
+    updatePhases: (updates: Partial<IPhase>[]) => void;
 
     assets: IAsset[];
     addAssets: (assets: IAsset[]) => void;
+    updateAssets: (updates: Partial<IAsset>[]) => void;
 
     tasks: ITask[];
     addTasks: (tasks: ITask[]) => void;
+    updateTasks: (updates: Partial<ITask>[]) => void;
 
     milestoneTasks: IMilestoneTask[];
     addMilestoneTasks: (tasks: IMilestoneTask[]) => void;
+    updateMilestoneTasks: (updates: Partial<IMilestoneTask>[]) => void;
 
     personWorkloads: IPersonWorkload[];
     addPersonWorkloads: (workloads: IPersonWorkload[]) => void;
+    updatePersonWorkloads: (updates: Partial<IPersonWorkload>[]) => void;
+
     pmmWorkloads: IPMMWorkload[];
     addPMMWorkloads: (workloads: IPMMWorkload[]) => void;
+    updatePMMWorkloads: (updates: Partial<IPMMWorkload>[]) => void;
 
     people: IPerson[];
     addPeople: (people: IPerson[]) => void;
@@ -185,35 +192,41 @@ export interface IAppContext {
 
 const defaultParams: IAppContext = {
     steps: [],
-    addSteps: () => { },
+    addSteps: () => {},
     subprojects: [],
-    addSubprojects: () => { },
+    addSubprojects: () => {},
     phases: [],
-    addPhases: () => { },
+    addPhases: () => {},
+    updatePhases: () => {},
     assets: [],
-    addAssets: () => { },
+    addAssets: () => {},
+    updateAssets: () => {},
     tasks: [],
-    addTasks: () => { },
+    addTasks: () => {},
+    updateTasks: () => {},
     milestoneTasks: [],
-    addMilestoneTasks: () => { },
+    addMilestoneTasks: () => {},
+    updateMilestoneTasks: () => {},
     personWorkloads: [],
-    addPersonWorkloads: () => { },
+    addPersonWorkloads: () => {},
+    updatePersonWorkloads: () => {},
     pmmWorkloads: [],
-    addPMMWorkloads: () => { },
+    addPMMWorkloads: () => {},
+    updatePMMWorkloads: () => {},
     people: [],
-    addPeople: () => { },
+    addPeople: () => {},
     selectedSubprojectId: undefined,
+    setSelectedSubprojectId: () => {},
     workCategories: [],
-    setWorkCategories: () => { },
-    setSelectedSubprojectId: () => { },
+    setWorkCategories: () => {},
     selectedPersonList: [],
-    setSelectedPersonList: () => { },
+    setSelectedPersonList: () => {},
     loading: false,
-    setLoading: () => { },
+    setLoading: () => {},
     currentPage: "Distribute",
-    setCurrentPage: () => { },
+    setCurrentPage: () => {},
     isEditMode: false,
-    setEditMode: () => { },
+    setEditMode: () => {},
 };
 
 const AppContext = createContext<IAppContext>({
@@ -347,6 +360,51 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     
+    // update系関数（部分フィールドのみ更新）
+    const updatePhases = useCallback((updates: Partial<IPhase>[]) => {
+        setPhases((prev) => prev.map(phase => {
+            const update = updates.find(u => u.id === phase.id);
+            return update ? { ...phase, ...update } : phase;
+        }));
+    }, []);
+
+    const updateAssets = useCallback((updates: Partial<IAsset>[]) => {
+        console.log('Updating assets with:', updates);
+        setAssets((prev) => prev.map(asset => {
+            const update = updates.find(u => u.id === asset.id);
+            return update ? { ...asset, ...update } : asset;
+        }));
+    }, []);
+
+    const updateTasks = useCallback((updates: Partial<ITask>[]) => {
+        setTasks((prev) => prev.map(task => {
+            const update = updates.find(u => u.id === task.id);
+            return update ? { ...task, ...update } : task;
+        }));
+    }, []);
+
+    const updateMilestoneTasks = useCallback((updates: Partial<IMilestoneTask>[]) => {
+        setMilestoneTasks((prev) => prev.map(task => {
+            const update = updates.find(u => u.id === task.id);
+            return update ? { ...task, ...update } : task;
+        }));
+    }, []);
+
+    const updatePersonWorkloads = useCallback((updates: Partial<IPersonWorkload>[]) => {
+        setPersonWorkloads((prev) => prev.map(workload => {
+            const update = updates.find(u => u.id === workload.id);
+            return update ? { ...workload, ...update } : workload;
+        }));
+    }, []);
+
+    const updatePMMWorkloads = useCallback((updates: Partial<IPMMWorkload>[]) => {
+        setPMMWorkloads((prev) => prev.map(workload => {
+            const update = updates.find(u => u.id === workload.id);
+            return update ? { ...workload, ...update } : workload;
+        }));
+    }, []);
+
+    
 
     return (
         <AppContext.Provider
@@ -357,16 +415,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 addSubprojects,
                 phases,
                 addPhases,
+                updatePhases,
                 assets,
                 addAssets,
+                updateAssets,
                 tasks,
                 addTasks,
+                updateTasks,
                 milestoneTasks,
                 addMilestoneTasks,
+                updateMilestoneTasks,
                 personWorkloads,
                 addPersonWorkloads,
+                updatePersonWorkloads,
                 pmmWorkloads,
                 addPMMWorkloads,
+                updatePMMWorkloads,
                 people,
                 addPeople,
                 workCategories,

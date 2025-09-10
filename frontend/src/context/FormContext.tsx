@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { IPhase, IAsset, ITask, IPerson, useAppContext } from '../context/AppContext';
-import { createAsset } from '../api/bridgeApi';
+import { createEntity, updateEntity } from '../api/bridgeApi';
 
 export type FormType = 'phase' | 'asset' | 'task';
 export type FormMode = 'create' | 'edit' | 'copy';
@@ -50,24 +50,10 @@ export const useFormContext = () => {
 
 interface FormProviderProps {
   children: React.ReactNode;
-  onPhaseSubmit?: (phase: Omit<IPhase, 'id'>) => void;
-  onAssetSubmit?: (asset: Omit<IAsset, 'id'>) => void;
-  onTaskSubmit?: (task: Omit<ITask, 'id'>) => void;
-  onPhaseUpdate?: (id: number, phase: Partial<IPhase>) => void;
-  onAssetUpdate?: (id: number, asset: Partial<IAsset>) => void;
-  onTaskUpdate?: (id: number, task: Partial<ITask>) => void;
 }
 
-
-export const FormProvider: React.FC<FormProviderProps> = ({
-  children,
-  onPhaseSubmit,
-  onAssetSubmit,
-  onTaskSubmit,
-  onPhaseUpdate,
-  onAssetUpdate,
-  onTaskUpdate,
-}) => {
+export const FormProvider: React.FC<FormProviderProps> = (props) => {
+  const { children } = props;
   const [formState, setFormState] = useState<FormState>({
     isOpen: false,
     type: null,
@@ -102,59 +88,51 @@ export const FormProvider: React.FC<FormProviderProps> = ({
     });
   }, []);
 
+  const { addAssets, addPhases, addTasks, updateAssets, updatePhases, updateTasks } = useAppContext();
 
-  const { addAssets } = useAppContext();
-  // Python側APIは未定なので空関数
-  const submitPhase = (data: Omit<IPhase, 'id'>) => {
-    // TODO: Python API連携
-  };
-  const updatePhase = (id: number, data: Partial<IPhase>) => {
-    // TODO: Python API連携
-  };
-
-  const submitAsset = (data: Omit<IAsset, 'id'>) => {
-    console.log('Submitting asset:', data);
-    createAsset(data).then((result) => {
-      if (result && (result as IAsset).id) {
-        addAssets([result as IAsset]);
+  // 共通のcreate関数
+  const createDataFromForm = (data: Partial<IAsset | IPhase | ITask>) => {
+    createEntity(data).then((result) => {
+      if (result && result.id && result.type) {
+        console.log('Created entity:', result);
+        if (result.type === 'Asset') {
+          addAssets([result as IAsset]);
+        } else if (result.type === 'Phase') {
+          addPhases([result as IPhase]);
+        } else if (result.type === 'Task') {
+          addTasks([result as ITask]);
+        }
       }
-      console.log('Asset created:', result);
     }).catch((error) => {
-      console.error('Failed to create asset:', error);
+      console.error('Failed to create entity:', error);
     });
   };
 
-  const updateAsset = (id: number, data: Partial<IAsset>) => {
-    // TODO: Python API連携
+  // 共通のupdate関数（API連携は未実装）
+  const updateDataFromForm = (id: number, data: Partial<IAsset | IPhase | ITask>) => {
+    updateEntity(id, data).then((result) => {
+      if (result && result.id && result.type) {
+        console.log('Updated entity:', result);
+        if (result.type === 'Asset') {
+          updateAssets([result as IAsset]);
+        } else if (result.type === 'Phase') {
+          updatePhases([result as IPhase]);
+        } else if (result.type === 'Task') {
+          updateTasks([result as ITask]);
+        }
+      }
+    }).catch((error) => {
+      console.error('Failed to create entity:', error);
+    });
   };
-  const submitTask = (data: Omit<ITask, 'id'>) => {
-    // TODO: Python API連携
-  };
-  const updateTask = (id: number, data: Partial<ITask>) => {
-    // TODO: Python API連携
-  };
-
+  
   // mode分岐でsubmit
   const handleFormSubmit = useCallback((data: any) => {
     const { type, mode, initialValues } = formState;
-    if (type === 'phase') {
-      if (mode === 'create' || mode === 'copy') {
-        submitPhase(data);
-      } else if (mode === 'edit' && initialValues?.id) {
-        updatePhase(initialValues.id, data);
-      }
-    } else if (type === 'asset') {
-      if (mode === 'create' || mode === 'copy') {
-        submitAsset(data);
-      } else if (mode === 'edit' && initialValues?.id) {
-        updateAsset(initialValues.id, data);
-      }
-    } else if (type === 'task') {
-      if (mode === 'create' || mode === 'copy') {
-        submitTask(data);
-      } else if (mode === 'edit' && initialValues?.id) {
-        updateTask(initialValues.id, data);
-      }
+    if (mode === 'create' || mode === 'copy') {
+      createDataFromForm(data);
+    } else if (mode === 'edit' && initialValues?.id) {
+      updateDataFromForm(initialValues.id, data);
     }
     closeForm();
   }, [formState, closeForm]);

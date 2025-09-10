@@ -1,7 +1,7 @@
 // Utilities for accessing the Qt WebChannel dataBridge object.
 // Always `await channelReady` before calling any bridge API.
 
-import { IAsset } from "../context/AppContext";
+import { IAsset, ITask ,IPhase} from "../context/AppContext";
 
 type BridgeObject = any;
 
@@ -102,58 +102,12 @@ export function fetchSteps() {
   return callBridge('fetchSteps');
 }
 
-export function createAsset(assetData: Omit<IAsset, 'id'>) {
-  console.log("call createAsset");
-  return callBridge('createAsset', assetData);
+export function createEntity(data: Partial<IAsset | IPhase | ITask>) {
+  const dataStr = JSON.stringify(data);
+  return callBridge('createEntity', dataStr);
 }
 
-// export function fetchSubproject(id: number) {
-//   return callBridge('getSubproject', id);
-// }
-
-
-
-// export function fetchPhase(id: number) {
-//   return callBridge('getPhase', id);
-// }
-
-// export function fetchAssets() {
-//   return callBridge('getAssets');
-// }
-
-// export function fetchAsset(id: number) {
-//   return callBridge('getAsset', id);
-// }
-
-// export function fetchTasks() {
-//   return callBridge('getTasks');
-// }
-
-// export function fetchTask(id: number) {
-//   return callBridge('getTask', id);
-// }
-
-// export function fetchWorkloads() {
-//   return callBridge('getWorkloads');
-// }
-
-// export function fetchWorkload(id: number) {
-//   return callBridge('getWorkload', id);
-// }
-
-// export function fetchPeople() {
-//   return callBridge('getPeople');
-// }
-
-// export function fetchPerson(id: number) {
-//   return callBridge('getPerson', id);
-// }
-
-// export function fetchWorkcategories() {
-//   return callBridge('getWorkcategories');
-// }
-
-// export function fetchWorkcategory(id: number) {
-//   return callBridge('getWorkcategory', id);
-// }
-
+export function updateEntity(id: number, data: Partial<IAsset | IPhase | ITask>) {
+  const dataStr = JSON.stringify(data);
+  return callBridge('updateEntity', id, dataStr);
+}

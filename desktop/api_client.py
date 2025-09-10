@@ -124,14 +124,80 @@ def remap_key_in_list(
         result.append(target)
     return result
 
-def get_entities(entity: str, filters: Optional[List] = None, fields: Optional[List[str]] = None) -> Any:
-    data = sg.find(entity, filters or [], fields)
+entity_fields = {
+    "Department": ["id", "name", "description"],
+    "Step": ["id", "name", "color"],
+    "Person": ["id", "name", "email", "department", "manager", "subproject"],
+    "Subproject": [
+        "id", "name", "start_date", "end_date", "editing", "department", "access", "pmm_status"
+    ],
+    "Phase": [
+        "id", "subproject", "name", "start_date", "end_date", "milestone", "phase_type"
+    ],
+    "Asset": [
+        "id", "phase", "name", "start_date", "end_date", "asset_type", "work_category", "step", "step.color"
+    ],
+    "Task": [
+        "id", "asset", "name", "start_date", "end_date", "assignees", "status",
+        "asset.phase.subproject", "asset.work_category"
+    ],
+    "MilestoneTask": [
+        "id", "asset", "name", "start_date", "end_date", "milestone_type",
+        "asset.phase.subproject", "asset.type"
+    ],
+    "PersonWorkload": [
+        "id", "task", "person", "name", "week", "man_week", "task.asset.phase.subproject"
+    ],
+    "PMMWorkload": [
+        "id", "subproject", "work_category", "name", "week", "man_week",
+    ],
+    "WorkCategory": ["id", "name", "description"],
+}
+
+def get_entities(entity: str, filters: Optional[List] = None) -> Any:
+    field_list = entity_fields.get(entity)
+    data = sg.find(entity, filters or [], field_list)
     return _format_list(data)
 
-def get_entity(entity: str, entity_id: int, fields: Optional[List[str]] = None) -> Any:
+def get_entity(entity: str, entity_id: int) -> Any:
     filters = [["id", "is", entity_id]]
-    data = sg.find_one(entity, filters, fields)
+    field_list = entity_fields.get(entity)
+    data = sg.find_one(entity, filters, field_list)
     return _format_dict(data) if data else data
+
+
+# モデルごとのフィールドリマップルール
+field_remap = {
+    "Asset": [("step.color", "color")],
+    "Task": [
+        ("asset.phase.subproject", "subproject"),
+        ("asset.work_category", "work_category"),
+    ],
+    "MilestoneTask": [
+        ("asset.phase.subproject", "subproject"),
+        ("asset.type", "asset_type"),
+    ],
+    "PersonWorkload": [
+        ("task.asset.phase.subproject", "subproject"),
+    ],
+}
+
+def adjust_field_names(data):
+    if not data:
+        return data
+
+    is_list = isinstance(data, list)
+    items = data if is_list else [data]
+    entity_type = None
+
+    for item in items:
+        if isinstance(item, dict) and "type" in item:
+            entity_type = item["type"]
+            break
+    remap = field_remap.get(entity_type, [])
+    for old_key, new_key in remap:
+        items = remap_key_in_list(items, old_key, new_key)
+    return items if is_list else items[0]
 
 def fetch_distribute_page() -> Any:
     """Distributeページ用: すべてのSubprojectとPhaseを取得"""
@@ -172,67 +238,22 @@ def fetch_project_page(project_id: int) -> Any:
 
     # Asset取得（親: Phase）
     phase_ids = [phase["id"] for phase in phases]
-    asset_fields = [
-        "id",
-        "name",
-        "phase",
-        "start_date",
-        "end_date",
-        "asset_type",
-        "work_category",
-        "step",
-        "step.color",
-    ]
-    assets = get_entities("Asset", [["phase", "in", phase_ids]], asset_fields) if phase_ids else []
-    assets = remap_key_in_list(assets, "step.color", "color")
+    assets = get_entities("Asset", [["phase", "in", phase_ids]]) if phase_ids else []
+    assets = adjust_field_names(assets)
 
     # Task取得（親: Asset）
     asset_ids = [asset["id"] for asset in assets]
-    task_fields = [
-        "id",
-        "name",
-        "asset",
-        "start_date",
-        "end_date",
-        "status",
-        "assignees",
-        "asset.phase.subproject",
-        "asset.work_category",
-    ]
-    tasks = get_entities("Task", [["asset", "in", asset_ids]], task_fields) if asset_ids else []
-    # サブプロジェクトを統一キーに
-    tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
-    tasks = remap_key_in_list(tasks, "asset.work_category", "work_category")
+    tasks = get_entities("Task", [["asset", "in", asset_ids]]) if asset_ids else []
+    tasks = adjust_field_names(tasks)
 
     # MilestoneTask取得（親: Asset、同一サブプロジェクトに属するもののみ）
-    ms_fields = [
-        "id",
-        "name",
-        "asset",
-        "start_date",
-        "end_date",
-        "milestone_type",
-        "asset.phase.subproject",
-        "asset.type"
-    ]
-    milestone_tasks = get_entities("MilestoneTask", [["asset", "in", asset_ids]], ms_fields) if asset_ids else []
-    milestone_tasks = remap_key_in_list(milestone_tasks, "asset.phase.subproject", "subproject")
-    milestone_tasks = remap_key_in_list(milestone_tasks, "asset.type", "asset_type")
-    milestone_tasks = [m for m in milestone_tasks if m.get("subproject", {}).get("id") == subproject["id"]]
+    milestone_tasks = get_entities("MilestoneTask", [["asset", "in", asset_ids]]) if asset_ids else []
+    milestone_tasks = adjust_field_names(milestone_tasks)
 
     # PersonWorkload取得（親: Task）
     task_ids = [task["id"] for task in tasks]
-    pw_fields = [
-        "id",
-        "name",
-        "task",
-        "person",
-        "week",
-        "man_week",
-        "task.asset.phase.subproject",
-    ]
-    personworkloads = get_entities("PersonWorkload", [["task", "in", task_ids]], pw_fields) if task_ids else []
-    personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
+    personworkloads = get_entities("PersonWorkload", [["task", "in", task_ids]]) if task_ids else []
+    personworkloads = adjust_field_names(personworkloads)
 
     # PMMWorkload取得（親: Subproject）
     pmmworkloads = get_entities("PMMWorkload", [["subproject", "is", subproject["id"]]]) if subproject else []
@@ -259,36 +280,15 @@ def fetch_assignment_page(start_iso: str, end_iso: str) -> Any:
     end = _parse_iso_date(end_iso)
 
     # DB側でフィルタして取得
-    task_fields = [
-        "id",
-        "name",
-        "asset",
-        "start_date",
-        "end_date",
-        "status",
-        "assignees",
-        "asset.phase.subproject",
-    ]
     tasks = get_entities(
         "Task",
         [["start_date", "<=", start], ["end_date", ">=", end]],
-        task_fields,
     )
     tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
 
-    pw_fields = [
-        "id",
-        "name",
-        "task",
-        "person",
-        "week",
-        "man_week",
-        "task.asset.phase.subproject",
-    ]
     personworkloads = get_entities(
         "PersonWorkload",
         [["week", ">=", start], ["week", "<=", end]],
-        pw_fields,
     )
     personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
 
@@ -305,20 +305,9 @@ def fetch_assignment_tasks(start_iso: str, end_iso: str) -> Any:
     start = _parse_iso_date(start_iso)
     end = _parse_iso_date(end_iso)
     # DB側でフィルター（start_date <= end かつ end_date >= start）
-    task_fields = [
-        "id",
-        "name",
-        "asset",
-        "start_date",
-        "end_date",
-        "status",
-        "assignees",
-        "asset.phase.subproject",
-    ]
     tasks = get_entities(
         "Task",
         [["start_date", "<=", end], ["end_date", ">=", start]],
-        task_fields,
     )
     tasks = remap_key_in_list(tasks, "asset.phase.subproject", "subproject")
     return {"tasks": tasks}
@@ -327,19 +316,9 @@ def fetch_assignment_workloads(start_iso: str, end_iso: str) -> Any:
     """期間内のPersonWorkloadのみを返す（週=weekが範囲内）"""
     start = _parse_iso_date(start_iso)
     end = _parse_iso_date(end_iso)
-    pw_fields = [
-        "id",
-        "name",
-        "task",
-        "person",
-        "week",
-        "man_week",
-        "task.asset.phase.subproject",
-    ]
     personworkloads = get_entities(
         "PersonWorkload",
         [["week", ">=", start], ["week", "<=", end]],
-        pw_fields,
     )
     personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
     return {"personworkloads": personworkloads}
@@ -372,32 +351,16 @@ def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[s
     return res
 
 
-def create_entity(entity_type: str, data: dict, fields: Optional[List[str]] = None) -> Any:
-    """
-    新規エンティティ作成（ShotgunAPI互換）
-    Args:
-        entity_type: エンティティ種別（例: 'Asset'）
-        data: 作成データ（フィールド値）
-        fields: 返却フィールド（省略可）
-    Returns:
-        作成されたエンティティ（辞書形式）
-    """
+def create_entity(data: dict) -> Any:
+    entity_type = data.get("type")
+    fields = entity_fields.get(entity_type)
+    data.pop("type")  # typeフィールドは削除
     result = sg.create(entity_type, data, fields)
+    result = adjust_field_names(result)
     return _format_dict(result)
 
-    
-def create_asset(asset_data: dict) -> Any:
-    """Asset作成ユーティリティ"""
-    field = [
-        "id",
-        "name",
-        "phase",
-        "start_date",
-        "end_date",
-        "asset_type",
-        "work_category",
-        "step",
-        "step.color",
-    ]
-    result = create_entity('Asset', asset_data, field)
+def update_entity(entity_id: int, data: dict) -> Any:
+    entity_type = data.get("type")
+    data.pop("type")  # typeフィールドは削除
+    result = sg.update(entity_type, entity_id, data)
     return _format_dict(result)

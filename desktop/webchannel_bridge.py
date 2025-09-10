@@ -5,6 +5,7 @@ from PySide6.QtCore import QObject, Slot
 
 import api_client
 import cache  # 追加
+import json
 
 
 class DataBridge(QObject):
@@ -51,9 +52,15 @@ class DataBridge(QObject):
     def fetchAssignmentWorkloads(self, start: str, end: str) -> Any:
         return api_client.fetch_assignment_workloads(start, end)
     
-    @Slot(dict, result="QVariant")
-    def createAsset(self, asset_data: dict) -> Any:
-        return api_client.create_asset(asset_data)
+    @Slot(str, result="QVariant")
+    def createEntity(self, data: str) -> Any:
+        data_dict = json.loads(data)
+        return api_client.create_entity(data_dict)
+
+    @Slot(int, str, result="QVariant")
+    def updateEntity(self, id: int, data: str) -> Any:
+        data_dict = json.loads(data)
+        return api_client.update_entity(id, data_dict)
 
     # @Slot(int, result="QVariant")
     # def getSubproject(self, subproject_id: int) -> Any:  # noqa: N802
