@@ -210,6 +210,11 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
     backgroundColor: "rgba(33, 150, 243, 0.08)",
     borderColor: "transparent",
   },
+  // ====== assigneesが空のタスクアイテム枠線 ======
+  "& .vis-item.no-assignee": {
+    borderWidth: "3px !important",
+    borderColor: "#e53935 !important", // 赤
+  },
 }));
 
 export const NoDataBox = styled(Box)(({ theme }) => ({

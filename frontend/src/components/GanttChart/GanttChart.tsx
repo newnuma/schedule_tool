@@ -63,6 +63,35 @@ export interface GanttChartProps {
   onGroupRightClick?: (groupId: number | string, group: GanttGroup, event: MouseEvent) => void;
 }
 
+export function getTooltipHtml(items: [string, any][]): string {
+  const MAX_LINE_LENGTH = 40;
+  function wrapValue(text: string | number | null | undefined): string {
+    if (typeof text !== 'string') return String(text ?? '');
+    let result = '';
+    let i = 0;
+    while (i < text.length) {
+      result += text.slice(i, i + MAX_LINE_LENGTH);
+      if (i + MAX_LINE_LENGTH < text.length) {
+        result += '<br />';
+      }
+      i += MAX_LINE_LENGTH;
+    }
+    return result;
+  }
+
+  return `<div>${items.map(([title, value]) => {
+    const valueStr = value == null ? '' : String(value);
+    const totalLen = title.length + valueStr.length;
+    if (totalLen > MAX_LINE_LENGTH) {
+      // タイトルの下にvalueを表示（先頭に改行）
+      return `<div><strong>${title}:</strong><br />${wrapValue(valueStr)}<br /></div>`;
+    } else {
+      // タイトルの横にvalueを表示
+      return `<div><strong>${title}:</strong> ${valueStr}<br /></div>`;
+    }
+  }).join('')}</div>`;
+}
+
 const GanttChart: React.FC<GanttChartProps> = ({
   items = [],
   groups,
@@ -144,7 +173,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
         const defaultOptions: TimelineOptions = {
           orientation: "top",
           stack: stackValue,
-          maxHeight: height,
+          maxHeight: typeof height === 'string' ? height : `${height}px`,
           verticalScroll: true,
           margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
           tooltip: { followMouse: true },

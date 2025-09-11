@@ -4,6 +4,7 @@ import { Folder as FolderIcon, Assignment as AssignmentIcon } from "@mui/icons-m
 import { useFilterContext } from "../../context/FilterContext";
 import { useFormContext, FormType, FormMode } from "../../context/FormContext";
 import GanttChart from "../../components/GanttChart";
+import {getTooltipHtml}from "../../components/GanttChart/GanttChart";
 import { DropdownFilter, CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../components/filters";
 import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
@@ -194,20 +195,33 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     [assetsForGroups]
   );
 
+  console.log("milestoneTasks", milestoneTasks);
+  console.log("assets", assets);
+  console.log("filteredPhases", filteredPhases);
+
+  
+
   const items = useMemo(
     () => {
       // Phaseアイテム（マイルストーン形式）
       const phaseItems = filteredPhases
-        .map((phase) => ({
-          id: `phase-${phase.id}`,
-          group: 'phase-group',
-          content: phase.name,
-          start: phase.end_date, // マイルストーンは終了日に表示
-          end: phase.end_date,   // start === end でマイルストーンになる
-          type: 'point' as const,  // マイルストーンタイプ
-          className: 'milestone',
-          tooltipHtml: `<div><strong>Phase:</strong> ${phase.name}<br/><strong>End:</strong> ${phase.end_date}</div>`
-        }));
+        .map((phase) => {
+          const tooltipItem:[string, any][]  = [
+              ["Name", phase.name],
+              ["Start", phase.start_date],
+              ["End", phase.end_date],
+          ];
+          return {
+            id: `phase-${phase.id}`,
+            group: 'phase-group',
+            content: phase.name,
+            start: phase.end_date, // マイルストーンは終了日に表示
+            end: phase.end_date,   // start === end でマイルストーンになる
+            type: 'point' as const,  // マイルストーンタイプ
+            className: 'milestone',
+            tooltipHtml: getTooltipHtml(tooltipItem),
+          };
+        });
 
       // Assetアイテム
       const assetItems = filteredAssets
@@ -218,6 +232,13 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
             const rgb = a.color.split(',').map(s => s.trim()).join(',');
             style = `background: rgba(${rgb}, 0.35); border: 1px solid rgba(${rgb}, 0.85);`;
           }
+          const tooltipItem:[string, any][]  = [
+              ["Name", a.name],
+              ["Phase", a.phase?.name],
+              ["Work Category", a.work_category?.name],
+              ["Start", a.start_date],
+              ["End", a.end_date],
+          ];
           return {
             id: a.id,
             group: a.asset_type,
@@ -226,7 +247,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
             content: a.name,
             start: a.start_date,
             end: a.end_date,
-            tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Type:</strong> ${a.asset_type}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`,
+            tooltipHtml: getTooltipHtml(tooltipItem),
             style,
           };
         });
@@ -245,12 +266,16 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
           const groupId = ms.asset_type || assetById.get(ms.asset.id)?.asset_type || 'Common';
           // サブグループは親Assetごとに分け、MS はバーの上側に来るよう別サブグループを用意
           const subGroup = "milestone";
-          // milestone_type に応じた className を付与
           const typeClass = ms.milestone_type === 'Date Receive' ? 'ms-receive'
             : ms.milestone_type === 'Date Release' ? 'ms-release'
             : ms.milestone_type === 'Review' ? 'ms-review'
             : 'ms-dr';
           const parentName = assetById.get(ms.asset.id)?.name || '';
+          const tooltipItem:[string, any][]  = [
+              ["Name", ms.name],
+              ["Start", ms.start_date],
+              ["End", ms.end_date],
+          ];
           return {
             id: `ms-${ms.id}`,
             group: groupId,
@@ -260,9 +285,10 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
             start: ms.start_date,
             type: 'point' as const,
             className: `milestone ${typeClass}`,
-            tooltipHtml: `<div><strong>Asset:</strong> ${parentName}<br/><strong>Date:</strong> ${ms.start_date}</div>`
+            tooltipHtml: getTooltipHtml(tooltipItem),
           };
         });
+        console.log("msItems", msItems);
 
       return [...phaseItems, ...assetItems, ...msItems];
     },
@@ -321,12 +347,13 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       </Box>
       
       {/* Gantt Chart Container */}
-      <Box sx={{ width: '100%', height: '600px' }}>
+      <Box sx={{ width: '100%', height: 'calc(100vh - 200px)' }}>
         {filteredAssets.length > 0 ? (
           <GanttChart 
             items={items} 
             groups={groups} 
             onItemRightClick={handleGanttRightClick}
+            height='calc(100vh - 200px)'
           />
         ) : (
           <Typography variant="body2" color="text.secondary">

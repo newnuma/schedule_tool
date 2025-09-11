@@ -4,6 +4,7 @@ import { Assignment as AssignmentIcon, Task as TaskIcon } from "@mui/icons-mater
 import { useFilterContext } from "../../context/FilterContext";
 import { useFormContext } from "../../context/FormContext";
 import GanttChart from "../../components/GanttChart";
+import {getTooltipHtml}from "../../components/GanttChart/GanttChart";
 import { CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../components/filters";
 import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
@@ -191,22 +192,33 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
           end: a.end_date,
           type: 'background' as const,
           className: 'asset-background',
-          tooltipHtml: `<div><strong>Asset:</strong> ${a.name}<br/><strong>Start:</strong> ${a.start_date}<br/><strong>End:</strong> ${a.end_date}</div>`
         }));
 
       // タスクアイテム
       const statusLabel = (s: string) => s === 'fin' ? 'Completed' : s === 'ip' ? 'In Progress' : 'Not Started';
-      const taskItems = filteredTasks.map((t) => ({
-        id: t.id,
-        group: t.asset.id,
-        content: t.name,
-        start: t.start_date,
-        end: t.end_date,
-        className: t.status === 'fin' ? 'status-fin' :
-          t.status === 'ip' ? 'status-ip' : 'status-wtg',
-        tooltipHtml: `<div><strong>Task:</strong> ${t.name}<br/><strong>Status:</strong> ${statusLabel(t.status)}<br/><strong>Asset:</strong> ${t.asset.name}<br/><strong>Start:</strong> ${t.start_date}<br/><strong>End:</strong> ${t.end_date}</div>`
-      }));
-
+      const taskItems = filteredTasks.map((t) => {
+        const tooltipItem:[string, any][]  = [
+          ["Name", t.name],
+          ["Start", t.start_date],
+          ["End", t.end_date],
+          ["Assignees", t.assignees && t.assignees.length > 0 ? t.assignees.map(a => a.name).join(", ") : "Unassigned"],
+        ];
+        // assigneesが空ならno-assigneeクラスを追加
+        const noAssignee = !t.assignees || t.assignees.length === 0;
+        return{
+          id: t.id,
+          group: t.asset.id,
+          content: t.name,
+          start: t.start_date,
+          end: t.end_date,
+          className: [
+            t.status === 'fin' ? 'status-fin' :
+            t.status === 'ip' ? 'status-ip' : 'status-wtg',
+            noAssignee ? 'no-assignee' : ''
+          ].filter(Boolean).join(' '),
+          tooltipHtml: getTooltipHtml(tooltipItem)
+        };
+      });
       return [...backgroundItems, ...taskItems];
     },
     [filteredAssets, filteredTasks]
@@ -261,12 +273,13 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
       </Box>
 
       {/* Gantt Chart Container */}
-      <Box sx={{ width: '100%', height: '600px' }}>
+      <Box sx={{ width: '100%', height: 'calc(100vh - 180px)' }}>
         {filteredTasks.length > 0 ? (
           <GanttChart 
             items={items} 
             groups={groups} 
             onItemRightClick={handleGanttRightClick}
+            height='calc(100vh - 200px)'
           />
         ) : (
           <Typography variant="body2" color="text.secondary">

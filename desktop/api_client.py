@@ -179,7 +179,7 @@ field_remap = {
     ],
     "MilestoneTask": [
         ("asset.phase.subproject", "subproject"),
-        ("asset.type", "asset_type"),
+        ("asset.asset_type", "asset_type"),
     ],
     "PersonWorkload": [
         ("task.asset.phase.subproject", "subproject"),

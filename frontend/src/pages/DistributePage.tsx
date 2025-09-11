@@ -135,9 +135,14 @@ const DistributePage: React.FC = () => {
         </Box>
       </Box>
       <ErrorBoundary>
-        <Box sx={{ width: '100%', height: '600px' }}>
+        <Box sx={{ width: '100%', height: 'calc(100vh - 200px)' }}>
           {filteredPhases.length > 0 ? (
-            <GanttChart items={items} groups={groups} options={{ stack: stacked }} />
+            <GanttChart 
+            items={items} 
+            groups={groups} 
+            options={{ stack: stacked }} 
+            height='calc(100vh - 200px)'
+            />
           ) : (
             <Typography variant="body2" color="text.secondary">
               No phases match the current filters
