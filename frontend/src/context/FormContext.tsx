@@ -88,7 +88,7 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
     });
   }, []);
 
-  const { addAssets, addPhases, addTasks, updateAssets, updatePhases, updateTasks } = useAppContext();
+  const { addAssets, addPhases, addTasks} = useAppContext();
 
   // 共通のcreate関数
   const createDataFromForm = (data: Partial<IAsset | IPhase | ITask>) => {
@@ -114,11 +114,11 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
       if (result && result.id && result.type) {
         console.log('Updated entity:', result);
         if (result.type === 'Asset') {
-          updateAssets([result as IAsset]);
+          addAssets([result as IAsset]);
         } else if (result.type === 'Phase') {
-          updatePhases([result as IPhase]);
+          addPhases([result as IPhase]);
         } else if (result.type === 'Task') {
-          updateTasks([result as ITask]);
+          addTasks([result as ITask]);
         }
       }
     }).catch((error) => {

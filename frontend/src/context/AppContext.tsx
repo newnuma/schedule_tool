@@ -47,6 +47,7 @@ export interface IPhase {
     end_date: string;
     milestone: boolean;
     phase_type: PhaseType;
+    updatedAt?: number;
 }
 
 export interface IAsset {
@@ -62,6 +63,8 @@ export interface IAsset {
 
     //参照用
     color?: string; //Stepの色
+    // 更新検知用（管理カウンタ不要で更新を伝播）
+    updatedAt?: number;
 }
 
 export interface ITask {
@@ -77,6 +80,7 @@ export interface ITask {
     //参照用
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
     work_category?: IForignKey | null; // 追加: AssetのWorkCategory（サーバ埋め込み or 正規化）
+    updatedAt?: number;
 }
 
 export interface IMilestoneTask {
@@ -91,6 +95,7 @@ export interface IMilestoneTask {
 
     //参照用
     asset_type?: AssetType; // 追加: Assetのtype（EXT/INT/Common）
+    updatedAt?: number;
 }
 
 export interface IPersonWorkload {
@@ -104,6 +109,7 @@ export interface IPersonWorkload {
 
     //参照用
     subproject?: IForignKey; // 追加: 所属SubProject（サーバ埋め込み or 正規化）
+    updatedAt?: number;
 }
 
 export interface IPMMWorkload {
@@ -114,6 +120,7 @@ export interface IPMMWorkload {
     name: string;
     week: string; // 週の月曜日（ISO文字列）
     man_week: number; // 工数(人週)
+    updatedAt?: number;
 }
 
 export interface IPerson {
@@ -286,8 +293,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
-                if (idx !== -1) merged[idx] = item;
-                else merged.push(item);
+                    const stamped: IPhase = {
+                        ...item,
+                        updatedAt: (item as any).updatedAt ?? Date.now(),
+                    };
+                    if (idx !== -1) merged[idx] = stamped;
+                    else merged.push(stamped);
             });
             return merged;
         });
@@ -297,8 +308,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
-                if (idx !== -1) merged[idx] = item;
-                else merged.push(item);
+                    const stamped: IAsset = {
+                        ...item,
+                        updatedAt: item.updatedAt ?? Date.now(),
+                    };
+                    if (idx !== -1) {
+                        merged[idx] = stamped;
+                    } else {
+                        merged.push(stamped);
+                    }
             });
             return merged;
         });
@@ -308,8 +326,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
-                if (idx !== -1) merged[idx] = item;
-                else merged.push(item);
+                    const stamped: ITask = {
+                        ...item,
+                        updatedAt: (item as any).updatedAt ?? Date.now(),
+                    };
+                    if (idx !== -1) merged[idx] = stamped;
+                    else merged.push(stamped);
             });
             return merged;
         });
@@ -319,8 +341,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
-                if (idx !== -1) merged[idx] = item;
-                else merged.push(item);
+                    const stamped: IMilestoneTask = {
+                        ...item,
+                        updatedAt: (item as any).updatedAt ?? Date.now(),
+                    };
+                    if (idx !== -1) merged[idx] = stamped;
+                    else merged.push(stamped);
             });
             return merged;
         });
@@ -330,8 +356,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
-                if (idx !== -1) merged[idx] = item;
-                else merged.push(item);
+                    const stamped: IPersonWorkload = {
+                        ...item,
+                        updatedAt: (item as any).updatedAt ?? Date.now(),
+                    };
+                    if (idx !== -1) merged[idx] = stamped;
+                    else merged.push(stamped);
             });
             return merged;
         });
@@ -341,8 +371,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             const merged = [...prev];
             newItems.forEach((item) => {
                 const idx = merged.findIndex((e) => e.id === item.id);
-                if (idx !== -1) merged[idx] = item;
-                else merged.push(item);
+                    const stamped: IPMMWorkload = {
+                        ...item,
+                        updatedAt: (item as any).updatedAt ?? Date.now(),
+                    };
+                    if (idx !== -1) merged[idx] = stamped;
+                    else merged.push(stamped);
             });
             return merged;
         });
@@ -372,7 +406,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         console.log('Updating assets with:', updates);
         setAssets((prev) => prev.map(asset => {
             const update = updates.find(u => u.id === asset.id);
-            return update ? { ...asset, ...update } : asset;
+            return update ? { ...asset, ...update, updatedAt: Date.now() } : asset;
         }));
     }, []);
 

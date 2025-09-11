@@ -157,12 +157,16 @@ entity_fields = {
 def get_entities(entity: str, filters: Optional[List] = None) -> Any:
     field_list = entity_fields.get(entity)
     data = sg.find(entity, filters or [], field_list)
+    # 共通のフィールド名調整（内部でtypeチェック）
+    data = adjust_field_names(data)
     return _format_list(data)
 
 def get_entity(entity: str, entity_id: int) -> Any:
     filters = [["id", "is", entity_id]]
     field_list = entity_fields.get(entity)
     data = sg.find_one(entity, filters, field_list)
+    # 共通のフィールド名調整（内部でtypeチェック）
+    data = adjust_field_names(data)
     return _format_dict(data) if data else data
 
 
@@ -183,20 +187,41 @@ field_remap = {
 }
 
 def adjust_field_names(data):
+    # そのまま返すべきケース
     if not data:
         return data
+    if not isinstance(data, (list, dict)):
+        return data
 
+    # dictでもlistでも対応し、戻り値の型は入力に合わせる
     is_list = isinstance(data, list)
     items = data if is_list else [data]
-    entity_type = None
 
-    for item in items:
-        if isinstance(item, dict) and "type" in item:
-            entity_type = item["type"]
-            break
-    remap = field_remap.get(entity_type, [])
-    for old_key, new_key in remap:
+    # 先頭要素からtypeを取得（全要素同一前提）
+    first = items[0] if items else None
+    entity_type = first.get("type") if isinstance(first, dict) else None
+
+    # typeが無い、またはルール未定義なら処理せず返す
+    if not entity_type or entity_type not in field_remap:
+        # 追加: update_atフィールドのstr化のみ行う
+        for item in items:
+            if isinstance(item, dict) and "update_at" in item:
+                val = item["update_at"]
+                if isinstance(val, (datetime.datetime, datetime.date)):
+                    item["update_at"] = val.strftime('%Y-%m-%d %H:%M:%S') if hasattr(val, 'hour') else val.strftime('%Y-%m-%d')
+        return items if is_list else items[0]
+
+    # ルール適用
+    for old_key, new_key in field_remap[entity_type]:
         items = remap_key_in_list(items, old_key, new_key)
+
+    # 追加: update_atフィールドのstr化
+    for item in items:
+        if isinstance(item, dict) and "update_at" in item:
+            val = item["update_at"]
+            if isinstance(val, (datetime.datetime, datetime.date)):
+                item["update_at"] = val.strftime('%Y-%m-%d %H:%M:%S') if hasattr(val, 'hour') else val.strftime('%Y-%m-%d')
+
     return items if is_list else items[0]
 
 def fetch_distribute_page() -> Any:
@@ -362,5 +387,7 @@ def create_entity(data: dict) -> Any:
 def update_entity(entity_id: int, data: dict) -> Any:
     entity_type = data.get("type")
     data.pop("type")  # typeフィールドは削除
-    result = sg.update(entity_type, entity_id, data)
+    sg.update(entity_type, entity_id, data)
+    result = get_entity(entity_type, entity_id)
+    result = adjust_field_names(result)
     return _format_dict(result)
