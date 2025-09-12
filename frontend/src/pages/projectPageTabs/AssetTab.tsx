@@ -38,6 +38,13 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   }>({ anchorEl: null, open: false });
 
   // 右クリック時のハンドラ
+  const [pendingMenu, setPendingMenu] = React.useState<{
+    anchorEl: HTMLElement | null;
+    open: boolean;
+    itemName?: string;
+    itemId?: number | string;
+  } | null>(null);
+
   const handleGanttRightClick = (
     itemId: number | string,
     itemName: string,
@@ -45,14 +52,27 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    const assetObj = assets.find(a => a.id === Number(itemId));
-    setMenuState({
+    setPendingMenu({
       anchorEl: event.target as HTMLElement,
       open: true,
       itemName,
-      asset: assetObj,
+      itemId,
     });
   };
+
+  // assetsが更新された時、pendingMenuがあれば最新のassetでmenuStateを更新
+  React.useEffect(() => {
+    if (pendingMenu && pendingMenu.itemId !== undefined) {
+      const assetObj = assets.find(a => a.id === Number(pendingMenu.itemId));
+      setMenuState({
+        anchorEl: pendingMenu.anchorEl,
+        open: pendingMenu.open,
+        itemName: pendingMenu.itemName,
+        asset: assetObj,
+      });
+      setPendingMenu(null);
+    }
+  }, [assets, pendingMenu]);
 
   const handleMenuClose = () => {
     setMenuState({ anchorEl: null, open: false });

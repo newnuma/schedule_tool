@@ -105,6 +105,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<Timeline | null>(null);
   const eventListenerRef = useRef<((event: MouseEvent) => void) | null>(null);
+  const dataSetRef = useRef<DataSet<ValidGanttItem, 'id'> | null>(null);
+  const groupSetRef = useRef<DataSet<GanttGroup> | undefined>(undefined);
 
   // データセットをメモ化して不要な再描画を防ぐ
   // start/endがnullやundefinedのアイテムを除外し、vis-timeline互換の型に変換
@@ -146,139 +148,104 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
   const memoizedOptions = useMemo(() => options, [JSON.stringify(options)]);
 
+  // 初期化: containerRefがセットされた時のみTimeline生成
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    // 既にTimelineインスタンスがある場合はdestroyして再生成
-    if (timelineRef.current) {
-      try {
-        timelineRef.current.destroy();
-        timelineRef.current = null;
-      } catch (error) {
-        console.warn("Error destroying timeline:", error);
-        timelineRef.current = null;
-      }
-    }
-
-    const dataSet = new DataSet<ValidGanttItem, 'id'>(memoizedItems);
-    let groupSet: DataSet<GanttGroup> | undefined;
+    if (!containerRef.current || timelineRef.current) return;
+    // 初期データセット
+    dataSetRef.current = new DataSet<ValidGanttItem, 'id'>(memoizedItems);
     if (memoizedGroups) {
-      groupSet = new DataSet(memoizedGroups);
+      groupSetRef.current = new DataSet(memoizedGroups);
     }
-
-    if (memoizedItems.length > 0) {
-      try {
-        // stack: true/falseをprops.optionsで制御
-        const stackValue = memoizedOptions?.stack ?? true;
-        const defaultOptions: TimelineOptions = {
-          orientation: "top",
-          stack: stackValue,
-          maxHeight: typeof height === 'string' ? height : `${height}px`,
-          verticalScroll: true,
-          margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
-          tooltip: { followMouse: true },
-          ...(stackValue ? { subgroupOrder: 'subgroupOrder' } : {}),
-          ...memoizedOptions,
-        } as TimelineOptions;
-
-        // グループラベル（最左列）へのクリック/右クリック対応
-        if ((onGroupClick || onGroupRightClick)) {
-          (defaultOptions as any).groupTemplate = (group: any, element: HTMLElement) => {
-            // content 表示
-            if (element) {
-              element.textContent = group?.content ?? '';
-              element.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
-              // 二重登録防止
-              const elAny = element as any;
-              if (!elAny.__hasGroupHandlers) {
-                if (onGroupClick) {
-                  element.addEventListener('click', (ev: Event) => {
-                    onGroupClick(group.id, group as GanttGroup, ev as MouseEvent);
-                  });
-                }
-                if (onGroupRightClick) {
-                  element.addEventListener('contextmenu', (ev: Event) => {
-                    ev.preventDefault();
-                    onGroupRightClick(group.id, group as GanttGroup, ev as MouseEvent);
-                  });
-                }
-                elAny.__hasGroupHandlers = true;
-              }
-              return element;
-            }
-            const div = document.createElement('div');
-            div.textContent = group?.content ?? '';
-            div.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
+    // オプション生成
+    const stackValue = memoizedOptions?.stack ?? true;
+    const defaultOptions: TimelineOptions = {
+      orientation: "top",
+      stack: stackValue,
+      maxHeight: typeof height === 'string' ? height : `${height}px`,
+      verticalScroll: true,
+      margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
+      tooltip: { followMouse: true },
+      ...(stackValue ? { subgroupOrder: 'subgroupOrder' } : {}),
+      ...memoizedOptions,
+    } as TimelineOptions;
+    // グループラベルクリック/右クリック
+    if ((onGroupClick || onGroupRightClick)) {
+      (defaultOptions as any).groupTemplate = (group: any, element: HTMLElement) => {
+        if (element) {
+          element.textContent = group?.content ?? '';
+          element.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
+          const elAny = element as any;
+          if (!elAny.__hasGroupHandlers) {
             if (onGroupClick) {
-              div.addEventListener('click', (ev: Event) => {
+              element.addEventListener('click', (ev: Event) => {
                 onGroupClick(group.id, group as GanttGroup, ev as MouseEvent);
               });
             }
             if (onGroupRightClick) {
-              div.addEventListener('contextmenu', (ev: Event) => {
+              element.addEventListener('contextmenu', (ev: Event) => {
                 ev.preventDefault();
                 onGroupRightClick(group.id, group as GanttGroup, ev as MouseEvent);
               });
             }
-            return div;
-          };
+            elAny.__hasGroupHandlers = true;
+          }
+          return element;
         }
-
-        if (memoizedGroups && memoizedGroups.length > 0 && groupSet) {
-          timelineRef.current = new Timeline(containerRef.current, dataSet, groupSet, defaultOptions);
-        } else {
-          timelineRef.current = new Timeline(containerRef.current, dataSet, defaultOptions);
+        const div = document.createElement('div');
+        div.textContent = group?.content ?? '';
+        div.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
+        if (onGroupClick) {
+          div.addEventListener('click', (ev: Event) => {
+            onGroupClick(group.id, group as GanttGroup, ev as MouseEvent);
+          });
         }
-
-        // 右クリックイベントリスナーを追加
-        if (onItemRightClick && timelineRef.current && containerRef.current) {
-          const timeline = timelineRef.current;
-          
-          // timelineが正常に初期化されるまで少し待つ
-          setTimeout(() => {
-            if (containerRef.current) {
-              // 以前のイベントリスナーを削除
-              if (eventListenerRef.current && containerRef.current) {
-                containerRef.current.removeEventListener('contextmenu', eventListenerRef.current);
-              }
-              
-              // 新しいイベントリスナーを作成
-              eventListenerRef.current = (event: MouseEvent) => {
-                event.preventDefault();
-                
-                try {
-                  // クリック位置からアイテムを特定
-                  const itemId = timeline.getEventProperties(event).item;
-                  if (itemId !== null && itemId !== undefined) {
-                    // アイテムのデータを取得
-                    const itemData = dataSet.get(itemId);
-                    // 背景アイテムはコンテキストメニュー対象外
-                    if (itemData && itemData.type !== 'background') {
-                      onItemRightClick(itemId, itemData.content, event);
-                    }
-                  }
-                } catch (err) {
-                  console.warn("Error handling right click:", err);
+        if (onGroupRightClick) {
+          div.addEventListener('contextmenu', (ev: Event) => {
+            ev.preventDefault();
+            onGroupRightClick(group.id, group as GanttGroup, ev as MouseEvent);
+          });
+        }
+        return div;
+      };
+    }
+    // Timeline生成
+    if (memoizedGroups && memoizedGroups.length > 0 && groupSetRef.current) {
+      timelineRef.current = new Timeline(containerRef.current, dataSetRef.current, groupSetRef.current, defaultOptions);
+    } else {
+      timelineRef.current = new Timeline(containerRef.current, dataSetRef.current, defaultOptions);
+    }
+    // 右クリックイベントリスナー
+    if (onItemRightClick && timelineRef.current && containerRef.current) {
+      const timeline = timelineRef.current;
+      setTimeout(() => {
+        if (containerRef.current) {
+          if (eventListenerRef.current && containerRef.current) {
+            containerRef.current.removeEventListener('contextmenu', eventListenerRef.current);
+          }
+          eventListenerRef.current = (event: MouseEvent) => {
+            event.preventDefault();
+            try {
+              const itemId = timeline.getEventProperties(event).item;
+              if (itemId !== null && itemId !== undefined) {
+                const itemData = dataSetRef.current?.get(itemId);
+                if (itemData && itemData.type !== 'background') {
+                  onItemRightClick(itemId, itemData.content, event);
                 }
-              };
-              
-              // timeline上でのcontextmenuイベントをキャッチ
-              containerRef.current.addEventListener('contextmenu', eventListenerRef.current);
+              }
+            } catch (err) {
+              console.warn("Error handling right click:", err);
             }
-          }, 100);
+          };
+          containerRef.current.addEventListener('contextmenu', eventListenerRef.current);
         }
-      } catch (error) {
-        console.error("Error creating timeline:", error);
-      }
+      }, 100);
     }
     // クリーンアップ
     return () => {
-      // イベントリスナーの削除
       if (eventListenerRef.current && containerRef.current) {
         containerRef.current.removeEventListener('contextmenu', eventListenerRef.current);
         eventListenerRef.current = null;
       }
-      
       if (timelineRef.current) {
         try {
           timelineRef.current.destroy();
@@ -288,7 +255,39 @@ const GanttChart: React.FC<GanttChartProps> = ({
           timelineRef.current = null;
         }
       }
+      dataSetRef.current = null;
+      groupSetRef.current = undefined;
     };
+  }, [containerRef.current]);
+
+  // データ更新: items/groups/options/heightが変わった時はsetItems/setGroups/setOptions
+  useEffect(() => {
+    if (!timelineRef.current) return;
+    // items
+    if (dataSetRef.current) {
+      dataSetRef.current.clear();
+      dataSetRef.current.add(memoizedItems);
+      timelineRef.current.setItems(dataSetRef.current);
+    }
+    // groups
+    if (memoizedGroups && groupSetRef.current) {
+      groupSetRef.current.clear();
+      groupSetRef.current.add(memoizedGroups);
+      timelineRef.current.setGroups(groupSetRef.current);
+    }
+    // options
+    const stackValue = memoizedOptions?.stack ?? true;
+    const defaultOptions: TimelineOptions = {
+      orientation: "top",
+      stack: stackValue,
+      maxHeight: typeof height === 'string' ? height : `${height}px`,
+      verticalScroll: true,
+      margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
+      tooltip: { followMouse: true },
+      ...(stackValue ? { subgroupOrder: 'subgroupOrder' } : {}),
+      ...memoizedOptions,
+    } as TimelineOptions;
+    timelineRef.current.setOptions(defaultOptions);
   }, [memoizedItems, memoizedGroups, memoizedOptions, height]);
 
   return (

@@ -39,6 +39,13 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
   }>({ anchorEl: null, open: false });
 
   // 右クリック時のハンドラ
+  const [pendingMenu, setPendingMenu] = React.useState<{
+    anchorEl: HTMLElement | null;
+    open: boolean;
+    itemName?: string;
+    itemId?: number | string;
+  } | null>(null);
+
   const handleGanttRightClick = (
     itemId: number | string,
     itemName: string,
@@ -46,14 +53,27 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    const taskObj = tasks.find(t => t.id === Number(itemId));
-    setMenuState({
+    setPendingMenu({
       anchorEl: event.target as HTMLElement,
       open: true,
       itemName,
-      task: taskObj,
+      itemId,
     });
   };
+
+  // tasksが更新された時、pendingMenuがあれば最新のtaskでmenuStateを更新
+  React.useEffect(() => {
+    if (pendingMenu && pendingMenu.itemId !== undefined) {
+      const taskObj = tasks.find(t => t.id === Number(pendingMenu.itemId));
+      setMenuState({
+        anchorEl: pendingMenu.anchorEl,
+        open: pendingMenu.open,
+        itemName: pendingMenu.itemName,
+        task: taskObj,
+      });
+      setPendingMenu(null);
+    }
+  }, [tasks, pendingMenu]);
 
   const handleMenuClose = () => {
     setMenuState({ anchorEl: null, open: false });

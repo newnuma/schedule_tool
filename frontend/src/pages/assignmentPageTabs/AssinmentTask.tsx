@@ -91,7 +91,11 @@ const AssinmentTask: React.FC = () => {
           />
         </CollapsibleFilterPanel>
       </Box>
-      <GanttChart items={items} groups={groups} />
+      <GanttChart 
+        items={items} 
+        groups={groups} 
+        height='calc(100vh - 200px)'
+      />
     </div>
   );
 };
