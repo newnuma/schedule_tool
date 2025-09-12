@@ -6,7 +6,7 @@ import DateRangeFilter from "../../components/filters/DateRangeFilter";
 import SearchDropdownFilter from "../../components/filters/SearchDropdownFilter";
 
 // 型定義
-import type { IPhase, IAsset, ITask, IPersonWorkload, IPMMWorkload, IPerson, IWorkCategory } from "../../context/AppContext";
+import type { IPhase, IAsset, ITask,IForignKey, IPersonWorkload, IPMMWorkload, IPerson, IWorkCategory } from "../../context/AppContext";
 
 interface WorkloadTabProps {
   phases: IPhase[];
@@ -26,6 +26,62 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
   const assetFilterKey = "workload:asset";
   // SearchDropdownFilterで選択されたwork_category.idを取得
   const selectedWorkCategoryId = filters[assetFilterKey]?.dropdown?.["work_category.id"]?.[0];
+
+  // 編集state（PersonWorkloadのみ例示。PMMWorkloadも同様に追加可能）
+  const [personWorkloadState, setPersonWorkloadState] = useState<Partial<IPersonWorkload>[]>([]);
+
+  // サブプロジェクト切替時のみ初期化
+  React.useEffect(() => {
+    setPersonWorkloadState(personWorkloads.map(w => ({ ...w })));
+    // setPMMWorkloadState(pmmWorkloads.map(w => ({ ...w }))); // PMMWorkloadも同様に
+  }, [selectedSubprojectId]);
+
+  // PersonWorkload編集イベント（IForignKey型で統一）
+  const handlePWChange = async (task: IForignKey, person: IForignKey, week: string, value: number) => {
+    setPersonWorkloadState(prev => {
+      const idx = prev.findIndex(
+        w => w.task?.id === task.id && w.person?.id === person.id && w.week === week
+      );
+      const id = personWorkloads.find(
+        w => w.task?.id === task.id && w.person?.id === person.id && w.week === week
+      )?.id;
+      const edit: Partial<IPersonWorkload> = {
+        id,
+        task,
+        person,
+        week,
+        man_week: value,
+        subproject: { type: "Subproject", id: selectedSubprojectId }
+      };
+      if (idx !== -1) {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], ...edit };
+        return updated;
+      }
+      return [...prev, edit];
+    });
+
+    // API送信（即時）
+    const id = personWorkloads.find(
+      w => w.task?.id === task.id && w.person?.id === person.id && w.week === week
+    )?.id;
+    const edit: Partial<IPersonWorkload> = {
+      id,
+      task,
+      person,
+      week,
+      man_week: value,
+      subproject: { type: "Subproject", id: selectedSubprojectId }
+    };
+    console.log("handlePWChange edit:", edit);
+    let result: IPersonWorkload;
+    if (id) {
+      // result = await updateEntity(id, edit);
+    } else {
+      // result = await createEntity(edit);
+    }
+    // if (result) addPersonWorkloads([result]);
+  };
 
   // --- テーブル本体 ---
   // 週ラベル生成（DateRangeFilterの値に連動）
@@ -84,15 +140,16 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
     });
   };
 
-  // 値取得ヘルパー
+  // 値取得ヘルパー（編集stateを参照）
   const getPMMWValue = (weekIso: string): { id?: number, value: number } => {
     const rec = filteredPMMW.find(w => w.week === weekIso);
     return rec ? { id: rec.id, value: rec.man_week } : { value: 0 };
   };
 
+  // 編集stateから値取得
   const getPWValue = (taskId: number, personId: number, weekIso: string): { id?: number, value: number } => {
-    const rec = filteredPW.find(w => w.task?.id === taskId && w.person?.id === personId && w.week === weekIso);
-    return rec ? { id: rec.id, value: rec.man_week } : { value: 0 };
+    const rec = personWorkloadState.find(w => w.task?.id === taskId && w.person?.id === personId && w.week === weekIso);
+    return rec ? { id: rec.id, value: rec.man_week ?? 0 } : { value: 0 };
   };
 
   const getTaskTotal = (taskId: number, weekIso: string) => {
@@ -110,26 +167,56 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
     return <Typography variant="body1" color="text.secondary">Please select a subproject to view workloads</Typography>;
   }
 
+  const Filter: React.FC = () => (
+    <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+      <SearchDropdownFilter
+        pageKey={assetFilterKey}
+        data={assets}
+        property="work_category.id"
+        label="Work Category"
+      />
+      <DateRangeFilter
+        pageKey={assetFilterKey}
+        label="Period (Week)"
+        startProperty="start_date"
+        endProperty="end_date"
+        alignStartToMonday
+        alignEndToFriday
+        defaultStartWeek={0}
+        defaultEndWeek={8}
+      />
+    </Box>
+  );
+
+  const PmmWorkloadRow: React.FC = () => (
+    <TableRow sx={{ backgroundColor: '#f9f9f9' }}>
+      <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#f9f9f9', zIndex: 1 }}>Approved Plan</TableCell>
+      {weekIsos.map((weekIso, idx) => {
+        const { id, value } = getPMMWValue(weekIso);
+        return (
+          <TableCell key={weekIso} align="center">
+            <TextField size="small" type="number" value={value} sx={{ width: 60, '& input': { textAlign: 'center' } }} inputProps={{ 'data-id': id ?? '', 'data-week': weekIso }} />
+          </TableCell>
+        );
+      })}
+    </TableRow>
+  );
+
+  const CurrentPlanRow: React.FC = () => (
+    <TableRow sx={{ backgroundColor: '#fff3cd' }}>
+      <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#fff3cd', zIndex: 1 }}>Current Plan</TableCell>
+      {weekIsos.map((weekIso, idx) => (
+        <TableCell key={weekIso} align="center">
+          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{getCurrentPlanTotal(weekIso)}</Typography>
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+
+
   return (
     <Box>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-        <SearchDropdownFilter
-          pageKey={assetFilterKey}
-          data={assets}
-          property="work_category.id"
-          label="Work Category"
-        />
-        <DateRangeFilter
-          pageKey={assetFilterKey}
-          label="Period (Week)"
-          startProperty="start_date"
-          endProperty="end_date"
-          alignStartToMonday
-          alignEndToFriday
-          defaultStartWeek={0}
-          defaultEndWeek={8}
-        />
-      </Box>
+      <Filter />
       <TableContainer component={Paper} sx={{ maxHeight: 600, overflow: 'auto' }}>
         <Table sx={{ minWidth: 1000 }} size="small">
           <TableHead>
@@ -141,27 +228,8 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
             </TableRow>
           </TableHead>
           <TableBody>
-            {/* Approved Plan行 */}
-            <TableRow sx={{ backgroundColor: '#f9f9f9' }}>
-              <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#f9f9f9', zIndex: 1 }}>Approved Plan</TableCell>
-              {weekIsos.map((weekIso, idx) => {
-                const { id, value } = getPMMWValue(weekIso);
-                return (
-                  <TableCell key={weekIso} align="center">
-                    <TextField size="small" type="number" value={value} sx={{ width: 60, '& input': { textAlign: 'center' } }} inputProps={{ 'data-id': id ?? '', 'data-week': weekIso }} />
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-            {/* Current Plan行 */}
-            <TableRow sx={{ backgroundColor: '#fff3cd' }}>
-              <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#fff3cd', zIndex: 1 }}>Current Plan</TableCell>
-              {weekIsos.map((weekIso, idx) => (
-                <TableCell key={weekIso} align="center">
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{getCurrentPlanTotal(weekIso)}</Typography>
-                </TableCell>
-              ))}
-            </TableRow>
+            <PmmWorkloadRow />
+            <CurrentPlanRow />
             {/* Asset, Task, Person階層 */}
             {filteredAssets.map(asset => {
               // Task: 親Assetに紐づくもののみ
@@ -203,7 +271,19 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
                             const { id, value } = getPWValue(task.id, personFk.id, weekIso);
                             return (
                               <TableCell key={weekIso} align="center">
-                                <TextField size="small" type="number" value={value} sx={{ width: 60, '& input': { textAlign: 'center' } }} inputProps={{ 'data-id': id ?? '', 'data-task': task.id, 'data-person': personFk.id, 'data-week': weekIso }} />
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  value={value}
+                                  sx={{ width: 60, '& input': { textAlign: 'center' } }}
+                                  // inputProps={{ 'data-id': id ?? '', 'data-task': task.id, 'data-person': personFk.id, 'data-week': weekIso }}
+                                  onChange={e => handlePWChange(
+                                    { type: "Task", id: task.id, name: task.name },
+                                    { type: "Person", id: personFk.id, name: personFk.name },
+                                    weekIso,
+                                    Number(e.target.value)
+                                  )}
+                                />
                               </TableCell>
                             );
                           })}

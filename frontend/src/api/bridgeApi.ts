@@ -1,3 +1,4 @@
+
 // Utilities for accessing the Qt WebChannel dataBridge object.
 // Always `await channelReady` before calling any bridge API.
 
@@ -110,4 +111,19 @@ export function createEntity(data: Partial<IAsset | IPhase | ITask>) {
 export function updateEntity(id: number, data: Partial<IAsset | IPhase | ITask>) {
   const dataStr = JSON.stringify(data);
   return callBridge('updateEntity', id, dataStr);
+}
+
+
+export async function createEntities<T extends object>(dataArr: Partial<T>[]): Promise<T[]> {
+  console.log("call createEntities", dataArr);
+  const dataStr = JSON.stringify(dataArr);
+  return callBridge('createEntities', dataStr);
+}
+
+// Bulk update: 配列で一括更新
+// Bulk update: 配列で一括更新（bridgeの一括APIを呼ぶ）
+export async function updateEntities<T extends { id: number }>(dataArr: Partial<T>[]): Promise<T[]> {
+  console.log("call updateEntities", dataArr);
+  const dataStr = JSON.stringify(dataArr);
+  return callBridge('updateEntities', dataStr);
 }
