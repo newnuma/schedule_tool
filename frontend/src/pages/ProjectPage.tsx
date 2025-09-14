@@ -214,11 +214,10 @@ const ProjectPage: React.FC = () => {
                 tasks={filteredTasks}
                 personWorkloads={filteredPersonWorkloads}
                 pmmWorkloads={filteredPMMWorkloads}
-                people={people}
+                people={assignablePeople}
                 workCategories={workCategories}
                 currentSubproject={currentSubproject}
                 isEditMode={isEditMode}
-                assignablePeople={assignablePeople} 
               />
             </TabPanel>
           </ErrorBoundary>

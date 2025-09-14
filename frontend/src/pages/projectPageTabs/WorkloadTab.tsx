@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, TextField, IconButton } from "@mui/material";
 import { ExpandMore, ChevronRight } from "@mui/icons-material";
+import AddIcon from '@mui/icons-material/Add';
 import { useFilterContext } from "../../context/FilterContext";
 import { useAppContext } from "../../context/AppContext";
 import DateRangeFilter from "../../components/filters/DateRangeFilter";
 import SearchDropdownFilter from "../../components/filters/SearchDropdownFilter";
+import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
+import { useFormContext } from "../../context/FormContext";
 
 // 型定義
 import type { IPhase, IAsset, ITask, IForignKey, IPersonWorkload, IPMMWorkload, IPerson, IWorkCategory, ISubproject } from "../../context/AppContext";
@@ -20,14 +23,14 @@ interface WorkloadTabProps {
   workCategories: IWorkCategory[] | undefined;
   currentSubproject: ISubproject | undefined;
   isEditMode: boolean;
-  assignablePeople: IPerson[];
 }
 
-const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, personWorkloads, pmmWorkloads, people, workCategories, currentSubproject, isEditMode, assignablePeople }) => {
+const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, personWorkloads, pmmWorkloads, people, workCategories, currentSubproject, isEditMode }) => {
   const { filters, setDropdownFilter, getFilteredData, setDateRangeFilter } = useFilterContext();
   const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set());
   const assetFilterKey = "workload:asset";
   const { addPersonWorkloads, addPMMWorkloads, setLoading } = useAppContext();
+  const { openForm } = useFormContext();
 
   const selectedWorkCategoryName = filters[assetFilterKey]?.dropdown?.["work_category.name"]?.[0];
   const selectedWorkCategory: IForignKey = {
@@ -115,6 +118,8 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
 
   // テーブルの値取得
   const getPMMWValue = (weekIso: string): { id?: number, value: number } => {
+    const hasCategory = filteredAssets.some(a => a.work_category?.id === selectedWorkCategory.id);
+    if (!selectedWorkCategory.id || !hasCategory) return { value: 0 };
     const rec = pmmWorkloadState.find(w => w.week === weekIso && w.work_category?.id === selectedWorkCategory.id);
     return rec ? { id: rec.id, value: rec.man_week ?? 0 } : { value: 0 };
   };
@@ -122,45 +127,20 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
     const rec = personWorkloadState.find(w => w.task?.id === taskId && w.person?.id === personId && w.week === weekIso);
     return rec ? { id: rec.id, value: rec.man_week ?? 0 } : { value: 0 };
   };
-  const getTaskTotal = (taskId: number, weekIso: string) => {
-    return people.reduce((sum, p) => sum + getPWValue(taskId, p.id, weekIso).value, 0);
+  const getTaskTotal = (task: ITask, weekIso: string) => {
+    return task.assignees.reduce((sum, p) => sum + getPWValue(task.id, p.id, weekIso).value, 0);
   };
   const getAssetTotal = (assetId: number, weekIso: string) => {
     const assetTasks = filteredTasks.filter(t => t.asset.id === assetId);
-    return assetTasks.reduce((sum, t) => sum + getTaskTotal(t.id, weekIso), 0);
+    return assetTasks.reduce((sum, t) => sum + getTaskTotal(t, weekIso), 0);
   };
   const getCurrentPlanTotal = (weekIso: string) => {
     return filteredPW.filter(w => w.week === weekIso).reduce((sum, w) => sum + (w.man_week ?? 0), 0);
   };
 
-
-  // PersonWorkload編集
-  const handlePersonWorkloadChange = async (task: IForignKey, person: IForignKey, week: string, value: number) => {
-    setPersonWorkloadState(prev => {
-      const idx = prev.findIndex(
-        w => w.task?.id === task.id && w.person?.id === person.id && w.week === week
-      );
-      const id = personWorkloads.find(
-        w => w.task?.id === task.id && w.person?.id === person.id && w.week === week
-      )?.id;
-      const edit: Partial<IPersonWorkload> = {
-        id,
-        task,
-        person,
-        week,
-        man_week: value,
-      };
-      if (idx !== -1) {
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], ...edit };
-        return updated;
-      }
-      return [...prev, edit];
-    });
-  };
+  // 入力値送信
   // PersonWorkload送信
   const personWorkloadSubmit = async (task: IForignKey, person: IForignKey, week: string, value: number) => {
-    if (value === 0) return; // 0は送信しない
     setPersonWorkloadState(prev => {
       const idx = prev.findIndex(
         w => w.task?.id === task.id && w.person?.id === person.id && w.week === week
@@ -195,46 +175,23 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
       man_week: value,
     };
     console.log("handlePWChange edit:", edit);
-    setLoading(true);
     if (id) {
       updateEntity(id, edit).then((result) => {
         if (result.id) {
           addPersonWorkloads([result]);
         }
-      }).finally(() => setLoading(false));
+      }).finally();
     } else {
       createEntity(edit).then((result) => {
         if (result.id) {
           addPersonWorkloads([result]);
         }
-      }).finally(() => setLoading(false));
+      }).finally();
     }
   };
-
-  // PMMWorkload編集
-  const handlePMMWorkloadChange = async (week: string, value: number) => {
-    setPMMWorkloadState(prev => {
-      const idx = prev.findIndex(w => w.week === week && w.work_category?.id === selectedWorkCategory.id);
-      const id = pmmWorkloads.find(w => w.week === week && w.work_category?.id === selectedWorkCategory.id)?.id;
-      const edit: Partial<IPMMWorkload> = {
-        id,
-        week,
-        work_category: selectedWorkCategory,
-        man_week: value,
-      };
-      if (idx !== -1) {
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], ...edit };
-        return updated;
-      }
-      return [...prev, edit];
-    });
-  };
-
   // PMMWorkload送信
   const pmmWorkloadSubmit = async (week: string, value: number) => {
     if (!currentSubproject) return;
-    if (value === 0) return; // 0は送信しない
 
     setPMMWorkloadState(prev => {
       const idx = prev.findIndex(w => w.week === week && w.work_category?.id === selectedWorkCategory.id);
@@ -266,23 +223,119 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
     };
     console.log("handlePWChange edit:", edit);
     if (id) {
-      setLoading(true);
       updateEntity(id, edit).then((result) => {
         if (result.id) {
           addPMMWorkloads([result]);
         }
       }
-      ).finally(() => setLoading(false));
+      ).finally();
     } else {
       createEntity(edit).then((result) => {
-        setLoading(true);
         if (result.id) {
           addPMMWorkloads([result]);
         }
-      }).finally(() => setLoading(false));
+      }).finally();
     }
   };
 
+  // 右クリックメニュー関連
+  // Task用
+  const [taskMenuState, setTaskMenuState] = useState<{
+    open: boolean;
+    task?: ITask;
+    anchorPosition?: { top: number; left: number };
+  }>({ open: false });
+
+  const handleTaskContextMenu = (task: ITask, event: React.MouseEvent<HTMLTableCellElement>) => {
+    event.preventDefault();
+    setTaskMenuState({
+      open: true,
+      task,
+      anchorPosition: { top: event.clientY, left: event.clientX },
+    });
+  };
+
+  const handleTaskMenuClose = () => {
+    setTaskMenuState({ open: false });
+  };
+
+  const taskContextMenuItems: ContextMenuItem[] = [
+    {
+      label: "Edit",
+      action: () => {
+        if (taskMenuState.task) {
+          openForm({
+            type: 'task',
+            mode: 'edit',
+            initialValues: taskMenuState.task,
+            candidates: {
+              assets: assets,
+              people: people,
+            },
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+  ];
+
+  // Asset用
+  const [assetMenuState, setAssetMenuState] = useState<{
+    open: boolean;
+    asset?: IAsset;
+    anchorPosition?: { top: number; left: number };
+  }>({ open: false });
+
+  const handleAssetContextMenu = (asset: IAsset, event: React.MouseEvent<HTMLTableCellElement>) => {
+    event.preventDefault();
+    setAssetMenuState({
+      open: true,
+      asset,
+      anchorPosition: { top: event.clientY, left: event.clientX },
+    });
+  };
+
+  const handleAssetMenuClose = () => {
+    setAssetMenuState({ open: false });
+  };
+
+  const assetContextMenuItems: ContextMenuItem[] = [
+    {
+      label: "Edit",
+      action: () => {
+        if (assetMenuState.asset) {
+          openForm({
+            type: 'asset',
+            mode: 'edit',
+            initialValues: assetMenuState.asset,
+            candidates: {
+              phases: phases,
+            },
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+    {
+      label: "Add Task",
+      icon: <AddIcon />,
+      action: () => {
+        if (assetMenuState.asset) {
+          const selectedAsset = { id: assetMenuState.asset?.id, name: assetMenuState.asset?.name, type: "Asset" } as IForignKey;
+          openForm({
+            type: 'task',
+            mode: 'create',
+            initialValues: { asset: selectedAsset },
+            candidates: {
+              assets: [assetMenuState.asset],
+              people: people,
+            },
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+  ];
 
   // 表示コンポーネント
   if (!personWorkloadState) {
@@ -326,26 +379,39 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
       setInputValues(initial);
     }, [pmmWorkloadState, weekIsos, selectedWorkCategory]);
 
+    const isPlanning = currentSubproject?.pmm_status !== "approved";
+
     return (
-      <TableRow sx={{ backgroundColor: '#f9f9f9' }}>
-        <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#f9f9f9', zIndex: 1 }}>Approved Plan</TableCell>
+      <TableRow sx={{ backgroundColor: '#dae7f3ff', border: '2px solid #707070ff' }}>
+        <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#dae7f3ff', zIndex: 1 }}>
+          PMM   &nbsp;
+          {isPlanning ? (
+            <Typography component="span" variant="body2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>[Planning]</Typography>
+          ) : (
+            <Typography component="span" variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>[Approved]</Typography>
+          )}
+          &nbsp;
+        </TableCell>
         {weekIsos.map((weekIso, idx) => (
           <TableCell key={weekIso} align="center">
-            <TextField
-              size="small"
-              type="number"
-              value={inputValues[weekIso] ?? ""}
-              sx={{ width: 70, '& input': { textAlign: 'center' } }}
-              onChange={(e) => {
-                const input = e.target.value;
-                setInputValues(prev => ({ ...prev, [weekIso]: input }));
-              }}
-              onBlur={(e) => {
-                const input = e.target.value;
-                if (input === "") return;
-                pmmWorkloadSubmit(weekIso, Number(input));
-              }}
-            />
+            {isPlanning && isEditMode? (
+              <TextField
+                size="small"
+                type="number"
+                value={inputValues[weekIso] ?? ""}
+                sx={{ width: 70, '& input': { textAlign: 'center' } }}
+                onChange={(e) => {
+                  const input = e.target.value;
+                  setInputValues(prev => ({ ...prev, [weekIso]: input }));
+                }}
+                onBlur={(e) => {
+                  const input = e.target.value;
+                  if (input === "") return;
+                  pmmWorkloadSubmit(weekIso, Number(input));
+                }}
+              />) : (
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{getPMMWValue(weekIso).value}</Typography>
+            )}
           </TableCell>
         ))}
       </TableRow>
@@ -353,20 +419,38 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
   };
 
   const CurrentPlanRow: React.FC = () => (
-    <TableRow sx={{ backgroundColor: '#fff3cd' }}>
+    <TableRow sx={{ backgroundColor: '#fff3cd', border: '2px solid #707070ff' }}>
       <TableCell sx={{ fontWeight: 'bold', position: 'sticky', left: 0, backgroundColor: '#fff3cd', zIndex: 1 }}>Current Plan</TableCell>
       {weekIsos.map((weekIso, idx) => (
         <TableCell key={weekIso} align="center">
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{getCurrentPlanTotal(weekIso)}</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{getCurrentPlanTotal(weekIso).toFixed(1)}</Typography>
         </TableCell>
       ))}
     </TableRow>
   );
 
   const AssetRow: React.FC<{ asset: IAsset, isExpanded: boolean }> = ({ asset, isExpanded }) => {
+    const isWeekInRange = (weekIso: string) => {
+      const weekStart = new Date(weekIso);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6); // 月曜+6=日曜
+      const start = new Date(asset.start_date);
+      const end = new Date(asset.end_date);
+      return (
+        (start >= weekStart && start <= weekEnd) ||
+        (end >= weekStart && end <= weekEnd) ||
+        (weekStart >= start && weekEnd <= end)
+      );
+    };
+
+
+
     return (
-      <TableRow sx={{ backgroundColor: '#e9ecef' }}>
-        <TableCell sx={{ position: 'sticky', left: 0, backgroundColor: '#e9ecef', zIndex: 1 }}>
+      <TableRow sx={{ backgroundColor: '#f7f7f7ff' }}>
+        <TableCell
+          sx={{ position: 'sticky', left: 0, backgroundColor: '#f7f7f7ff', zIndex: 1 }}
+          onContextMenu={(e) => handleAssetContextMenu(asset, e)}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <IconButton size="small" onClick={() => toggleAssetExpansion(asset.id)} sx={{ mr: 1 }}>
               {isExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
@@ -375,20 +459,49 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
           </Box>
         </TableCell>
         {weekIsos.map(weekIso => (
-          <TableCell key={weekIso} align="center">{getAssetTotal(asset.id, weekIso)}</TableCell>
+          <TableCell
+            key={weekIso}
+            align="center"
+            sx={{
+              backgroundColor: isWeekInRange(weekIso) ? '#ffffff' : '#d1d1d1ff'
+            }}
+          >{getAssetTotal(asset.id, weekIso).toFixed(1)}
+          </TableCell>
         ))}
       </TableRow>
     );
   };
 
   const TaskRow: React.FC<{ task: ITask, }> = ({ task }) => {
+    const isWeekInRange = (weekIso: string) => {
+      const weekStart = new Date(weekIso);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6); // 月曜+4=金曜
+      const start = new Date(task.start_date);
+      const end = new Date(task.end_date);
+      return (
+        (start >= weekStart && start <= weekEnd) ||
+        (end >= weekStart && end <= weekEnd) ||
+        (weekStart >= start && weekEnd <= end)
+      );
+    };
+
     return (
       <TableRow sx={{ backgroundColor: '#d1ecf1' }}>
-        <TableCell sx={{ position: 'sticky', left: 0, backgroundColor: '#d1ecf1', zIndex: 1, pl: 4 }}>
+        <TableCell 
+        sx={{ position: 'sticky', left: 0, backgroundColor: '#d1ecf1', zIndex: 1, pl: 4 }}
+        onContextMenu={(e) => handleTaskContextMenu(task, e)}
+        >
           <strong>{task.name}</strong>
         </TableCell>
         {weekIsos.map(weekIso => (
-          <TableCell key={weekIso} align="center">{getTaskTotal(task.id, weekIso)}</TableCell>
+          <TableCell
+            key={weekIso}
+            align="center"
+            sx={{
+              backgroundColor: isWeekInRange(weekIso) ? '#d1ecf1' : '#b1c4c7ff'
+            }}
+          >{getTaskTotal(task, weekIso).toFixed(1)}</TableCell>
         ))}
       </TableRow>
     );
@@ -408,21 +521,42 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
       setInputValues(initial);
     }, [personWorkloadState, weekIsos, task.id, personFk.id]);
 
+    const isWeekInRange = (weekIso: string) => {
+      const weekStart = new Date(weekIso);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6); // 月曜+6=日曜
+      const start = new Date(task.start_date);
+      const end = new Date(task.end_date);
+      return (
+        (start >= weekStart && start <= weekEnd) ||
+        (end >= weekStart && end <= weekEnd) ||
+        (weekStart >= start && weekEnd <= end)
+      );
+    };
+
     return (
       <TableRow>
         <TableCell sx={{ position: 'sticky', left: 0, zIndex: 1, pl: 8 }}>{personFk.name}</TableCell>
         {weekIsos.map(weekIso => (
-          <TableCell key={`${task.id}-${personFk.id}-${weekIso}`} align="center">
-            <TextField
+          <TableCell
+            key={`${task.id}-${personFk.id}-${weekIso}`}
+            align="center"
+            sx={{
+              backgroundColor: isWeekInRange(weekIso) ? '#ffffffff' : '#cacacaff'
+            }}
+          >
+            {isEditMode ? (
+              <TextField
               size="small"
               type="number"
+              inputProps={{ step: 0.1, min: 0 }}
               value={inputValues[weekIso] ?? ""}
               sx={{ width: 70, '& input': { textAlign: 'center' } }}
-              onChange={e => {
+              onChange={(e) => {
                 const input = e.target.value;
                 setInputValues(prev => ({ ...prev, [weekIso]: input }));
               }}
-              onBlur={e => {
+              onBlur={(e) => {
                 const input = e.target.value;
                 if (input === "") return;
                 personWorkloadSubmit(
@@ -432,7 +566,10 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
                   Number(input)
                 );
               }}
-            />
+            />) : (
+              <Typography variant="body2">{getPWValue(task.id, personFk.id, weekIso).value}</Typography>
+            )}
+            
           </TableCell>
         ))}
       </TableRow>
@@ -478,6 +615,24 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* コンテキストメニュー（座標指定） */}
+      {/* Asset用 */}
+      <ContextMenu
+        open={assetMenuState.open}
+        onClose={handleAssetMenuClose}
+        items={assetContextMenuItems}
+        header={assetMenuState.asset?.name}
+        anchorPosition={assetMenuState.anchorPosition}
+      />
+      {/* Task用 */}
+      <ContextMenu
+        open={taskMenuState.open}
+        onClose={handleTaskMenuClose}
+        items={taskContextMenuItems}
+        header={taskMenuState.task?.name}
+        anchorPosition={taskMenuState.anchorPosition}
+      />
     </Box>
   );
 }

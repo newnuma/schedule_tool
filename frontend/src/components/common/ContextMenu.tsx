@@ -22,7 +22,8 @@ export interface ContextMenuItem {
 }
 
 export interface ContextMenuProps {
-  anchorEl: HTMLElement | null;
+  anchorEl?: HTMLElement | null;
+  anchorPosition?: { top: number; left: number } | undefined;
   open: boolean;
   onClose: () => void;
   items: ContextMenuItem[];
@@ -31,11 +32,12 @@ export interface ContextMenuProps {
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
   anchorEl,
+  anchorPosition,
   open,
   onClose,
   items,
   header,
-  }) => {
+}) => {
 
     const defaultIcons: Record<string, React.ReactNode> = {
       'Jump to Flow-PT': <WebIcon fontSize="small" />,
@@ -54,6 +56,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         anchorEl={anchorEl}
         open={open}
         onClose={onClose}
+        anchorReference={anchorPosition ? "anchorPosition" : "anchorEl"}
+        anchorPosition={anchorPosition}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         PaperProps={{
