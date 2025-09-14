@@ -215,12 +215,6 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     [assetsForGroups]
   );
 
-  console.log("milestoneTasks", milestoneTasks);
-  console.log("assets", assets);
-  console.log("filteredPhases", filteredPhases);
-
-  
-
   const items = useMemo(
     () => {
       // Phaseアイテム（マイルストーン形式）
@@ -308,7 +302,6 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
             tooltipHtml: getTooltipHtml(tooltipItem),
           };
         });
-        console.log("msItems", msItems);
 
       return [...phaseItems, ...assetItems, ...msItems];
     },

@@ -262,8 +262,14 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
       <CheckboxFilter
         pageKey={groupsPageKey}
         data={basicFilteredAssets}
-        property="type"
+        property="asset_type"
         label="Asset Type (Groups)"
+      />
+      <CheckboxFilter
+        pageKey={groupsPageKey}
+        data={basicFilteredAssets}
+        property="work_category.name"
+        label="work_category.name (Groups)"
       />
       <DateRangeFilter
         pageKey={groupsPageKey}

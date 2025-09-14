@@ -135,7 +135,7 @@ const ProjectPage: React.FC = () => {
   }, [selectedSubprojectId, setLoading]);
 
   // --- サブプロジェクト関連データのフィルタリング ---
-  const currentSubproject = subprojects.find(sp => sp.id === selectedSubprojectId);
+  const currentSubproject = subprojects.find(sp => sp.id === selectedSubprojectId) ;
   // Phase
   const filteredPhases = phases.filter(p => p.subproject.id === selectedSubprojectId);
   // Asset（Phaseに紐づく）
@@ -216,7 +216,9 @@ const ProjectPage: React.FC = () => {
                 pmmWorkloads={filteredPMMWorkloads}
                 people={people}
                 workCategories={workCategories}
-                selectedSubprojectId={selectedSubprojectId}
+                currentSubproject={currentSubproject}
+                isEditMode={isEditMode}
+                assignablePeople={assignablePeople} 
               />
             </TabPanel>
           </ErrorBoundary>

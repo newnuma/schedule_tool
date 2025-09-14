@@ -403,7 +403,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const updateAssets = useCallback((updates: Partial<IAsset>[]) => {
-        console.log('Updating assets with:', updates);
         setAssets((prev) => prev.map(asset => {
             const update = updates.find(u => u.id === asset.id);
             return update ? { ...asset, ...update, updatedAt: Date.now() } : asset;

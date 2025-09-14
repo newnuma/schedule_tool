@@ -2,7 +2,7 @@
 // Utilities for accessing the Qt WebChannel dataBridge object.
 // Always `await channelReady` before calling any bridge API.
 
-import { IAsset, ITask ,IPhase} from "../context/AppContext";
+import { IAsset, ITask ,IPhase, IPMMWorkload, IPersonWorkload} from "../context/AppContext";
 
 type BridgeObject = any;
 
@@ -103,12 +103,12 @@ export function fetchSteps() {
   return callBridge('fetchSteps');
 }
 
-export function createEntity(data: Partial<IAsset | IPhase | ITask>) {
+export function createEntity(data: Partial<IAsset | IPhase | ITask | IPersonWorkload | IPMMWorkload>) {
   const dataStr = JSON.stringify(data);
   return callBridge('createEntity', dataStr);
 }
 
-export function updateEntity(id: number, data: Partial<IAsset | IPhase | ITask>) {
+export function updateEntity(id: number, data: Partial<IAsset | IPhase | ITask | IPersonWorkload | IPMMWorkload >) {
   const dataStr = JSON.stringify(data);
   return callBridge('updateEntity', id, dataStr);
 }
