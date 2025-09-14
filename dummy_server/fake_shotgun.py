@@ -21,6 +21,22 @@ from decimal import Decimal
 
 
 class FakeShotgun:
+    def delete(self, entity_type: str, entity_id: int) -> bool:
+        """
+        Shotgun-like delete method.
+        Args:
+            entity_type: Entity type string
+            entity_id: ID of the entity to delete
+        Returns:
+            True if deleted, False if not found
+        """
+        Model = self._model(entity_type)
+        try:
+            obj = Model.objects.get(id=entity_id)
+            obj.delete()
+            return True
+        except Model.DoesNotExist:
+            return False
     """Simplified Shotgun API backed by local models."""
 
     def __init__(self) -> None:

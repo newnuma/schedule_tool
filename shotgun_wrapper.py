@@ -8,6 +8,8 @@ from django.apps import apps
 
 
 class ShotgunClient:
+    def delete(self, entity_type: str, entity_id: int) -> bool:
+        return self._impl.delete(entity_type, entity_id)
     """Provide Shotgun-like API backed by real or fake implementation."""
 
     def __init__(self, base_url: Optional[str] = None, script_name: Optional[str] = None,
