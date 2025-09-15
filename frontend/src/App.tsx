@@ -1,4 +1,5 @@
 import { AppBar, CircularProgress, Toolbar, Box } from "@mui/material";
+import { DialogProvider } from "./context/DialogContext";
 import {
   Layout,
   Content,
@@ -15,25 +16,27 @@ const App = () => {
   const { currentPage, loading } = useAppContext();
 
   return (
-    <Layout>
-      <Sidebar />
-      <Content>
-        <AppBar position="static">
-        </AppBar>
-        <Box sx={{ display: currentPage === 'Distribute' ? 'block' : 'none' }}>
-          <DistributePage />
-        </Box>
-        <Box sx={{ display: currentPage === 'Project' ? 'block' : 'none' }}>
-          <ProjectPage />
-        </Box>
-        <Box sx={{ display: currentPage === 'Assignment' ? 'block' : 'none' }}>
-          <AssignmentPage />
-        </Box>
-      </Content>
-      <OverlayBackdrop open={loading}>
-        <CircularProgress color="inherit" />
-      </OverlayBackdrop>
-    </Layout>
+    <DialogProvider>
+      <Layout>
+        <Sidebar />
+        <Content>
+          <AppBar position="static">
+          </AppBar>
+          <Box sx={{ display: currentPage === 'Distribute' ? 'block' : 'none' }}>
+            <DistributePage />
+          </Box>
+          <Box sx={{ display: currentPage === 'Project' ? 'block' : 'none' }}>
+            <ProjectPage />
+          </Box>
+          <Box sx={{ display: currentPage === 'Assignment' ? 'block' : 'none' }}>
+            <AssignmentPage />
+          </Box>
+        </Content>
+        <OverlayBackdrop open={loading}>
+          <CircularProgress color="inherit" />
+        </OverlayBackdrop>
+      </Layout>
+    </DialogProvider>
   );
 };
 

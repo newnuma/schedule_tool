@@ -61,6 +61,10 @@ class DataBridge(QObject):
     def updateEntity(self, id: int, data: str) -> Any:
         data_dict = json.loads(data)
         return api_client.update_entity(id, data_dict)
+    
+    @Slot(str, int, result=bool)
+    def deleteEntity(self, type: str, id: int) -> bool:
+        return api_client.delete_entity(type, id)
 
     # @Slot(int, result="QVariant")
     # def getSubproject(self, subproject_id: int) -> Any:  # noqa: N802

@@ -8,6 +8,9 @@ import {getTooltipHtml}from "../../components/GanttChart/GanttChart";
 import { DropdownFilter, CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../components/filters";
 import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
+import { useAppContext } from "../../context/AppContext";
+import { useDialogContext } from "../../context/DialogContext";
+import { deleteEntity } from "../../api/bridgeApi";
 
 // 型定義
 import type { IPhase, IAsset, IMilestoneTask } from "../../context/AppContext";
@@ -28,6 +31,8 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   const itemsPageKey = "project.assets:items";   // date range + status for items
   const groupsPageKey = "project.assets:groups"; // type for groups
   const { openForm } = useFormContext();
+  const { deleteAsset } = useAppContext();
+  const { openDialog } = useDialogContext();
 
   // ContextMenuの状態管理
   const [menuState, setMenuState] = React.useState<{
@@ -125,15 +130,40 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       dividerBefore: true,
       label: "Delete",
       action: () => {
-        console.log("Delete", menuState.asset);
+        if (menuState.asset) {
+          openDialog({
+            title: "Delete Asset",
+            message: `Are you sure you want to delete asset '${menuState.asset.name}'?`,
+            okText: "Delete",
+            cancelText: "Cancel",
+            onOk: async () => {
+              try {
+                const res = await deleteEntity("Asset", menuState.asset!.id);
+                if (res) {
+                  deleteAsset(menuState.asset!.id);
+                } else {
+                  openDialog({
+                    title: "Delete Failed",
+                    message: `Failed to delete asset '${menuState?.asset?.name}'.`,
+                    okText: "OK",
+                  });
+                }
+              } catch (e) {
+                openDialog({
+                  title: "Delete Failed",
+                  message: `Error occurred: ${e}`,
+                  okText: "OK",
+                });
+              }
+            },
+          });
+        }
       },
       disable: !isEditMode,
       color: "error.main",
     },
   ];
 
-
-  // ...existing code...
 
   // Add menu handlers（新しいForm形式）
   const handleAddPhase = () => {

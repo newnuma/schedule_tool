@@ -154,14 +154,17 @@ export interface IAppContext {
     phases: IPhase[];
     addPhases: (phases: IPhase[]) => void;
     updatePhases: (updates: Partial<IPhase>[]) => void;
+    deletePhase: (id: number) => void;
 
     assets: IAsset[];
     addAssets: (assets: IAsset[]) => void;
     updateAssets: (updates: Partial<IAsset>[]) => void;
+    deleteAsset: (id: number) => void;
 
     tasks: ITask[];
     addTasks: (tasks: ITask[]) => void;
     updateTasks: (updates: Partial<ITask>[]) => void;
+    deleteTask: (id: number) => void;
 
     milestoneTasks: IMilestoneTask[];
     addMilestoneTasks: (tasks: IMilestoneTask[]) => void;
@@ -205,12 +208,15 @@ const defaultParams: IAppContext = {
     phases: [],
     addPhases: () => {},
     updatePhases: () => {},
+    deletePhase: () => {},
     assets: [],
     addAssets: () => {},
     updateAssets: () => {},
+    deleteAsset: () => {},
     tasks: [],
     addTasks: () => {},
     updateTasks: () => {},
+    deleteTask: () => {},
     milestoneTasks: [],
     addMilestoneTasks: () => {},
     updateMilestoneTasks: () => {},
@@ -437,7 +443,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }));
     }, []);
 
-    
+    // 削除系メソッド
+    const deleteAsset = useCallback((id: number) => {
+        setAssets((prev) => prev.filter((a) => a.id !== id));
+    }, []);
+    const deleteTask = useCallback((id: number) => {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+    }, []);
+    const deletePhase = useCallback((id: number) => {
+        setPhases((prev) => prev.filter((p) => p.id !== id));
+    }, []);
 
     return (
         <AppContext.Provider
@@ -449,12 +464,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 phases,
                 addPhases,
                 updatePhases,
+                deletePhase,
                 assets,
                 addAssets,
                 updateAssets,
+                deleteAsset,
                 tasks,
                 addTasks,
                 updateTasks,
+                deleteTask,
                 milestoneTasks,
                 addMilestoneTasks,
                 updateMilestoneTasks,

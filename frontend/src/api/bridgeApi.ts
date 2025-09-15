@@ -113,6 +113,9 @@ export function updateEntity(id: number, data: Partial<IAsset | IPhase | ITask |
   return callBridge('updateEntity', id, dataStr);
 }
 
+export function deleteEntity(type: string, id: number) {
+  return callBridge('deleteEntity', type, id);
+}
 
 export async function createEntities<T extends object>(dataArr: Partial<T>[]): Promise<T[]> {
   console.log("call createEntities", dataArr);

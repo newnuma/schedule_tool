@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { IPhase, IAsset, ITask, IPerson, useAppContext } from '../context/AppContext';
 import { createEntity, updateEntity } from '../api/bridgeApi';
+import { useDialogContext } from "../context/DialogContext";
 
 export type FormType = 'phase' | 'asset' | 'task';
 export type FormMode = 'create' | 'edit' | 'copy';
@@ -88,7 +89,8 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
     });
   }, []);
 
-  const { addAssets, addPhases, addTasks} = useAppContext();
+  const { addAssets, addPhases, addTasks } = useAppContext();
+  const { openDialog } = useDialogContext();
 
   // 共通のcreate関数
   const createDataFromForm = (data: Partial<IAsset | IPhase | ITask>) => {
@@ -122,10 +124,15 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
         }
       }
     }).catch((error) => {
-      console.error('Failed to create entity:', error);
+      openDialog({
+        title: "Update Failed",
+        message: `Failed to update'${formState?.initialValues?.name || ''}'.`,
+        okText: "OK",
+      });
+      console.error('Failed to update entity:', error);
     });
   };
-  
+
   // mode分岐でsubmit
   const handleFormSubmit = useCallback((data: any) => {
     const { type, mode, initialValues } = formState;

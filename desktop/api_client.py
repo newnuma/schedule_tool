@@ -391,3 +391,6 @@ def update_entity(entity_id: int, data: dict) -> Any:
     result = get_entity(entity_type, entity_id)
     result = adjust_field_names(result)
     return _format_dict(result)
+
+def delete_entity(entity_type: str, entity_id: int) -> bool:
+    return sg.delete(entity_type, entity_id)
