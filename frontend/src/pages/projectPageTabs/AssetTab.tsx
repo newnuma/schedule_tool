@@ -47,16 +47,12 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     open: boolean;
     itemName?: string;
     asset?: IAsset;
+    phase?: IPhase;
+    milestoneTask?: IMilestoneTask;
+    itemType?: 'asset' | 'phase' | 'milestone';
   }>({ anchorEl: null, open: false });
 
   // 右クリック時のハンドラ
-  const [pendingMenu, setPendingMenu] = React.useState<{
-    anchorEl: HTMLElement | null;
-    open: boolean;
-    itemName?: string;
-    itemId?: number | string;
-  } | null>(null);
-
   const handleGanttRightClick = (
     itemId: number | string,
     itemName: string,
@@ -64,34 +60,41 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    setPendingMenu({
+    // idのprefixで種別判定
+    let itemType: 'asset' | 'phase' | 'milestone' = 'asset';
+    let assetObj: IAsset | undefined = undefined;
+    let phaseObj: IPhase | undefined = undefined;
+    let milestoneTaskObj: IMilestoneTask | undefined = undefined;
+    if (typeof itemId === 'string' && itemId.startsWith('phase-')) {
+      itemType = 'phase';
+      const phaseId = Number(itemId.replace('phase-', ''));
+      phaseObj = phases.find(p => p.id === phaseId);
+    } else if (typeof itemId === 'string' && itemId.startsWith('ms-')) {
+      itemType = 'milestone';
+      const msId = Number(itemId.replace('ms-', ''));
+      milestoneTaskObj = milestoneTasks.find(ms => ms.id === msId);
+    } else {
+      // Asset: idが数値 or 数値文字列
+      assetObj = assets.find(a => a.id === Number(itemId));
+    }
+    setMenuState({
       anchorEl: event.target as HTMLElement,
       open: true,
       itemName,
-      itemId,
+      asset: assetObj,
+      phase: phaseObj,
+      milestoneTask: milestoneTaskObj,
+      itemType,
     });
   };
-
-  // assetsが更新された時、pendingMenuがあれば最新のassetでmenuStateを更新
-  React.useEffect(() => {
-    if (pendingMenu && pendingMenu.itemId !== undefined) {
-      const assetObj = assets.find(a => a.id === Number(pendingMenu.itemId));
-      setMenuState({
-        anchorEl: pendingMenu.anchorEl,
-        open: pendingMenu.open,
-        itemName: pendingMenu.itemName,
-        asset: assetObj,
-      });
-      setPendingMenu(null);
-    }
-  }, [assets, pendingMenu]);
 
   const handleMenuClose = () => {
     setMenuState({ anchorEl: null, open: false });
   };
 
   // メニュー項目定義（新しいForm形式で起動）
-  const contextMenuItems: ContextMenuItem[] = [
+  // Asset用
+  const assetContextMenuItems: ContextMenuItem[] = [
     {
       label: "Jump to Flow-PT",
       action: () => {
@@ -140,6 +143,56 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       disable: !isEditMode,
       color: "error.main",
     },
+  ];
+
+  // Phase用
+  const phaseContextMenuItems: ContextMenuItem[] = [
+    {
+      label: "Edit Phase",
+      action: () => {
+        if (menuState.phase) {
+          openForm({
+            type: 'phase',
+            mode: 'edit',
+            initialValues: menuState.phase,
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+    {
+      label: "Copy Phase",
+      action: () => {
+        if (menuState.phase) {
+          const { id, ...copyData } = menuState.phase;
+          openForm({
+            type: 'phase',
+            mode: 'copy',
+            initialValues: copyData,
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+    // 必要に応じて他のPhase用メニューを追加
+  ];
+
+  // MilestoneTask用
+  const milestoneContextMenuItems: ContextMenuItem[] = [
+    {
+      label: "Edit Milestone",
+      action: () => {
+        if (menuState.milestoneTask) {
+          openForm({
+            type: 'milestonetask',
+            mode: 'edit',
+            initialValues: menuState.milestoneTask,
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+    // 必要に応じて他のMilestone用メニューを追加
   ];
 
 
@@ -390,7 +443,13 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
         anchorEl={menuState.anchorEl}
         open={menuState.open}
         onClose={handleMenuClose}
-        items={contextMenuItems}
+        items={
+          menuState.itemType === 'phase'
+            ? phaseContextMenuItems
+            : menuState.itemType === 'milestone'
+              ? milestoneContextMenuItems
+              : assetContextMenuItems
+        }
         header={menuState.itemName}
       />
     </div>

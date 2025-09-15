@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FormModal, PhaseForm, AssetForm, TaskForm } from '../forms';
+import MilestoneTaskForm from './MilestoneTaskForm';
 import { useFormContext, AssetCandidates, TaskCandidates } from '../../context/FormContext';
-import { IPhase, IAsset, ITask } from '../../context/AppContext';
+import { IPhase, IAsset, ITask, IMilestoneTask } from '../../context/AppContext';
 
 const FormManager: React.FC = () => {
   const { formState, closeForm, handleFormSubmit } = useFormContext();
@@ -57,6 +58,16 @@ const FormManager: React.FC = () => {
           <TaskForm
             initialValues={initialValues as Partial<ITask>}
             candidates={candidates as TaskCandidates}
+            mode={mode}
+            onSubmit={handleFormSubmit}
+            onClose={closeForm}
+          />
+        );
+      case 'milestonetask':
+        return (
+          <MilestoneTaskForm
+            initialValues={initialValues as Partial<IMilestoneTask>}
+            candidates={candidates as any}
             mode={mode}
             onSubmit={handleFormSubmit}
             onClose={closeForm}

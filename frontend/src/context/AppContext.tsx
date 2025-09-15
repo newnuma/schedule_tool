@@ -170,6 +170,7 @@ export interface IAppContext {
     milestoneTasks: IMilestoneTask[];
     addMilestoneTasks: (tasks: IMilestoneTask[]) => void;
     updateMilestoneTasks: (updates: Partial<IMilestoneTask>[]) => void;
+    deleteMilestoneTask: (id: number) => void;
 
     personWorkloads: IPersonWorkload[];
     addPersonWorkloads: (workloads: IPersonWorkload[]) => void;
@@ -224,6 +225,7 @@ const defaultParams: IAppContext = {
     milestoneTasks: [],
     addMilestoneTasks: () => {},
     updateMilestoneTasks: () => {},
+    deleteMilestoneTask: () => {},
     personWorkloads: [],
     addPersonWorkloads: () => {},
     updatePersonWorkloads: () => {},
@@ -460,6 +462,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const deletePhase = useCallback((id: number) => {
         setPhases((prev) => prev.filter((p) => p.id !== id));
     }, []);
+    const deleteMilestoneTask = useCallback((id: number) => {
+        setMilestoneTasks((prev) => prev.filter((m) => m.id !== id));
+    }, []);
 
     return (
         <AppContext.Provider
@@ -483,6 +488,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 milestoneTasks,
                 addMilestoneTasks,
                 updateMilestoneTasks,
+                deleteMilestoneTask,
                 personWorkloads,
                 addPersonWorkloads,
                 updatePersonWorkloads,

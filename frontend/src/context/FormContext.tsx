@@ -1,10 +1,14 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { IPhase, IAsset, ITask, IPerson, useAppContext } from '../context/AppContext';
+import { IPhase, IAsset, ITask, IMilestoneTask, IPerson, IForignKey, useAppContext } from '../context/AppContext';
 import { createEntity, updateEntity } from '../api/bridgeApi';
 import { useDialogContext } from "../context/DialogContext";
 
-export type FormType = 'phase' | 'asset' | 'task';
+export type FormType = 'phase' | 'asset' | 'task' | 'milestonetask';
+export interface MilestoneTaskCandidates {
+  assets: IForignKey[];
+  subprojects?: IForignKey[];
+}
 export type FormMode = 'create' | 'edit' | 'copy';
 
 export interface AssetCandidates {
@@ -21,8 +25,8 @@ export interface FormState {
   isOpen: boolean;
   type: FormType | null;
   mode: FormMode;
-  initialValues?: Partial<IPhase> | Partial<IAsset> | Partial<ITask>;
-  candidates?: TaskCandidates | AssetCandidates | undefined; // 各Formで使う候補リスト
+  initialValues?: Partial<IPhase> | Partial<IAsset> | Partial<ITask> | Partial<IMilestoneTask>;
+  candidates?: TaskCandidates | AssetCandidates | MilestoneTaskCandidates | undefined; // 各Formで使う候補リスト
 }
 
 
@@ -31,8 +35,8 @@ export interface FormContextType {
   openForm: (params: {
     type: FormType;
     mode: FormMode;
-    initialValues?: Partial<IPhase> | Partial<IAsset> | Partial<ITask>;
-    candidates?: TaskCandidates | AssetCandidates | undefined;
+    initialValues?: Partial<IPhase> | Partial<IAsset> | Partial<ITask> | Partial<IMilestoneTask>;
+    candidates?: TaskCandidates | AssetCandidates | MilestoneTaskCandidates | undefined;
   }) => void;
   closeForm: () => void;
   handleFormSubmit: (data: any) => void;
@@ -67,8 +71,8 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
   const openForm = useCallback((params: {
     type: FormType;
     mode: FormMode;
-    initialValues?: Partial<IPhase | IAsset | ITask>;
-    candidates?: TaskCandidates | AssetCandidates | undefined;
+    initialValues?: Partial<IPhase | IAsset | ITask | IMilestoneTask>;
+    candidates?: TaskCandidates | AssetCandidates | MilestoneTaskCandidates | undefined;
   }) => {
     setFormState({
       isOpen: true,
@@ -89,12 +93,12 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
     });
   }, []);
 
-  const { addAssets, addPhases, addTasks } = useAppContext();
+  const { addAssets, addPhases, addTasks, addMilestoneTasks } = useAppContext();
   const { openDialog } = useDialogContext();
 
   // 共通のcreate関数
-  const createDataFromForm = (data: Partial<IAsset | IPhase | ITask>) => {
-    createEntity(data).then((result) => {
+  const createDataFromForm = (data: Partial<IAsset | IPhase | ITask | IMilestoneTask>) => {
+    createEntity(data as any).then((result) => {
       if (result && result.id && result.type) {
         console.log('Created entity:', result);
         if (result.type === 'Asset') {
@@ -103,6 +107,8 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
           addPhases([result as IPhase]);
         } else if (result.type === 'Task') {
           addTasks([result as ITask]);
+        } else if (result.type === 'MilestoneTask') {
+          addMilestoneTasks([result as IMilestoneTask]);
         }
       }
     }).catch((error) => {
@@ -116,8 +122,8 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
   };
 
   // 共通のupdate関数（API連携は未実装）
-  const updateDataFromForm = (id: number, data: Partial<IAsset | IPhase | ITask>) => {
-    updateEntity(id, data).then((result) => {
+  const updateDataFromForm = (id: number, data: Partial<IAsset | IPhase | ITask | IMilestoneTask>) => {
+    updateEntity(id, data as any).then((result) => {
       if (result && result.id && result.type) {
         console.log('Updated entity:', result);
         if (result.type === 'Asset') {
@@ -126,6 +132,8 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
           addPhases([result as IPhase]);
         } else if (result.type === 'Task') {
           addTasks([result as ITask]);
+        } else if (result.type === 'MilestoneTask') {
+          addMilestoneTasks([result as IMilestoneTask]);
         }
       }
     }).catch((error) => {
