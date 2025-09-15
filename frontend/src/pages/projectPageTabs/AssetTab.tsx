@@ -11,6 +11,7 @@ import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMen
 import { useAppContext } from "../../context/AppContext";
 import { useDialogContext } from "../../context/DialogContext";
 import { deleteEntity } from "../../api/bridgeApi";
+import {useEntityCrud} from "../../hooks/useEntityCrud"
 
 // 型定義
 import type { IPhase, IAsset, IMilestoneTask } from "../../context/AppContext";
@@ -31,8 +32,14 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   const itemsPageKey = "project.assets:items";   // date range + status for items
   const groupsPageKey = "project.assets:groups"; // type for groups
   const { openForm } = useFormContext();
-  const { deleteAsset } = useAppContext();
+  const { handleDeleteAsset } = useEntityCrud(); 
   const { openDialog } = useDialogContext();
+
+    // 初期表示範囲（2週前～3か月後）
+  const start = new Date();
+  start.setDate(start.getDate() - 14);
+  const end = new Date();
+  end.setMonth(end.getMonth() + 2);
 
   // ContextMenuの状態管理
   const [menuState, setMenuState] = React.useState<{
@@ -129,36 +136,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     {
       dividerBefore: true,
       label: "Delete",
-      action: () => {
-        if (menuState.asset) {
-          openDialog({
-            title: "Delete Asset",
-            message: `Are you sure you want to delete asset '${menuState.asset.name}'?`,
-            okText: "Delete",
-            cancelText: "Cancel",
-            onOk: async () => {
-              try {
-                const res = await deleteEntity("Asset", menuState.asset!.id);
-                if (res) {
-                  deleteAsset(menuState.asset!.id);
-                } else {
-                  openDialog({
-                    title: "Delete Failed",
-                    message: `Failed to delete asset '${menuState?.asset?.name}'.`,
-                    okText: "OK",
-                  });
-                }
-              } catch (e) {
-                openDialog({
-                  title: "Delete Failed",
-                  message: `Error occurred: ${e}`,
-                  okText: "OK",
-                });
-              }
-            },
-          });
-        }
-      },
+      action: () => {handleDeleteAsset(menuState.asset as IAsset)},
       disable: !isEditMode,
       color: "error.main",
     },
@@ -397,6 +375,8 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
             groups={groups} 
             onItemRightClick={handleGanttRightClick}
             height='calc(100vh - 200px)'
+            start={start}
+            end={end}
           />
         ) : (
           <Typography variant="body2" color="text.secondary">

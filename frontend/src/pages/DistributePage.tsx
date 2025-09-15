@@ -1,4 +1,6 @@
 import React, { useMemo } from "react";
+import type { IPage } from "../types";
+import type { GanttGroup } from "../components/GanttChart";
 import { Typography, Box } from "@mui/material";
 import { Main } from "../components/StyledComponents";
 import { useAppContext } from "../context/AppContext";
@@ -13,8 +15,15 @@ const DistributePage: React.FC = () => {
   const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   // Stack表示切替
   const [stacked, setStacked] = React.useState(true);
-  const { subprojects, phases } = useAppContext();
+  const { subprojects, phases, setSelectedSubprojectId, setCurrentPage } = useAppContext();
   const { getFilteredData } = useFilterContext();
+
+  // 初期表示範囲（1か月前～1年後）
+  const start = new Date();
+  start.setMonth(start.getMonth() - 1);
+  const end = new Date();
+  end.setFullYear(end.getFullYear() + 1);
+  end.setMonth(start.getMonth());
 
   // Split pageKeys by target: items vs groups
   const itemsPageKey = "distribute.phases:items";   // date range on phases (items)
@@ -49,6 +58,15 @@ const DistributePage: React.FC = () => {
     () => phasesForItems.filter(p => allowedSubprojectIds.has(p.subproject.id)),
     [phasesForItems, allowedSubprojectIds]
   );
+
+    // グループ（Subproject名）クリック時のハンドラ
+  const handleGroupClick = (groupId: number | string, group: GanttGroup) => {
+    const subprojectId = typeof groupId === 'number' ? groupId : Number(groupId);
+    if (!isNaN(subprojectId)) {
+      setSelectedSubprojectId(subprojectId);
+      setCurrentPage("Project" as IPage);
+    }
+  };
 
   // グループはAppContextのSubprojects（グループフィルタ適用後）
     // グループはAppContextのSubprojects（グループフィルタ適用後）
@@ -95,6 +113,8 @@ const DistributePage: React.FC = () => {
     return [...milestoneItems, ...barItems];
   }, [filteredPhases]);
 
+
+
   // フィルタコンポーネント
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel
@@ -138,10 +158,13 @@ const DistributePage: React.FC = () => {
         <Box sx={{ width: '100%', height: 'calc(100vh - 200px)' }}>
           {filteredPhases.length > 0 ? (
             <GanttChart 
-            items={items} 
-            groups={groups} 
-            options={{ stack: stacked }} 
-            height='calc(100vh - 200px)'
+              items={items} 
+              groups={groups} 
+              options={{ stack: stacked }} 
+              height='calc(100vh - 200px)'
+              start={start}
+              end={end}
+              onGroupClick={handleGroupClick}
             />
           ) : (
             <Typography variant="body2" color="text.secondary">

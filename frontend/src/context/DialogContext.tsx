@@ -7,7 +7,7 @@ import Button from '@mui/material/Button';
 
 export interface DialogOptions {
   title: string;
-  message: string;
+  message: string|React.ReactNode;
   okText?: string;
   cancelText?: string;
   onOk?: () => void;

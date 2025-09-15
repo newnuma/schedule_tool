@@ -15,6 +15,12 @@ const AssinmentTask: React.FC = () => {
   const itemsPageKey = "assignment:task:items";   // DateRange for tasks
   const groupsPageKey = "assignment:task:groups"; // Department filter for people
 
+  // 初期表示範囲（2週前～2か月後）
+  const start = new Date();
+  start.setDate(start.getDate() - 14);
+  const end = new Date();
+  end.setMonth(end.getMonth() + 2);
+
   // データ取得（itemsPageKey の dateRange にのみ連動）
   const debounceRef = useRef<number | undefined>(undefined);
   const itemsDateRange = filters[itemsPageKey]?.dateRange;
@@ -95,6 +101,8 @@ const AssinmentTask: React.FC = () => {
         items={items} 
         groups={groups} 
         height='calc(100vh - 200px)'
+        start={start}
+        end={end}
       />
     </div>
   );

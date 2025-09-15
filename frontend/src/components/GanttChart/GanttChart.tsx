@@ -55,11 +55,14 @@ export interface GanttChartProps {
   groups?: GanttGroup[];
   options?: TimelineOptions;
   height?: string | number;
+  start?: string | Date;
+  end?: string | Date;
   onItemRightClick?: (itemId: number | string, itemName: string, event: MouseEvent) => void;
   // アイテムからツールチップ (HTML 文字列) を生成するコールバック。item.tooltipHtml が優先される。
   getItemTooltip?: (item: GanttItem) => string | undefined;
-  // グループ（左列ラベル）のクリック/右クリックイベント
+  // グループ（左列ラベル）のクリックイベント
   onGroupClick?: (groupId: number | string, group: GanttGroup, event: MouseEvent) => void;
+  // グループ（左列ラベル）の右クリックイベント
   onGroupRightClick?: (groupId: number | string, group: GanttGroup, event: MouseEvent) => void;
 }
 
@@ -97,6 +100,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
   groups,
   options,
   height = 500,
+  start,
+  end,
   onItemRightClick,
   getItemTooltip,
   onGroupClick,
@@ -165,35 +170,20 @@ const GanttChart: React.FC<GanttChartProps> = ({
       verticalScroll: true,
       margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
       tooltip: { followMouse: true },
+      zoomMax: 1000 * 60 * 60 * 24 * 365 * 5, // 最大ズームアウトを５年に制限
+      zoomMin: 1000 * 60 * 60 * 24 * 3, // 最大ズームインを3日に制限
+      ...(start ? { start } : {}),
+      ...(end ? { end } : {}),
       ...(stackValue ? { subgroupOrder: 'subgroupOrder' } : {}),
       ...memoizedOptions,
     } as TimelineOptions;
     // グループラベルクリック/右クリック
-    if ((onGroupClick || onGroupRightClick)) {
-      (defaultOptions as any).groupTemplate = (group: any, element: HTMLElement) => {
-        if (element) {
-          element.textContent = group?.content ?? '';
-          element.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
-          const elAny = element as any;
-          if (!elAny.__hasGroupHandlers) {
-            if (onGroupClick) {
-              element.addEventListener('click', (ev: Event) => {
-                onGroupClick(group.id, group as GanttGroup, ev as MouseEvent);
-              });
-            }
-            if (onGroupRightClick) {
-              element.addEventListener('contextmenu', (ev: Event) => {
-                ev.preventDefault();
-                onGroupRightClick(group.id, group as GanttGroup, ev as MouseEvent);
-              });
-            }
-            elAny.__hasGroupHandlers = true;
-          }
-          return element;
-        }
+    if (onGroupClick || onGroupRightClick) {
+      (defaultOptions as any).groupTemplate = (group: any) => {
+        // 毎回新しいdivを生成して返す（element引数は使わない）
         const div = document.createElement('div');
         div.textContent = group?.content ?? '';
-        div.style.cursor = (onGroupClick || onGroupRightClick) ? 'pointer' : '';
+        div.style.cursor = 'pointer';
         if (onGroupClick) {
           div.addEventListener('click', (ev: Event) => {
             onGroupClick(group.id, group as GanttGroup, ev as MouseEvent);
@@ -284,6 +274,8 @@ const GanttChart: React.FC<GanttChartProps> = ({
       verticalScroll: true,
       margin: { item: { horizontal: 0, vertical: 8 }, axis: 5 },
       tooltip: { followMouse: true },
+      ...(start ? { start } : {}),
+      ...(end ? { end } : {}),
       ...(stackValue ? { subgroupOrder: 'subgroupOrder' } : {}),
       ...memoizedOptions,
     } as TimelineOptions;

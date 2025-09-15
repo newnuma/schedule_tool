@@ -8,6 +8,7 @@ import {getTooltipHtml}from "../../components/GanttChart/GanttChart";
 import { CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../components/filters";
 import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
+import {useEntityCrud} from "../../hooks/useEntityCrud"
 
 // 型定義
 import type { IPhase, IAsset, ITask, IPerson } from "../../context/AppContext";
@@ -29,6 +30,13 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
   const itemsPageKey = "project.tasks:items";   // date range etc. for items
   const groupsPageKey = "project.tasks:groups"; // group-level filter (asset type)
   const { openForm } = useFormContext();
+  const { handleDeleteAsset, handleDeleteTask } = useEntityCrud(); 
+
+  // 初期表示範囲（１週前～1か月後）
+  const start = new Date();
+  start.setDate(start.getDate() - 7);
+  const end = new Date();
+  end.setMonth(end.getMonth() + 1);
 
   // ContextMenuの状態管理
   const [menuState, setMenuState] = React.useState<{
@@ -122,7 +130,7 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
     {
       dividerBefore: true,
       label: "Delete",
-      action: () => {},
+      action: () => {handleDeleteTask(menuState.task as ITask)},
       disable: !isEditMode,
       color: "error.main",
     },
@@ -306,6 +314,8 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
             groups={groups} 
             onItemRightClick={handleGanttRightClick}
             height='calc(100vh - 200px)'
+            start={start}
+            end={end}
           />
         ) : (
           <Typography variant="body2" color="text.secondary">

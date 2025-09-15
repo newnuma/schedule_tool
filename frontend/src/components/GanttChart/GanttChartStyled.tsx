@@ -215,6 +215,14 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
     borderWidth: "3px !important",
     borderColor: "#e53935 !important", // 赤
   },
+  // ====== 週末背景色（グリッド） ======
+  // 土曜・日曜のグリッド背景色と文字色を変更
+  '& .vis-time-axis .vis-grid.vis-saturday, & .vis-time-axis .vis-grid.vis-sunday': {
+    background: '#f5f5f5',
+  },
+  '& .vis-time-axis .vis-text.vis-saturday, & .vis-time-axis .vis-text.vis-sunday': {
+    color: '#888',
+  },
 }));
 
 export const NoDataBox = styled(Box)(({ theme }) => ({
