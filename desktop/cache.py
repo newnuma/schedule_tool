@@ -17,11 +17,13 @@ def get_project_id_and_person_list():
     cache = load_cache()
     project_id = cache.get("project_id", 1)  # デフォルト値は適宜
     person_list = cache.get("person_list", [])
-    return project_id, person_list
+    current_user = cache.get("current_user", None)
+    return project_id, person_list, current_user
 
-def set_project_id_and_person_list(project_id, person_list):
+def set_project_id_and_person_list(project_id, person_list, current_user):
     cache = load_cache()
     cache["project_id"] = project_id
     cache["person_list"] = person_list
+    cache["current_user"] = current_user
     save_cache(cache)# データ構造や型定義を記載（必要な場合）
 # サーバーやReactとやりとりするデータの型や補助的なクラスを定義

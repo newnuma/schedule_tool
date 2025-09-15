@@ -23,10 +23,10 @@ class DataBridge(QObject):
     # Init loader: steps + three pages worth of data
     @Slot(result="QVariant")
     def initLoad(self) -> Any:
-        project_id, person_list = cache.get_project_id_and_person_list()
+        project_id, person_list, current_user = cache.get_project_id_and_person_list()
         start, end = self._default_assignment_range()
-        return api_client.init_load(project_id, person_list, (start, end))
-    
+        return api_client.init_load(project_id, person_list, (start, end), current_user)
+
     # Page-specific fetchers
     @Slot(result="QVariant")
     def fetchDistributePage(self) -> Any:
@@ -67,6 +67,21 @@ class DataBridge(QObject):
     @Slot(str, int, result="QVariant")
     def deleteEntity(self, type: str, id: int) -> Any:
         result = api_client.delete_entity(type, id)
+        return result
+    
+    @Slot(int, int, result="QVariant")
+    def acquireEditLock(self, subproject_id: int, user_id: int) -> Any:
+        result = api_client.acquire_edit_lock(subproject_id, user_id)
+        return result
+    
+    @Slot(int, int, result="QVariant")
+    def heartbeatEditLock(self, subproject_id: int, user_id: int) -> Any:
+        result = api_client.heartbeat_edit_lock(subproject_id, user_id)
+        return result
+    
+    @Slot(int, int, result="QVariant")
+    def releaseEditLock(self, subproject_id: int, user_id: int) -> Any:
+        result = api_client.release_edit_lock(subproject_id, user_id)
         return result
 
     # @Slot(int, result="QVariant")

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Typography, Box, Tabs, Tab, Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
 import { Main } from "../components/StyledComponents";
 import { useAppContext, IPerson } from "../context/AppContext";
@@ -10,6 +10,8 @@ import WorkloadTab from "../pages/projectPageTabs/WorkloadTab";
 import type { ISubproject } from "../context/AppContext";
 import { FormProvider } from "../context/FormContext";
 import { FormManager } from "../components/forms";
+import { acquireEditLock, heartbeatEditLock,releaseEditLock } from '../api/bridgeApi';
+import { useDialogContext } from "../context/DialogContext";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -24,6 +26,14 @@ interface SubprojectSelectorProps {
   isEditMode: boolean;
   setEditMode: (enabled: boolean) => void;
 }
+
+interface EditModeButtonProps {
+  isEditMode: boolean;
+  setEditMode: (enabled: boolean) => void;
+  selectedSubprojectId?: number;
+  currentUser: IPerson | null;
+}
+
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
@@ -64,22 +74,92 @@ function SubprojectSelector({ selectedSubproject, subprojects, onChange, isEditM
           )}
         />
       </Box>
-      <FormControlLabel
-        control={
-          <Switch
-            checked={isEditMode}
-            onChange={(event) => setEditMode(event.target.checked)}
-            color="primary"
-            size="medium"
-          />
-        }
-        label={<Typography variant="h6">Edit</Typography>}
-        labelPlacement="start"
-        sx={{ gap: 1 }}
-      />
+      <EditModeButton isEditMode={isEditMode} setEditMode={setEditMode} selectedSubprojectId={selectedSubproject?.id} currentUser={useAppContext().currentUser} />
     </Box>
   );
 }
+
+// EditModeButton: 独立コンポーネント
+
+interface EditModeButtonProps {
+  isEditMode: boolean;
+  setEditMode: (enabled: boolean) => void;
+  selectedSubprojectId?: number;
+  currentUser: IPerson | null;
+}
+
+export const EditModeButton: React.FC<EditModeButtonProps> = ({ isEditMode, setEditMode, selectedSubprojectId, currentUser }) => {
+  const { openDialog } = useDialogContext();
+  const editTimeoutId = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatId = useRef<NodeJS.Timeout | null>(null);
+
+  const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    if (checked) {
+      // EditMode ON: ロック取得
+      if (!selectedSubprojectId || !currentUser) return;
+      const res = await acquireEditLock(selectedSubprojectId, currentUser.id);
+      if (res && res.success === false) {
+        openDialog({
+          title: "Edit Locked",
+          message: `Another user (${res.editingUser?.name || "Unknown"}) is currently editing. Please try again later.`,
+          okText: "OK"
+        });
+        setEditMode(false);
+        return;
+      }
+      setEditMode(true);
+      // 15分タイマー
+      editTimeoutId.current = setTimeout(() => {
+        setEditMode(false);
+        openDialog({
+          title: "Edit Time Expired",
+          message: "Edit mode has been turned off after 15 minutes. If you wish to continue editing, please turn on the Edit button again.",
+          okText: "OK"
+        });
+      }, 15 * 60 * 1000);
+      // 1分ごとにheartbeat
+      heartbeatId.current = setInterval(() => {
+        heartbeatEditLock(selectedSubprojectId, currentUser.id);
+      }, 60 * 1000);
+
+    } else {
+      // EditMode OFF: ロック解除
+      if (selectedSubprojectId && currentUser) {
+        releaseEditLock(selectedSubprojectId, currentUser.id);
+      }
+      setEditMode(false);
+      if (editTimeoutId.current) clearTimeout(editTimeoutId.current);
+      if (heartbeatId.current) clearInterval(heartbeatId.current);
+      editTimeoutId.current = null;
+      heartbeatId.current = null;
+    }
+  };
+
+  // サブプロジェクト切り替え時のクリーンアップ
+  React.useEffect(() => {
+    return () => {
+      if (editTimeoutId.current) clearTimeout(editTimeoutId.current);
+      if (heartbeatId.current) clearInterval(heartbeatId.current);
+    };
+  }, [selectedSubprojectId]);
+
+  return (
+    <FormControlLabel
+      control={
+        <Switch
+          checked={isEditMode}
+          onChange={handleChange}
+          color="primary"
+          size="medium"
+        />
+      }
+      label={<Typography variant="h6">Edit</Typography>}
+      labelPlacement="start"
+      sx={{ gap: 1 }}
+    />
+  );
+};
 
 function a11yProps(index: number) {
   return {
@@ -92,7 +172,7 @@ const ProjectPage: React.FC = () => {
   const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, 
     addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addMilestoneTasks,
     addPeople, setSelectedPersonList, isEditMode, setEditMode, 
-    phases, assets, tasks, milestoneTasks, personWorkloads, pmmWorkloads, people, workCategories } = useAppContext();
+    phases, assets, tasks, milestoneTasks, personWorkloads, pmmWorkloads, people, workCategories, currentUser } = useAppContext();
   const [tabValue, setTabValue] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {

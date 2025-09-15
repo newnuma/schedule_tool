@@ -145,3 +145,19 @@ export async function updateEntities<T extends { id: number }>(dataArr: Partial<
   const dataStr = JSON.stringify(dataArr);
   return callBridge('updateEntities', dataStr);
 }
+
+  // --- Edit Lock API ---
+  export async function acquireEditLock(subprojectId: number, userId: number) {
+    // Python側で判定・更新
+    return callBridge('acquireEditLock', subprojectId, userId);
+  }
+
+  export async function heartbeatEditLock(subprojectId: number, userId: number) {
+    // Python側でlast_editを更新
+    return callBridge('heartbeatEditLock', subprojectId, userId);
+  }
+
+  export async function releaseEditLock(subprojectId: number, userId: number) {
+    // Python側でロック解除
+    return callBridge('releaseEditLock', subprojectId, userId);
+  }

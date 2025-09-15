@@ -1,3 +1,4 @@
+
 """Abstraction for accessing Flow-PT like entities.
 
 In development mode this uses :class:`dummy_server.fake_shotgun.FakeShotgun`.
@@ -129,7 +130,7 @@ entity_fields = {
     "Step": ["id", "name", "color"],
     "Person": ["id", "name", "email", "department", "manager", "subproject"],
     "Subproject": [
-        "id", "name", "start_date", "end_date", "editing", "department", "access", "pmm_status"
+        "id", "name", "start_date", "end_date", "editing", "department", "access", "pmm_status","last_edit"
     ],
     "Phase": [
         "id", "subproject", "name", "start_date", "end_date", "milestone", "phase_type"
@@ -234,14 +235,16 @@ def fetch_distribute_page() -> Any:
     }
 
 
-def fetch_basic_data() -> Any:
+def fetch_basic_data(current_user_id: int) -> Any:
     person = get_entities("Person")
     steps = get_entities("Step")
     work_categories = get_entities("WorkCategory")
+    current_user = get_entity("Person", current_user_id) if current_user_id else None
     return {
         "person": person,
         "steps": steps,
         "workCategories": work_categories,
+        "currentUser": current_user,
     }
 
 
@@ -348,13 +351,13 @@ def fetch_assignment_workloads(start_iso: str, end_iso: str) -> Any:
     personworkloads = remap_key_in_list(personworkloads, "task.asset.phase.subproject", "subproject")
     return {"personworkloads": personworkloads}
 
-def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[str, str]) -> Any:
+def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[str, str], current_user_id: int) -> Any:
     """起動時ロード: 3ページの必要情報 + 基本情報(Step) を一括取得し、ID重複なしでマージして返す"""
     distribute = fetch_distribute_page()
     # project_page = fetch_project_page(project_id)
     # assignment_page = fetch_assignment_page(assignment_range[0], assignment_range[1])
 
-    basic_data = fetch_basic_data()
+    basic_data = fetch_basic_data(current_user_id)
 
     def merge_by_id(*lists, id_key="id"):
         merged = {}
@@ -371,6 +374,7 @@ def init_load(project_id: int, person_list: List[int], assignment_range: Tuple[s
         "workCategories": merge_by_id(basic_data.get("workCategories", [])),
         "selectedSubprojectId": project_id,
         "selectedPersonList": person_list,
+        "currentUser": basic_data.get("currentUser", None),
     }
 
     return res
@@ -403,3 +407,66 @@ def delete_entity(entity_type: str, entity_id: int) -> bool:
         return sg.delete(entity_type, entity_id)
     except Exception as e:
         return {"error": True, "message": str(e)}
+    
+
+# --- Edit Lock Control ---
+def acquire_edit_lock(subproject_id: int, user_id: int) -> dict:
+    """
+    Try to acquire edit lock for a subproject. Returns success status and editing user info if failed.
+    """
+    from datetime import datetime, timedelta
+    subproject = get_entity("Subproject", subproject_id)
+    now = datetime.now()
+    editing = subproject.get("editing")
+    last_edit = subproject.get("last_edit")
+    # If no editing or editing is self or last_edit is None/old, allow
+    if not editing or (editing and editing.get("id") == user_id) or not last_edit:
+        # Lock allowed
+        update_data = {
+            "editing": {"type": "Person", "id": user_id},
+            "last_edit": now.isoformat(timespec="seconds")
+        }
+        update_entity(subproject_id, {"type": "Subproject", **update_data})
+        return {"success": True}
+    # Check last_edit time
+    try:
+        last_edit_dt = datetime.fromisoformat(last_edit)
+    except Exception:
+        last_edit_dt = None
+    if last_edit_dt and (now - last_edit_dt).total_seconds() > 5 * 60:
+        # Lock expired, allow
+        update_data = {
+            "editing": {"type": "Person", "id": user_id},
+            "last_edit": now.isoformat(timespec="seconds")
+        }
+        update_entity(subproject_id, {"type": "Subproject", **update_data})
+        return {"success": True}
+    # Otherwise, locked by another user
+    return {
+        "success": False,
+        "editingUser": editing,
+        "last_edit": last_edit
+    }
+
+def heartbeat_edit_lock(subproject_id: int, user_id: int) -> dict:
+    """
+    Update last_edit if editing is current user.
+    """
+    from datetime import datetime
+    subproject = get_entity("Subproject", subproject_id)
+    editing = subproject.get("editing")
+    if editing and editing.get("id") == user_id:
+        update_entity(subproject_id, {"type": "Subproject", "last_edit": datetime.now().isoformat(timespec="seconds")})
+        return {"success": True}
+    return {"success": False}
+
+def release_edit_lock(subproject_id: int, user_id: int) -> dict:
+    """
+    Release edit lock if editing is current user.
+    """
+    subproject = get_entity("Subproject", subproject_id)
+    editing = subproject.get("editing")
+    if editing and editing.get("id") == user_id:
+        update_entity(subproject_id, {"type": "Subproject", "editing": None, "last_edit": None})
+        return {"success": True}
+    return {"success": False}

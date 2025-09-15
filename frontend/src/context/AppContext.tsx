@@ -33,6 +33,7 @@ export interface ISubproject {
     department?: IForignKey | null; // Department参照
     access: "Common" | "Project Team" | "High Confidential";
     editing?: IForignKey | null; // 編集中ユーザー(Person FK)
+    last_edit?: string | null; // 最終編集日時(ISO文字列)
     pmm_status?: "planning" | "approved";
 }
 
@@ -184,6 +185,9 @@ export interface IAppContext {
     selectedSubprojectId?: number;
     setSelectedSubprojectId: (id?: number) => void;
 
+    currentUser: IPerson | null;
+    setCurrentUser: (user: IPerson | null) => void;
+
     workCategories?: IWorkCategory[];
     setWorkCategories: (categories: IWorkCategory[]) => void;
 
@@ -230,6 +234,8 @@ const defaultParams: IAppContext = {
     addPeople: () => {},
     selectedSubprojectId: undefined,
     setSelectedSubprojectId: () => {},
+    currentUser: null,
+    setCurrentUser: () => {},
     workCategories: [],
     setWorkCategories: () => {},
     selectedPersonList: [],
@@ -260,6 +266,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [people, setPeople] = useState<IPerson[]>([]);
     const [workCategories, setWorkCategories] = useState<IWorkCategory[]>([]);
     const [selectedSubprojectId, setSelectedSubprojectId] = useState<number | undefined>(undefined);
+    const [currentUser, setCurrentUser] = useState<IPerson | null>(null);
     const [selectedPersonList, setSelectedPersonList] = useState<number[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState<IPage>("Distribute");
@@ -488,6 +495,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 setWorkCategories,
                 selectedSubprojectId,
                 setSelectedSubprojectId: handleSetSelectedSubprojectId,
+                currentUser,
+                setCurrentUser,
                 selectedPersonList,
                 setSelectedPersonList,
                 loading,

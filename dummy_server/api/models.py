@@ -46,6 +46,7 @@ class Subproject(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     # people = models.ManyToManyField(Person, related_name='subprojects', blank=True)
+    last_edit = models.DateTimeField(null=True, blank=True)
     editing = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, blank=True, related_name='editing_subprojects')
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='subprojects')
     access = models.CharField(max_length=32, choices=[
