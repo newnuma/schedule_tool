@@ -8,6 +8,7 @@ import DateRangeFilter from "../../components/filters/DateRangeFilter";
 import SearchDropdownFilter from "../../components/filters/SearchDropdownFilter";
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
 import { useFormContext } from "../../context/FormContext";
+import { useDialogContext } from "../../context/DialogContext";
 
 // 型定義
 import type { IPhase, IAsset, ITask, IForignKey, IPersonWorkload, IPMMWorkload, IPerson, IWorkCategory, ISubproject } from "../../context/AppContext";
@@ -31,6 +32,7 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
   const assetFilterKey = "workload:asset";
   const { addPersonWorkloads, addPMMWorkloads, setLoading } = useAppContext();
   const { openForm } = useFormContext();
+  const { openDialog } = useDialogContext();
 
   const selectedWorkCategoryName = filters[assetFilterKey]?.dropdown?.["work_category.name"]?.[0];
   const selectedWorkCategory: IForignKey = {
@@ -227,14 +229,27 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
         if (result.id) {
           addPMMWorkloads([result]);
         }
-      }
-      ).finally();
+      }).catch((error) => {
+      openDialog({
+        title: "Update Failed",
+        message: `Failed to update Workload.\n${error.message}`,
+        okText: "OK",
+      });
+      console.error('Failed to update entity:', error);
+      });
     } else {
       createEntity(edit).then((result) => {
         if (result.id) {
           addPMMWorkloads([result]);
         }
-      }).finally();
+      }).catch((error) => {
+      openDialog({
+        title: "Create Failed",
+        message: `Failed to create Workload.\n${error.message}`,
+        okText: "OK",
+      });
+      console.error('Failed to cre entity:', error);
+      });
     }
   };
 

@@ -380,17 +380,26 @@ def create_entity(data: dict) -> Any:
     entity_type = data.get("type")
     fields = entity_fields.get(entity_type)
     data.pop("type")  # typeフィールドは削除
-    result = sg.create(entity_type, data, fields)
-    result = adjust_field_names(result)
-    return _format_dict(result)
+    try:
+        result = sg.create(entity_type, data, fields)
+        result = adjust_field_names(result)
+        return _format_dict(result)
+    except Exception as e:
+        return {"error": True, "message": str(e)}
 
 def update_entity(entity_id: int, data: dict) -> Any:
     entity_type = data.get("type")
     data.pop("type")  # typeフィールドは削除
-    sg.update(entity_type, entity_id, data)
-    result = get_entity(entity_type, entity_id)
-    result = adjust_field_names(result)
-    return _format_dict(result)
+    try:
+        sg.update(entity_type, entity_id, data)
+        result = get_entity(entity_type, entity_id)
+        result = adjust_field_names(result)
+        return _format_dict(result)
+    except Exception as e:
+        return {"error": True, "message": str(e)}
 
 def delete_entity(entity_type: str, entity_id: int) -> bool:
-    return sg.delete(entity_type, entity_id)
+    try:
+        return sg.delete(entity_type, entity_id)
+    except Exception as e:
+        return {"error": True, "message": str(e)}

@@ -105,16 +105,31 @@ export function fetchSteps() {
 
 export function createEntity(data: Partial<IAsset | IPhase | ITask | IPersonWorkload | IPMMWorkload>) {
   const dataStr = JSON.stringify(data);
-  return callBridge('createEntity', dataStr);
+  return callBridge('createEntity', dataStr).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function updateEntity(id: number, data: Partial<IAsset | IPhase | ITask | IPersonWorkload | IPMMWorkload >) {
   const dataStr = JSON.stringify(data);
-  return callBridge('updateEntity', id, dataStr);
+  return callBridge('updateEntity', id, dataStr).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function deleteEntity(type: string, id: number) {
-  return callBridge('deleteEntity', type, id);
+  return callBridge('deleteEntity', type, id).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export async function createEntities<T extends object>(dataArr: Partial<T>[]): Promise<T[]> {

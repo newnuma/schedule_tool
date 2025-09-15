@@ -106,6 +106,11 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
         }
       }
     }).catch((error) => {
+      openDialog({
+        title: "Create Failed",
+        message: `Failed to create '${data?.name || ''}'.\n${error.message}`,
+        okText: "OK",
+      });
       console.error('Failed to create entity:', error);
     });
   };
@@ -126,7 +131,7 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
     }).catch((error) => {
       openDialog({
         title: "Update Failed",
-        message: `Failed to update'${formState?.initialValues?.name || ''}'.`,
+        message: `Failed to update '${data?.name || ''}'.\n${error.message}`,
         okText: "OK",
       });
       console.error('Failed to update entity:', error);
