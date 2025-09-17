@@ -25,6 +25,8 @@ class DataBridge(QObject):
     def initLoad(self) -> Any:
         project_id, person_list, current_user = cache.get_project_id_and_person_list()
         # project_id= cache.get("project_id")
+        if current_user is None:
+            current_user = 386
         start, end = self._default_assignment_range()
         result = api_client.init_load(project_id, person_list, (start, end), current_user)
         result["filters"] = cache.load_cache().get("filters", {})  # キャッシュからフィルター情報を追加

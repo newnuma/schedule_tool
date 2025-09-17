@@ -1,10 +1,17 @@
 import json
 import os
 
-CACHE_FILE = os.path.join(os.path.dirname(__file__), "cache.json")
+import getpass
+
+# ユーザープロファイルのデスクトップにcache.jsonを配置
+USER_DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
+CACHE_FILE = os.path.join(USER_DESKTOP, "cache.json")
 
 def load_cache():
     if not os.path.exists(CACHE_FILE):
+        # ファイルがなければ空のJSONファイルを新規作成
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=2)
         return {}
     with open(CACHE_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
