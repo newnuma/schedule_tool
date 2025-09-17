@@ -12,6 +12,7 @@ import { useAppContext } from "../../context/AppContext";
 import { useDialogContext } from "../../context/DialogContext";
 import { deleteEntity } from "../../api/bridgeApi";
 import {useEntityCrud} from "../../hooks/useEntityCrud"
+import { openFlowPtUrl } from "../../api/bridgeApi";
 
 // 型定義
 import type { IPhase, IAsset, IMilestoneTask } from "../../context/AppContext";
@@ -98,8 +99,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     {
       label: "Jump to Flow-PT",
       action: () => {
-        // asset情報を利用
-        console.log("Jump to Flow-PT", menuState.asset);
+        openFlowPtUrl(selectedSubprojectId);
       },
     },
     {

@@ -170,3 +170,8 @@ export function sendFilterConfig(pageKey: string, filterConfig: any) {
   };
   return callBridge('saveFilterConfig', JSON.stringify(data));
 }
+
+// Flow-PT外部ブラウザ起動API
+export function openFlowPtUrl(assetId: number) {
+  return callBridge('openFlowPtUrl', assetId);
+}

@@ -9,6 +9,12 @@ import json
 
 
 class DataBridge(QObject):
+    @Slot(int, result="QVariant")
+    def openFlowPtUrl(self, asset_id: int) -> Any:
+        import webbrowser
+        url = f"https://flow-pt.example.com/assets/{asset_id}"
+        webbrowser.open(url)
+        return {"success": True, "url": url}
     """Expose API client methods to the frontend via Qt WebChannel."""
 
     def _default_assignment_range(self) -> Tuple[str, str]:
