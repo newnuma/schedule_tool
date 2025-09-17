@@ -1,4 +1,3 @@
-
 // Utilities for accessing the Qt WebChannel dataBridge object.
 // Always `await channelReady` before calling any bridge API.
 
@@ -161,3 +160,13 @@ export async function updateEntities<T extends { id: number }>(dataArr: Partial<
     // Python側でロック解除
     return callBridge('releaseEditLock', subprojectId, userId);
   }
+
+
+  //　filter cache
+export function sendFilterConfig(pageKey: string, filterConfig: any) {
+  const data = {
+    pageKey,
+    filterConfig,
+  };
+  return callBridge('saveFilterConfig', JSON.stringify(data));
+}

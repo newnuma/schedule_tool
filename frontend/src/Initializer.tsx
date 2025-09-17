@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useAppContext } from "./context/AppContext";
+import { useFilterContext } from "./context/FilterContext";
 import * as bridgeApi from "./api/bridgeApi";
 
 const fetchInitialData = async (
@@ -11,7 +12,8 @@ const fetchInitialData = async (
   setLoading: any,
   setSelectedPersonList: any,
   setSelectedSubprojectId: any,
-  setCurrentUser: any
+  setCurrentUser: any,
+  setFilters: any
 ) => {
   setLoading(true);
   console.log("Fetching initial data...");
@@ -26,6 +28,9 @@ const fetchInitialData = async (
     setSelectedPersonList(result.selectedPersonList || []);
     setSelectedSubprojectId(result.selectedSubprojectId || undefined);
     setCurrentUser(result.currentUser || undefined);
+    if (result.filters) {
+      setFilters(result.filters);
+    }
   } catch (e) {
     console.error(e);
   } finally {
@@ -44,7 +49,10 @@ const Initializer = () => {
     setSelectedPersonList,
     setSelectedSubprojectId,
     setCurrentUser,
+
   } = useAppContext();
+
+  const { setFilters } = useFilterContext();
 
   useEffect(() => {
     (async () => {
@@ -59,6 +67,7 @@ const Initializer = () => {
         setSelectedPersonList,
         setSelectedSubprojectId,
         setCurrentUser,
+        setFilters,
       );
     })();
     // eslint-disable-next-line

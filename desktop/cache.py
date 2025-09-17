@@ -27,3 +27,9 @@ def set_project_id_and_person_list(project_id, person_list, current_user):
     cache["current_user"] = current_user
     save_cache(cache)# データ構造や型定義を記載（必要な場合）
 # サーバーやReactとやりとりするデータの型や補助的なクラスを定義
+
+# 任意のキーと値でキャッシュを更新する関数
+def set_cache_value(key, value):
+    cache = load_cache()
+    cache[key] = value
+    save_cache(cache)

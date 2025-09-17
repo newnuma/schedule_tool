@@ -24,8 +24,11 @@ class DataBridge(QObject):
     @Slot(result="QVariant")
     def initLoad(self) -> Any:
         project_id, person_list, current_user = cache.get_project_id_and_person_list()
+        # project_id= cache.get("project_id")
         start, end = self._default_assignment_range()
-        return api_client.init_load(project_id, person_list, (start, end), current_user)
+        result = api_client.init_load(project_id, person_list, (start, end), current_user)
+        result["filters"] = cache.load_cache().get("filters", {})  # キャッシュからフィルター情報を追加
+        return result
 
     # Page-specific fetchers
     @Slot(result="QVariant")
@@ -34,7 +37,9 @@ class DataBridge(QObject):
 
     @Slot(int, result="QVariant")
     def fetchProjectPage(self, subproject_id: int) -> Any:
-        return api_client.fetch_project_page(subproject_id)
+        result = api_client.fetch_project_page(subproject_id)
+        cache.set_cache_value("project_id", subproject_id)  # キャッシュを保存
+        return result
 
     @Slot(str, str, result="QVariant")
     def fetchAssignmentPage(self, start: str, end: str) -> Any:
@@ -83,6 +88,19 @@ class DataBridge(QObject):
     def releaseEditLock(self, subproject_id: int, user_id: int) -> Any:
         result = api_client.release_edit_lock(subproject_id, user_id)
         return result
+    
+    @Slot(str, result="QVariant")
+    def saveFilterConfig(self, data: str) -> Any:
+        try:
+            payload = json.loads(data)
+            page_key = payload.get("pageKey")
+            filter_config = payload.get("filterConfig")
+            filters = cache.load_cache().get("filters", {})
+            filters[page_key] = filter_config
+            cache.set_cache_value("filters", filters)
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     # @Slot(int, result="QVariant")
     # def getSubproject(self, subproject_id: int) -> Any:  # noqa: N802

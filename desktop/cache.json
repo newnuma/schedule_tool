@@ -1,5 +1,68 @@
 {
-  "project_id": 116,
-  "person_list": [35, 36, 37, 38, 39],
-  "current_user": 384
+  "project_id": 118,
+  "person_list": [
+    35,
+    36,
+    37,
+    38,
+    39
+  ],
+  "current_user": 384,
+  "filters": {
+    "assignment:task:items": {
+      "dropdown": {},
+      "dateRange": {
+        "start": "2025-09-17",
+        "end": "2025-11-11",
+        "startProperty": "start_date",
+        "endProperty": "end_date"
+      }
+    },
+    "assignment:workload:items": {
+      "dropdown": {},
+      "dateRange": {
+        "start": "2025-09-15",
+        "end": "2025-11-09",
+        "startProperty": "week",
+        "endProperty": "week"
+      }
+    },
+    "workload:asset": {
+      "dropdown": {
+        "work_category.name": [
+          "Packaging"
+        ]
+      },
+      "dateRange": {
+        "start": "2025-09-15",
+        "end": "2025-11-09",
+        "startProperty": "start_date",
+        "endProperty": "end_date"
+      }
+    },
+    "project.assets:groups": {
+      "dateRange": null,
+      "dropdown": {
+        "asset_type": []
+      }
+    },
+    "project.assets:items": {
+      "dateRange": null,
+      "dropdown": {}
+    },
+    "assignment:task:groups": {
+      "dropdown": {
+        "department.name": [
+          "Prototype"
+        ]
+      },
+      "dateRange": null
+    },
+    "distribute.subprojects:groups": {
+      "dateRange": null,
+      "dropdown": {
+        "name": []
+      }
+    }
+  }
 }

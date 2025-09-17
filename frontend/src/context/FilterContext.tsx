@@ -1,5 +1,29 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import type { FilterConfig, FilterContextType } from "../types/filter.types";
+// import type { FilterConfig, FilterContextType } from "../types/filter.types";
+import { sendFilterConfig } from "../api/bridgeApi";
+export interface FilterConfig {
+  dropdown: Record<string, any[]>; // プロパティ名 -> 選択された値の配列
+  dateRange: {
+    start?: string;
+    end?: string;
+    startProperty?: string;
+    endProperty?: string;
+  } | null;
+}
+
+export interface FilterContextType {
+  // フィルター状態
+  filters: Record<string, FilterConfig>; // ページ/タブキー -> フィルター設定
+  setFilters: React.Dispatch<React.SetStateAction<Record<string, FilterConfig>>>;
+  // フィルター操作
+  setDropdownFilter: (pageKey: string, property: string, selectedValues: any[]) => void;
+  setDateRangeFilter: (pageKey: string, start?: string, end?: string, startProp?: string, endProp?: string) => void;
+  clearFilters: (pageKey: string) => void;
+  
+  // フィルタリング実行
+  getFilteredData: <T>(pageKey: string, data: T[]) => T[];
+}
+
 
 const defaultFilterConfig: FilterConfig = {
   dropdown: {},
@@ -25,16 +49,21 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
 
   // ドロップダウンフィルターの設定
   const setDropdownFilter = useCallback((pageKey: string, property: string, selectedValues: any[]) => {
-    setFilters(prev => ({
-      ...prev,
-      [pageKey]: {
-        ...prev[pageKey] || defaultFilterConfig,
-        dropdown: {
-          ...prev[pageKey]?.dropdown || {},
-          [property]: selectedValues,
+    setFilters(prev => {
+      const updated = {
+        ...prev,
+        [pageKey]: {
+          ...prev[pageKey] || defaultFilterConfig,
+          dropdown: {
+            ...prev[pageKey]?.dropdown || {},
+            [property]: selectedValues,
+          },
         },
-      },
-    }));
+      };
+      // フィルター変更時に即送信
+      sendFilterConfig(pageKey, updated[pageKey]);
+      return updated;
+    });
   }, []);
 
   // 日付範囲フィルターの設定
@@ -45,18 +74,23 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
     startProp?: string, 
     endProp?: string
   ) => {
-    setFilters(prev => ({
-      ...prev,
-      [pageKey]: {
-        ...prev[pageKey] || defaultFilterConfig,
-        dateRange: start || end ? {
-          start,
-          end,
-          startProperty: startProp,
-          endProperty: endProp,
-        } : null,
-      },
-    }));
+    setFilters(prev => {
+      const updated = {
+        ...prev,
+        [pageKey]: {
+          ...prev[pageKey] || defaultFilterConfig,
+          dateRange: start || end ? {
+            start,
+            end,
+            startProperty: startProp,
+            endProperty: endProp,
+          } : null,
+        },
+      };
+      // フィルター変更時に即送信
+      sendFilterConfig(pageKey, updated[pageKey]);
+      return updated;
+    });
   }, []);
 
   // フィルターのクリア
@@ -118,6 +152,7 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
     <FilterContext.Provider
       value={{
         filters,
+        setFilters,
         setDropdownFilter,
         setDateRangeFilter,
         clearFilters,

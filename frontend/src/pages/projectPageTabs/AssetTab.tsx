@@ -387,7 +387,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       <DropdownFilter
         pageKey={groupsPageKey}
         data={basicFilteredAssets}
-        property="type"
+        property="asset_type"
         label="Type (Groups)"
       />
       <CheckboxFilter
