@@ -13,7 +13,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useFilterContext } from "../../context/FilterContext";
 
 interface CollapsibleFilterPanelProps {
-  pageKey: string;
+  pageKey: string | string[];
   children: React.ReactNode;
   expanded?: boolean;
   onChange?: (expanded: boolean) => void;
@@ -29,24 +29,27 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
 }) => {
   const { filters } = useFilterContext();
 
-  // フィルター適用数をカウント
+  // フィルター適用数をカウント（複数pageKey対応）
   const activeFilterCount = React.useMemo(() => {
-    const pageFilters = filters[pageKey];
-    if (!pageFilters) return 0;
-    let count = 0;
-    // Dropdown/Checkbox filters
-    if (pageFilters.dropdown) {
-      Object.values(pageFilters.dropdown).forEach(values => {
-        if (Array.isArray(values) && values.length > 0) {
-          count++;
-        }
-      });
-    }
-    // DateRange filter
-    if (pageFilters.dateRange && (pageFilters.dateRange.start || pageFilters.dateRange.end)) {
-      count++;
-    }
-    return count;
+    const keys = Array.isArray(pageKey) ? pageKey : [pageKey];
+    let total = 0;
+    keys.forEach(key => {
+      const pageFilters = filters[key];
+      if (!pageFilters) return;
+      // Dropdown/Checkbox filters
+      if (pageFilters.dropdown) {
+        Object.values(pageFilters.dropdown).forEach(values => {
+          if (Array.isArray(values) && values.length > 0) {
+            total++;
+          }
+        });
+      }
+      // DateRange filter
+      if (pageFilters.dateRange && (pageFilters.dateRange.start || pageFilters.dateRange.end)) {
+        total++;
+      }
+    });
+    return total;
   }, [filters, pageKey]);
 
   const title = `Filter (${activeFilterCount})`;

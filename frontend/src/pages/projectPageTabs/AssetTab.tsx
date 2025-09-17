@@ -380,7 +380,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   // Filter component
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel
-      pageKey={groupsPageKey}
+      pageKey={[groupsPageKey, itemsPageKey]} // Support multiple pageKeys
       expanded={filterPanelExpanded}
       onChange={setFilterPanelExpanded}
     >
