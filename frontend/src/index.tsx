@@ -1,8 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import { CssBaseline, Dialog, ThemeProvider, createTheme } from "@mui/material";
 import { AppProvider } from "./context/AppContext";
 import { FilterProvider } from "./context/FilterContext";
+import { DialogProvider } from "./context/DialogContext";
 import App from "./App";
 import Initializer from "./Initializer";
 
@@ -15,8 +16,10 @@ root.render(
       <CssBaseline />
       <AppProvider>
         <FilterProvider>
-          <App />
-          <Initializer />
+          <DialogProvider>
+            <App />
+            <Initializer />
+          </DialogProvider>
         </FilterProvider>
       </AppProvider>
     </ThemeProvider>

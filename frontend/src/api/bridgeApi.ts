@@ -2,7 +2,6 @@
 // Always `await channelReady` before calling any bridge API.
 
 import { IAsset, ITask ,IPhase, IPMMWorkload, IPersonWorkload} from "../context/AppContext";
-
 type BridgeObject = any;
 
 let bridgePromise: Promise<BridgeObject | null> | null = null;
@@ -20,7 +19,7 @@ export const channelReady: Promise<void> = new Promise((resolve) => {
 
 function getBridge(): Promise<BridgeObject | null> {
   if (!bridgePromise) {
-    bridgePromise = new Promise((resolve) => {
+    bridgePromise = new Promise((resolve, reject) => {
       const w = window as any;
       const webChannelUrl =
         process.env.REACT_APP_WEBCHANNEL_URL || "ws://localhost:12345";
@@ -59,9 +58,11 @@ function getBridge(): Promise<BridgeObject | null> {
 async function callBridge(method: string, ...args: any[]): Promise<any> {
   await channelReady;
   const bridge = await getBridge();
-  if (!bridge || typeof bridge[method] !== "function") {
-    console.warn(`Bridge not available or method not found: ${method}`);
-    return {};
+  if (!bridge) {
+    throw new Error(`Bridge not available (method: ${method})`);
+  }
+  if (typeof bridge[method] !== "function") {
+    throw new Error(`Bridge method not found: ${method}`);
   }
   return bridge[method](...args);
 }
@@ -69,32 +70,62 @@ async function callBridge(method: string, ...args: any[]): Promise<any> {
 // Initial bulk load: steps + data for all three pages
 export function initLoad() {
   console.log("call initLoad");
-  return callBridge('initLoad');
+  return callBridge('initLoad').then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function fetchDistributePage() {
   console.log("call fetchDistributePage");
-  return callBridge('fetchDistributePage');
+  return callBridge('fetchDistributePage').then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function fetchProjectPage(id: number) {
   console.log("call fetchProjectPage", id);
-  return callBridge('fetchProjectPage', id);
+  return callBridge('fetchProjectPage', id).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function fetchAssignmentPage(startIso: string, endIso: string) {
   console.log("call fetchAssignmentPage", startIso, endIso);
-  return callBridge('fetchAssignmentPage', startIso, endIso);
+  return callBridge('fetchAssignmentPage', startIso, endIso).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function fetchAssignmentTasks(startIso: string, endIso: string) {
   console.log("call fetchAssignmentTasks", startIso, endIso);
-  return callBridge('fetchAssignmentTasks', startIso, endIso);
+  return callBridge('fetchAssignmentTasks', startIso, endIso).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function fetchAssignmentWorkloads(startIso: string, endIso: string) {
   console.log("call fetchAssignmentWorkloads", startIso, endIso);
-  return callBridge('fetchAssignmentWorkloads', startIso, endIso);
+  return callBridge('fetchAssignmentWorkloads', startIso, endIso).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.message || 'DB Error');
+    }
+    return res;
+  });
 }
 
 export function fetchSteps() {

@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import type { IPage } from "../types";
 import type { GanttGroup } from "../components/GanttChart";
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, Tooltip, IconButton, } from "@mui/material";
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { Main } from "../components/StyledComponents";
 import { useAppContext } from "../context/AppContext";
 import GanttChart from "../components/GanttChart";
@@ -9,14 +10,36 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import { useFilterContext } from "../context/FilterContext";
 import { CollapsibleFilterPanel, CheckboxFilter, DateRangeFilter } from "../components/filters";
 import StackSwitch from "../components/common/StackSwitch";
+import { useDialogContext } from "../context/DialogContext";
+import { fetchDistributePage } from "../api/bridgeApi";
 
 const DistributePage: React.FC = () => {
   // CollapsibleFilterPanel展開状態管理
   const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   // Stack表示切替
   const [stacked, setStacked] = React.useState(true);
-  const { subprojects, phases, setSelectedSubprojectId, setCurrentPage } = useAppContext();
+  const { subprojects, phases, setSelectedSubprojectId, setCurrentPage, setLoading, addSubprojects, addPhases } = useAppContext();
   const { getFilteredData } = useFilterContext();
+  const { openDialog } = useDialogContext();
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await fetchDistributePage();
+      addSubprojects(result.subprojects || []);
+      addPhases(result.phases || []);
+    } catch (error: any) {
+      openDialog({
+        title: "Error",
+        message: `Failed to fetch subprojects data. '\n${error.message}`,
+        okText: "OK"
+      });
+      console.error('Failed to fetch subprojects data:', error);
+    } finally {
+      setLoading(false);
+    }
+
+  }, [setLoading, addPhases, addSubprojects, openDialog]);
 
   // 初期表示範囲（1か月前～1年後）
   const start = new Date();
@@ -59,7 +82,7 @@ const DistributePage: React.FC = () => {
     [phasesForItems, allowedSubprojectIds]
   );
 
-    // グループ（Subproject名）クリック時のハンドラ
+  // グループ（Subproject名）クリック時のハンドラ
   const handleGroupClick = (groupId: number | string, group: GanttGroup) => {
     const subprojectId = typeof groupId === 'number' ? groupId : Number(groupId);
     if (!isNaN(subprojectId)) {
@@ -69,8 +92,8 @@ const DistributePage: React.FC = () => {
   };
 
   // グループはAppContextのSubprojects（グループフィルタ適用後）
-    // グループはAppContextのSubprojects（グループフィルタ適用後）
-    // AssetTabと同様にsubgroupOrder/subgroupStackを追加
+  // グループはAppContextのSubprojects（グループフィルタ適用後）
+  // AssetTabと同様にsubgroupOrder/subgroupStackを追加
   const groups = useMemo(() => {
     return filteredSubprojects.map(sp => ({
       id: sp.id,
@@ -140,15 +163,24 @@ const DistributePage: React.FC = () => {
   return (
     <Main component="main">
       {/* Title Row */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <Typography variant="h4" gutterBottom sx={{ mb: 1 }}>
         Distribute
       </Typography>
+      <Tooltip title="Reload">
+        <span>
+          <IconButton onClick={fetchData} size="large" color="primary">
+            <RefreshIcon />
+          </IconButton>
+        </span>
+      </Tooltip>
+      </Box>
       {/* Counts + Filter Row */}
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
         </Box>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-            <StackSwitch value={stacked} onChange={setStacked} label="Stack" labelPosition="top" />
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+          <StackSwitch value={stacked} onChange={setStacked} label="Stack" labelPosition="top" />
           <Box sx={{ position: 'relative' }}>
             <Filter />
           </Box>
@@ -157,10 +189,10 @@ const DistributePage: React.FC = () => {
       <ErrorBoundary>
         <Box sx={{ width: '100%', height: 'calc(100vh - 200px)' }}>
           {filteredPhases.length > 0 ? (
-            <GanttChart 
-              items={items} 
-              groups={groups} 
-              options={{ stack: stacked }} 
+            <GanttChart
+              items={items}
+              groups={groups}
+              options={{ stack: stacked }}
               height='calc(100vh - 200px)'
               start={start}
               end={end}

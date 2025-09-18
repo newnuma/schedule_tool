@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
 	Table,
 	TableBody,
@@ -9,17 +9,21 @@ import {
 	Paper,
 	Box,
 	IconButton,
+	Tooltip,
 } from "@mui/material";
 import { ExpandMore, ChevronRight } from "@mui/icons-material";
+import RefreshIcon from '@mui/icons-material/Refresh';
 import DateRangeFilter from "../../components/filters/DateRangeFilter";
 import { CollapsibleFilterPanel, CheckboxFilter } from "../../components/filters";
 import { useFilterContext } from "../../context/FilterContext";
 import { fetchAssignmentWorkloads } from "../../api/bridgeApi";
 import { useAppContext } from "../../context/AppContext";
+import { useDialogContext } from "../../context/DialogContext";
 
 const AssinmentWorkload: React.FC = () => {
 	const { addPersonWorkloads, setLoading, personWorkloads, people } = useAppContext();
 	const { filters, getFilteredData } = useFilterContext();
+	const { openDialog } = useDialogContext();
 	// 分離した pageKey
 	const itemsPageKey = "assignment:workload:items";   // DateRange for weeks
 	const groupsPageKey = "assignment:workload:groups"; // Department filter for people
@@ -30,17 +34,29 @@ const AssinmentWorkload: React.FC = () => {
 	const itemsDateRange = filters[itemsPageKey]?.dateRange;
 	const itemsStart = itemsDateRange?.start;
 	const itemsEnd = itemsDateRange?.end;
+
+	const fetchData = useCallback(async () => {
+		if (!itemsStart || !itemsEnd) return;
+		try {
+			setLoading(true);
+			const res = await fetchAssignmentWorkloads(itemsStart, itemsEnd);
+			addPersonWorkloads(res.personworkloads || []);
+		} catch (e: any) {
+			openDialog({
+				title: "Error",
+				message: `Failed to fetch assignment workloads.\n${e.message || String(e)}`,
+				okText: "OK"
+			});
+		} finally {
+			setLoading(false);
+		}
+	}, [itemsStart, itemsEnd, addPersonWorkloads, setLoading, openDialog]);
+
 	useEffect(() => {
 		if (!itemsStart || !itemsEnd) return;
 		if (debounceRef.current) window.clearTimeout(debounceRef.current);
 		debounceRef.current = window.setTimeout(async () => {
-			try {
-				setLoading(true);
-				const res = await fetchAssignmentWorkloads(itemsStart, itemsEnd);
-				addPersonWorkloads(res.personworkloads || []);
-			} finally {
-				setLoading(false);
-			}
+			fetchData();
 		}, 300);
 		return () => {
 			if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -52,48 +68,48 @@ const AssinmentWorkload: React.FC = () => {
 		setExpandedPersons(new Set());
 	}, [filters]);
 
-  // Util: YYYY-MM-DD -> Date（ローカル）
-  const parseISODate = (iso: string) => {
-    const [y, m, d] = iso.split("-").map(Number);
-    return new Date(y, (m || 1) - 1, d || 1);
-  };
-  // Util: Date -> YYYY-MM-DD（ゼロ詰め、ローカル）
-  const toISODate = (dt: Date) => {
-    const y = dt.getFullYear();
-    const m = `${dt.getMonth() + 1}`.padStart(2, "0");
-    const d = `${dt.getDate()}`.padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
-  // Util: 表示用 M/D
-  const toMonthDay = (dt: Date) => `${dt.getMonth() + 1}/${dt.getDate()}`;
+	// Util: YYYY-MM-DD -> Date（ローカル）
+	const parseISODate = (iso: string) => {
+		const [y, m, d] = iso.split("-").map(Number);
+		return new Date(y, (m || 1) - 1, d || 1);
+	};
+	// Util: Date -> YYYY-MM-DD（ゼロ詰め、ローカル）
+	const toISODate = (dt: Date) => {
+		const y = dt.getFullYear();
+		const m = `${dt.getMonth() + 1}`.padStart(2, "0");
+		const d = `${dt.getDate()}`.padStart(2, "0");
+		return `${y}-${m}-${d}`;
+	};
+	// Util: 表示用 M/D
+	const toMonthDay = (dt: Date) => `${dt.getMonth() + 1}/${dt.getDate()}`;
 
-  // 週配列（start~end を月曜ベース（既に月曜渡し）で1週刻み、両端含む）
+	// 週配列（start~end を月曜ベース（既に月曜渡し）で1週刻み、両端含む）
 	const { weekIsos, weekLabels } = useMemo(() => {
 		const dr = filters[itemsPageKey]?.dateRange;
-    const start = dr?.start;
-    const end = dr?.end;
-    const result = { weekIsos: [] as string[], weekLabels: [] as string[] };
-    if (!start || !end) return result;
-    const s = parseISODate(start);
-    const e = parseISODate(end);
-    if (isNaN(s.getTime()) || isNaN(e.getTime())) return result;
-    let cur = new Date(s);
-    while (cur <= e) {
-      result.weekIsos.push(toISODate(cur));
-      result.weekLabels.push(toMonthDay(cur));
-      const nx = new Date(cur);
-      nx.setDate(nx.getDate() + 7);
-      cur = nx;
-    }
-    return result;
-  }, [filters]);
+		const start = dr?.start;
+		const end = dr?.end;
+		const result = { weekIsos: [] as string[], weekLabels: [] as string[] };
+		if (!start || !end) return result;
+		const s = parseISODate(start);
+		const e = parseISODate(end);
+		if (isNaN(s.getTime()) || isNaN(e.getTime())) return result;
+		let cur = new Date(s);
+		while (cur <= e) {
+			result.weekIsos.push(toISODate(cur));
+			result.weekLabels.push(toMonthDay(cur));
+			const nx = new Date(cur);
+			nx.setDate(nx.getDate() + 7);
+			cur = nx;
+		}
+		return result;
+	}, [filters]);
 
 
 	// 期間内データのみを抽出（FilterContext 経由の列方向フィルタを適用）
-			const filteredPW: typeof personWorkloads = useMemo(() => {
-			// itemsPageKey に設定された DateRangeFilter（week）を使用して personWorkloads をフィルタ
-			return getFilteredData(itemsPageKey, personWorkloads);
-			}, [personWorkloads, getFilteredData, itemsStart, itemsEnd]);
+	const filteredPW: typeof personWorkloads = useMemo(() => {
+		// itemsPageKey に設定された DateRangeFilter（week）を使用して personWorkloads をフィルタ
+		return getFilteredData(itemsPageKey, personWorkloads);
+	}, [personWorkloads, getFilteredData, itemsStart, itemsEnd]);
 
 	// タスク名参照用: personWorkloads の task フィールドから直接取得（tasks に依存しない）
 	const taskNameById = useMemo(() => {
@@ -108,18 +124,18 @@ const AssinmentWorkload: React.FC = () => {
 		return m;
 	}, [filteredPW]);
 
-  // 集計インデックスの構築
-  const aggregates = useMemo(() => {
-    const personWeek = new Map<string, number>(); // person|week -> sum
-    const personTaskWeek = new Map<string, number>(); // person|task|week -> sum
-    const personSubprojWeek = new Map<string, number>(); // person|subproj|week -> sum
-    const personSubprojects = new Map<number, Set<number>>(); // person -> set(subprojId)
-    const personSubprojTasks = new Map<string, Set<number>>(); // person|subproj -> set(taskId)
-    const subprojName = new Map<number, string>();
+	// 集計インデックスの構築
+	const aggregates = useMemo(() => {
+		const personWeek = new Map<string, number>(); // person|week -> sum
+		const personTaskWeek = new Map<string, number>(); // person|task|week -> sum
+		const personSubprojWeek = new Map<string, number>(); // person|subproj|week -> sum
+		const personSubprojects = new Map<number, Set<number>>(); // person -> set(subprojId)
+		const personSubprojTasks = new Map<string, Set<number>>(); // person|subproj -> set(taskId)
+		const subprojName = new Map<number, string>();
 
-    const add = (map: Map<string, number>, key: string, val: number) => {
-      map.set(key, (map.get(key) || 0) + val);
-    };
+		const add = (map: Map<string, number>, key: string, val: number) => {
+			map.set(key, (map.get(key) || 0) + val);
+		};
 
 		filteredPW.forEach(w => {
 			// 必須フィールドの存在チェック（不足時はスキップ）
@@ -150,14 +166,14 @@ const AssinmentWorkload: React.FC = () => {
 			personSubprojTasks.get(pstKey)!.add(taskId);
 		});
 
-    return { personWeek, personTaskWeek, personSubprojWeek, personSubprojects, personSubprojTasks, subprojName };
-  }, [filteredPW]);
+		return { personWeek, personTaskWeek, personSubprojWeek, personSubprojects, personSubprojTasks, subprojName };
+	}, [filteredPW]);
 
-  // 表示ユーティリティ: 1桁小数、0は"0"
-  const fmt = (v: number) => {
-    if (Math.abs(v) < 1e-9) return "0";
-    return v.toFixed(1);
-  };
+	// 表示ユーティリティ: 1桁小数、0は"0"
+	const fmt = (v: number) => {
+		if (Math.abs(v) < 1e-9) return "0";
+		return v.toFixed(1);
+	};
 
 	// トグル操作
 	const togglePerson = (pid: number) => {
@@ -179,11 +195,12 @@ const AssinmentWorkload: React.FC = () => {
 
 	return (
 		<Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100vh', overflow: 'hidden' }}>
-			<Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, flexShrink: 0 }}>
+			<Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexShrink: 0 }}>
 				{/* 左上: 列に作用する期間フィルタ（itemsPageKey） */}
 				<DateRangeFilter
 					pageKey={itemsPageKey}
 					label="Period (Week)"
+					hideTitle={true}
 					startProperty="week"
 					endProperty="week"
 					alignStartToMonday
@@ -191,6 +208,13 @@ const AssinmentWorkload: React.FC = () => {
 					defaultStartWeek={0}
 					defaultEndWeek={8}
 				/>
+				<Tooltip title="Reload">
+					<span>
+						<IconButton onClick={fetchData} size="large" color="primary">
+							<RefreshIcon />
+						</IconButton>
+					</span>
+				</Tooltip>
 				{/* 右上: 行に作用するフィルタ群 */}
 				<Box sx={{ ml: 'auto' }}>
 					<CollapsibleFilterPanel pageKey={groupsPageKey}>
@@ -302,12 +326,12 @@ const AssinmentWorkload: React.FC = () => {
 											</React.Fragment>
 										);
 									})}
-									</React.Fragment>
-								);
-							})}
-						</TableBody>
-					</Table>
-				</TableContainer>
+								</React.Fragment>
+							);
+						})}
+					</TableBody>
+				</Table>
+			</TableContainer>
 		</Box>
 	);
 };

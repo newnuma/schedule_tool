@@ -1,42 +1,10 @@
+
 import { useEffect } from "react";
 import { useAppContext } from "./context/AppContext";
 import { useFilterContext } from "./context/FilterContext";
-import * as bridgeApi from "./api/bridgeApi";
+import { useDialogContext } from "./context/DialogContext";
+import { initLoad, channelReady } from "./api/bridgeApi";
 
-const fetchInitialData = async (
-  addSteps: any,
-  addSubprojects: any,
-  addPhases: any,
-  addPeople: any,
-  setWorkCategories: any,
-  setLoading: any,
-  setSelectedPersonList: any,
-  setSelectedSubprojectId: any,
-  setCurrentUser: any,
-  setFilters: any
-) => {
-  setLoading(true);
-  console.log("Fetching initial data...");
-  try {
-    const result = await bridgeApi.initLoad();
-    console.log("res", result);
-    addSteps(result.steps || []);
-    addSubprojects(result.subprojects || []);
-    addPhases(result.phases || []);
-    addPeople(result.person || []);
-    setWorkCategories(result.workCategories || []);
-    setSelectedPersonList(result.selectedPersonList || []);
-    setSelectedSubprojectId(result.selectedSubprojectId || undefined);
-    setCurrentUser(result.currentUser || undefined);
-    if (result.filters) {
-      setFilters(result.filters);
-    }
-  } catch (e) {
-    console.error(e);
-  } finally {
-    setLoading(false);
-  }
-};
 
 const Initializer = () => {
   const {
@@ -49,28 +17,43 @@ const Initializer = () => {
     setSelectedPersonList,
     setSelectedSubprojectId,
     setCurrentUser,
-
   } = useAppContext();
 
   const { setFilters } = useFilterContext();
+  const { openDialog } = useDialogContext();
 
+  // fetchInitialDataを内部関数として定義し、ProjectPageのfetchDataスタイルに合わせる
+  const fetchInitialData = async () => {
+    setLoading(true);
+    try {
+      await channelReady;
+      const result = await initLoad();
+      console.log("Waiting for channel to be ready...");
+      addSteps(result.steps || []);
+      addSubprojects(result.subprojects || []);
+      addPhases(result.phases || []);
+      addPeople(result.person || []);
+      setWorkCategories(result.workCategories || []);
+      setSelectedPersonList(result.selectedPersonList || []);
+      setSelectedSubprojectId(result.selectedSubprojectId || undefined);
+      setCurrentUser(result.currentUser || undefined);
+      if (result.filters) {
+        setFilters(result.filters);
+      }
+    } catch (e: any) {
+      const msg = (e instanceof Error) ? e.message : String(e);
+      openDialog({
+        title: "Error",
+        message: `Failed to fetch initial data.\n${msg}`,
+        okText: "OK"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   useEffect(() => {
-    (async () => {
-      await bridgeApi.channelReady;
-      await fetchInitialData(
-        addSteps,
-        addSubprojects,
-        addPhases,
-        addPeople,
-        setWorkCategories,
-        setLoading,
-        setSelectedPersonList,
-        setSelectedSubprojectId,
-        setCurrentUser,
-        setFilters,
-      );
-    })();
-    // eslint-disable-next-line
+    fetchInitialData();
   }, []);
 
   return null;

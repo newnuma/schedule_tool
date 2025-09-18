@@ -13,16 +13,7 @@ import { FormProvider } from "../context/FormContext";
 import { FormManager } from "../components/forms";
 import { useDialogContext } from "../context/DialogContext";
 
-const ProjectPage: React.FC = () => {
-  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading,
-    addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addMilestoneTasks,
-    addPeople, setSelectedPersonList, isEditMode, setEditMode,
-    phases, assets, tasks, milestoneTasks, personWorkloads, pmmWorkloads, people, workCategories, currentUser } = useAppContext();
-  const [tabValue, setTabValue] = useState(0);
-
-  // --- 内部コンポーネント定義 ---
-  // TabPanel
-  const TabPanel: React.FC<{ children?: React.ReactNode; index: number; value: number }> = ({ children, value, index, ...other }) => (
+const TabPanel: React.FC<{ children?: React.ReactNode; index: number; value: number }> = ({ children, value, index, ...other }) => (
     <div
       role="tabpanel"
       id={`project-tabpanel-${index}`}
@@ -33,43 +24,58 @@ const ProjectPage: React.FC = () => {
     </div>
   );
 
+
+const ProjectPage: React.FC = () => {
+  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading,
+    addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addMilestoneTasks,
+    addPeople, setSelectedPersonList, isEditMode, setEditMode,
+    phases, assets, tasks, milestoneTasks, personWorkloads, pmmWorkloads, people, workCategories, currentUser } = useAppContext();
+  const [tabValue, setTabValue] = useState(0);
+  const { openDialog } = useDialogContext();
+
+  // --- 内部コンポーネント定義 ---
+  // TabPanel
+  
   // SubprojectSelector
   const SubprojectSelector: React.FC<{
     selectedSubproject: ISubproject | undefined;
     subprojects: ISubproject[];
     onChange: (event: any, value: ISubproject | null) => void;
-  }> = ({ selectedSubproject, subprojects, onChange }) => (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-      <Typography variant="h5" component="span">
-        SubProject:
-      </Typography>
-      <Autocomplete
-        value={selectedSubproject || null}
-        onChange={(event, newValue) => onChange(event, newValue)}
-        options={subprojects}
-        getOptionLabel={(option) => option.name}
-        isOptionEqualToValue={(option, value) => option.id === value.id}
-        filterOptions={(options, { inputValue }) =>
-          options.filter(option =>
-            option.name.toLowerCase().startsWith(inputValue.toLowerCase())
-          )
-        }
-        sx={{ minWidth: 200 }}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            variant="outlined"
-            size="small"
-            placeholder="Select subproject"
-          />
-        )}
-      />
-    </Box>
-  );
+  }> = ({ selectedSubproject, subprojects, onChange }) => {
+    // サブプロジェクト名でabc順ソート
+    const sortedOptions = [...subprojects].sort((a, b) => a.name.localeCompare(b.name));
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Typography variant="h4" component="span">
+          SubProject:
+        </Typography>
+        <Autocomplete
+          value={selectedSubproject || null}
+          onChange={(event, newValue) => onChange(event, newValue)}
+          options={sortedOptions}
+          getOptionLabel={(option) => option.name}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          filterOptions={(options, { inputValue }) =>
+            options.filter(option =>
+              option.name.toLowerCase().startsWith(inputValue.toLowerCase())
+            )
+          }
+          sx={{ minWidth: 200 }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              variant="outlined"
+              size="small"
+              placeholder="Select subproject"
+            />
+          )}
+        />
+      </Box>
+    );
+  };
 
   // EditModeButton
   const EditModeButton: React.FC = () => {
-    const { openDialog } = useDialogContext();
     const editTimeoutId = useRef<NodeJS.Timeout | null>(null);
     const heartbeatId = useRef<NodeJS.Timeout | null>(null);
 
@@ -162,8 +168,8 @@ const ProjectPage: React.FC = () => {
   // fetchData: サブプロジェクトデータを取得
   const fetchData = useCallback(async () => {
     if (selectedSubprojectId) {
+      setLoading(true);
       try {
-        setLoading(true);
         const result = await fetchProjectPage(selectedSubprojectId);
         addPhases(result.phases || []);
         addAssets(result.assets || []);
@@ -171,7 +177,12 @@ const ProjectPage: React.FC = () => {
         addMilestoneTasks(result.milestoneTasks || []);
         addPersonWorkloads(result.personworkloads || []);
         addPMMWorkloads(result.pmmworkloads || []);
-      } catch (error) {
+      } catch (error: any) {
+        openDialog({
+          title: "Error",
+          message: `Failed to fetch subproject data. '\n${error.message}`,
+          okText: "OK"
+        });
         console.error('Failed to fetch subproject data:', error);
       } finally {
         setLoading(false);
@@ -221,7 +232,7 @@ const ProjectPage: React.FC = () => {
     <FormProvider>
       <Main component="main">
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3, pr: 4 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0 }}>
             <SubprojectSelector
               selectedSubproject={selectedSubproject}
               subprojects={subprojects}

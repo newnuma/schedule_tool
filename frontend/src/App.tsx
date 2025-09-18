@@ -1,5 +1,4 @@
 import { AppBar, CircularProgress, Toolbar, Box } from "@mui/material";
-import { DialogProvider } from "./context/DialogContext";
 import {
   Layout,
   Content,
@@ -16,7 +15,6 @@ const App = () => {
   const { currentPage, loading } = useAppContext();
 
   return (
-    <DialogProvider>
       <Layout>
         <Sidebar />
         <Content>
@@ -36,7 +34,6 @@ const App = () => {
           <CircularProgress color="inherit" />
         </OverlayBackdrop>
       </Layout>
-    </DialogProvider>
   );
 };
 
