@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Typography, Box, Tabs, Tab, Autocomplete, TextField, Switch, FormControlLabel } from "@mui/material";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Typography, Box, Tabs, Tab, Autocomplete, TextField, Switch, FormControlLabel, IconButton, Tooltip } from "@mui/material";
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { Main } from "../components/StyledComponents";
 import { useAppContext, IPerson } from "../context/AppContext";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -13,9 +14,9 @@ import { FormManager } from "../components/forms";
 import { useDialogContext } from "../context/DialogContext";
 
 const ProjectPage: React.FC = () => {
-  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading, 
+  const { selectedSubprojectId, setSelectedSubprojectId, subprojects, setLoading,
     addSteps, addPhases, addAssets, addTasks, addPersonWorkloads, addPMMWorkloads, addMilestoneTasks,
-    addPeople, setSelectedPersonList, isEditMode, setEditMode, 
+    addPeople, setSelectedPersonList, isEditMode, setEditMode,
     phases, assets, tasks, milestoneTasks, personWorkloads, pmmWorkloads, people, workCategories, currentUser } = useAppContext();
   const [tabValue, setTabValue] = useState(0);
 
@@ -48,6 +49,11 @@ const ProjectPage: React.FC = () => {
         options={subprojects}
         getOptionLabel={(option) => option.name}
         isOptionEqualToValue={(option, value) => option.id === value.id}
+        filterOptions={(options, { inputValue }) =>
+          options.filter(option =>
+            option.name.toLowerCase().startsWith(inputValue.toLowerCase())
+          )
+        }
         sx={{ minWidth: 200 }}
         renderInput={(params) => (
           <TextField
@@ -153,31 +159,33 @@ const ProjectPage: React.FC = () => {
     }
   };
 
+  // fetchData: サブプロジェクトデータを取得
+  const fetchData = useCallback(async () => {
+    if (selectedSubprojectId) {
+      try {
+        setLoading(true);
+        const result = await fetchProjectPage(selectedSubprojectId);
+        addPhases(result.phases || []);
+        addAssets(result.assets || []);
+        addTasks(result.tasks || []);
+        addMilestoneTasks(result.milestoneTasks || []);
+        addPersonWorkloads(result.personworkloads || []);
+        addPMMWorkloads(result.pmmworkloads || []);
+      } catch (error) {
+        console.error('Failed to fetch subproject data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [selectedSubprojectId, setLoading, addPhases, addAssets, addTasks, addMilestoneTasks, addPersonWorkloads, addPMMWorkloads]);
+
   // Subprojectが選択されたときにデータを取得
   useEffect(() => {
-    const fetchData = async () => {
-      if (selectedSubprojectId) {
-        try {
-          setLoading(true);
-          const result = await fetchProjectPage(selectedSubprojectId);
-          addPhases(result.phases || []);
-          addAssets(result.assets || []);
-          addTasks(result.tasks || []);
-          addMilestoneTasks(result.milestoneTasks || []);
-          addPersonWorkloads(result.personworkloads || []);
-          addPMMWorkloads(result.pmmworkloads || []);
-        } catch (error) {
-          console.error('Failed to fetch subproject data:', error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
     fetchData();
-  }, [selectedSubprojectId, setLoading]);
+  }, [fetchData]);
 
   // --- サブプロジェクト関連データのフィルタリング ---
-  const currentSubproject = subprojects.find(sp => sp.id === selectedSubprojectId) ;
+  const currentSubproject = subprojects.find(sp => sp.id === selectedSubprojectId);
   // Phase
   const filteredPhases = phases.filter(p => p.subproject.id === selectedSubprojectId);
   // Asset（Phaseに紐づく）
@@ -213,11 +221,20 @@ const ProjectPage: React.FC = () => {
     <FormProvider>
       <Main component="main">
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3, pr: 4 }}>
-          <SubprojectSelector
-            selectedSubproject={selectedSubproject}
-            subprojects={subprojects}
-            onChange={handleSubprojectChange}
-          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <SubprojectSelector
+              selectedSubproject={selectedSubproject}
+              subprojects={subprojects}
+              onChange={handleSubprojectChange}
+            />
+            <Tooltip title="Reload">
+              <span>
+                <IconButton onClick={fetchData} disabled={!selectedSubprojectId} size="large" color="primary">
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
           <EditModeButton />
         </Box>
 
