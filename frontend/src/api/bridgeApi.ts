@@ -37,7 +37,7 @@ function getBridge(): Promise<BridgeObject | null> {
           });
         });
         socket.addEventListener("message", (ev) => {
-          console.log("WS message", ev.data);
+          // console.log("WS message", ev.data);
         });
         socket.addEventListener("error", (err) => {
           console.error("WebSocket error", err);

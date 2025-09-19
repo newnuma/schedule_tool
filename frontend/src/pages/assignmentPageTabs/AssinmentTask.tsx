@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useCallback } from "react";
-import { Box, Tooltip, IconButton} from "@mui/material";
+import { Box, Tooltip, IconButton } from "@mui/material";
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useAppContext } from "../../context/AppContext";
+import { useAppContext, ITask } from "../../context/AppContext";
 import GanttChart, { GanttItem, GanttGroup } from "../../components/GanttChart";
 import DateRangeFilter from "../../components/filters/DateRangeFilter";
 import { useFilterContext } from "../../context/FilterContext";
@@ -9,9 +9,10 @@ import { fetchAssignmentTasks } from "../../api/bridgeApi";
 import CollapsibleFilterPanel from "../../components/filters/CollapsibleFilterPanel";
 import CheckboxFilter from "../../components/filters/CheckboxFilter";
 import { useDialogContext } from "../../context/DialogContext";
+import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
 
 const AssinmentTask: React.FC = () => {
-  const { people, tasks, addTasks, setLoading } = useAppContext();
+  const { people, tasks, addTasks, setLoading, setSelectedSubprojectId, setCurrentPage } = useAppContext();
   const { filters, getFilteredData } = useFilterContext();
   const { openDialog } = useDialogContext();
   // 分離した pageKey
@@ -29,7 +30,6 @@ const AssinmentTask: React.FC = () => {
   const itemsDateRange = filters[itemsPageKey]?.dateRange;
   const itemsStart = itemsDateRange?.start;
   const itemsEnd = itemsDateRange?.end;
-
 
   const fetchData = useCallback(async () => {
     if (!itemsStart || !itemsEnd) return;
@@ -59,6 +59,50 @@ const AssinmentTask: React.FC = () => {
     };
   }, [itemsStart, itemsEnd, addTasks, setLoading]);
 
+  // ContextMenuの状態管理
+  const [menuState, setMenuState] = React.useState<{
+    anchorEl: HTMLElement | null;
+    open: boolean;
+    itemName?: string;
+    task?: ITask;
+  }>({ anchorEl: null, open: false });
+
+
+  const handleGanttRightClick = (
+    itemId: string | number,
+    itemName: string,
+    event: MouseEvent
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const taskObj = tasks.find(t => t.id === Number((itemId as string).split("-")[0]));
+    console.log("Pending Menu Task:", taskObj);
+    setMenuState({
+      anchorEl: event.target as HTMLElement,
+      open: true,
+      itemName,
+      task: taskObj,
+    });
+  };
+  const handleMenuClose = () => {
+    setMenuState({ anchorEl: null, open: false });
+  };
+  const contextMenuItems: ContextMenuItem[] = [
+    {
+      label: "Jump to Project Page",
+      action: () => {
+        console.log("Jump to Project Page", menuState.task);
+        if (menuState.task?.subproject) {
+          setSelectedSubprojectId(menuState.task.subproject.id);
+          setCurrentPage("Project");
+        }
+      },
+    },
+  ];
+
+
+  // データのフィルタリング、Gantt用データ変換
   const peopleFiltered = useMemo(() => {
     return getFilteredData(groupsPageKey, people ?? []);
   }, [people, getFilteredData]);
@@ -104,12 +148,12 @@ const AssinmentTask: React.FC = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <DateRangeFilter pageKey={itemsPageKey} label="Period" hideTitle={true} compact defaultStartWeek={0} defaultEndWeek={8} />
           <Tooltip title="Reload">
-              <span>
-                <IconButton onClick={fetchData} size="large" color="primary">
-                  <RefreshIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
+            <span>
+              <IconButton onClick={fetchData} size="large" color="primary">
+                <RefreshIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Box>
         <CollapsibleFilterPanel pageKey={groupsPageKey} sx={{ ml: 2 }}>
           <CheckboxFilter
@@ -123,9 +167,19 @@ const AssinmentTask: React.FC = () => {
       <GanttChart
         items={items}
         groups={groups}
+        onItemRightClick={handleGanttRightClick}
         height='calc(100vh - 200px)'
         start={start}
         end={end}
+      />
+
+      {/* Context Menu */}
+      <ContextMenu
+        anchorEl={menuState.anchorEl}
+        open={menuState.open}
+        onClose={handleMenuClose}
+        items={contextMenuItems}
+        header={menuState.itemName}
       />
     </div>
   );
