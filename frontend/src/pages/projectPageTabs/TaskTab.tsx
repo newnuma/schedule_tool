@@ -9,6 +9,7 @@ import { CheckboxFilter, DateRangeFilter, CollapsibleFilterPanel } from "../../c
 import AddButton, { AddButtonItem } from "../../components/common/AddButton";
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
 import {useEntityCrud} from "../../hooks/useEntityCrud"
+import { openFlowPtUrl } from "../../api/bridgeApi";
 
 // 型定義
 import type { IPhase, IAsset, ITask, IPerson } from "../../context/AppContext";
@@ -39,6 +40,7 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
   end.setMonth(end.getMonth() + 1);
 
   // ContextMenuの状態管理
+  // ContextMenuの状態管理（Task用は従来通り、Asset用は別管理）
   const [menuState, setMenuState] = React.useState<{
     anchorEl: HTMLElement | null;
     open: boolean;
@@ -46,14 +48,25 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
     task?: ITask;
   }>({ anchorEl: null, open: false });
 
-  // 右クリック時のハンドラ
+  // Asset用ContextMenuの状態管理
+  const [assetMenuState, setAssetMenuState] = React.useState<{
+    anchorEl: HTMLElement | null;
+    open: boolean;
+    itemName?: string;
+    asset?: IAsset;
+  }>({ anchorEl: null, open: false });
+
+
+  // タスクアイテム右クリック
   const [pendingMenu, setPendingMenu] = React.useState<{
     anchorEl: HTMLElement | null;
     open: boolean;
     itemName?: string;
     itemId?: number | string;
+    menuType?: 'task' | 'asset';
   } | null>(null);
 
+  // タスクアイテム右クリック
   const handleGanttRightClick = (
     itemId: number | string,
     itemName: string,
@@ -66,29 +79,61 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
       open: true,
       itemName,
       itemId,
+      menuType: 'task',
     });
   };
 
-  // tasksが更新された時、pendingMenuがあれば最新のtaskでmenuStateを更新
+  // グループ（Asset）右クリック
+  // GanttChartのonGroupRightClick: (groupId, group, event)
+  const handleGanttGroupRightClick = (
+    groupId: number | string,
+    group: { id: number | string; content: string },
+    event: MouseEvent
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setPendingMenu({
+      anchorEl: event.target as HTMLElement,
+      open: true,
+      itemName: group.content,
+      itemId: groupId,
+      menuType: 'asset',
+    });
+  };
+
+  // tasks/assetsが更新された時、pendingMenuがあれば最新のtask/assetでmenuStateを更新
   React.useEffect(() => {
     if (pendingMenu && pendingMenu.itemId !== undefined) {
-      const taskObj = tasks.find(t => t.id === Number(pendingMenu.itemId));
-      setMenuState({
-        anchorEl: pendingMenu.anchorEl,
-        open: pendingMenu.open,
-        itemName: pendingMenu.itemName,
-        task: taskObj,
-      });
+      if (pendingMenu.menuType === 'task') {
+        const taskObj = tasks.find(t => t.id === Number(pendingMenu.itemId));
+        setMenuState({
+          anchorEl: pendingMenu.anchorEl,
+          open: pendingMenu.open,
+          itemName: pendingMenu.itemName,
+          task: taskObj,
+        });
+      } else if (pendingMenu.menuType === 'asset') {
+        const assetObj = assets.find(a => a.id === Number(pendingMenu.itemId));
+        setAssetMenuState({
+          anchorEl: pendingMenu.anchorEl,
+          open: pendingMenu.open,
+          itemName: pendingMenu.itemName,
+          asset: assetObj,
+        });
+      }
       setPendingMenu(null);
     }
-  }, [tasks, pendingMenu]);
+  }, [tasks, assets, pendingMenu]);
 
   const handleMenuClose = () => {
     setMenuState({ anchorEl: null, open: false });
   };
+  const handleAssetMenuClose = () => {
+    setAssetMenuState({ anchorEl: null, open: false });
+  };
 
-  // メニュー項目定義（actionは空関数）
-  const contextMenuItems: ContextMenuItem[] = [
+  // タスク用メニュー（従来通り）
+  const taskContextMenuItems: ContextMenuItem[] = [
     {
       label: "Jump to Flow-PT",
       action: () => {},
@@ -131,6 +176,56 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
       dividerBefore: true,
       label: "Delete",
       action: () => {handleDeleteTask(menuState.task as ITask)},
+      disable: !isEditMode,
+      color: "error.main",
+    },
+  ];
+
+  // Asset用メニュー（AssetTabのassetContextMenuItemsと同等）
+  const assetContextMenuItems: ContextMenuItem[] = [
+    {
+      label: "Jump to Flow-PT",
+      action: () => {
+        openFlowPtUrl(selectedSubprojectId);
+      },
+    },
+    {
+      label: "Edit",
+      action: () => {
+        if (assetMenuState.asset) {
+          openForm({
+            type: 'asset',
+            mode: 'edit',
+            initialValues: assetMenuState.asset,
+            candidates: {
+              phases: phases,
+            },
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+    {
+      label: "Copy",
+      action: () => {
+        if (assetMenuState.asset) {
+          const { id, ...copyData } = assetMenuState.asset;
+          openForm({
+            type: 'asset',
+            mode: 'copy',
+            initialValues: copyData,
+            candidates: {
+              phases: phases,
+            },
+          });
+        }
+      },
+      disable: !isEditMode,
+    },
+    {
+      dividerBefore: true,
+      label: "Delete",
+      action: () => {handleDeleteAsset(assetMenuState.asset as IAsset)},
       disable: !isEditMode,
       color: "error.main",
     },
@@ -313,6 +408,7 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
             items={items} 
             groups={groups} 
             onItemRightClick={handleGanttRightClick}
+            onGroupRightClick={handleGanttGroupRightClick}
             height='calc(100vh - 200px)'
             start={start}
             end={end}
@@ -324,13 +420,21 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
         )}
       </Box>
       
-      {/* Context Menu */}
+      {/* Context Menu (Task用) */}
       <ContextMenu
         anchorEl={menuState.anchorEl}
         open={menuState.open}
         onClose={handleMenuClose}
-        items={contextMenuItems}
+        items={taskContextMenuItems}
         header={menuState.itemName}
+      />
+      {/* Context Menu (Asset用) */}
+      <ContextMenu
+        anchorEl={assetMenuState.anchorEl}
+        open={assetMenuState.open}
+        onClose={handleAssetMenuClose}
+        items={assetContextMenuItems}
+        header={assetMenuState.itemName}
       />
     </div>
   );
