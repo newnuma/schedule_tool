@@ -71,29 +71,30 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           },
         }}
       >
-        {header && (
-          <>
-            <MenuItem disabled sx={{ fontWeight: 'bold', opacity: 1 }}>
-              {header}
-            </MenuItem>
-            <Divider />
-          </>
-        )}
-        {items.map((item, idx) => {
+        {header && [
+          <MenuItem key="header" disabled sx={{ fontWeight: 'bold', opacity: 1 }}>
+            {header}
+          </MenuItem>,
+          <Divider key="header-divider" />
+        ]}
+        {items.flatMap((item, idx) => {
           const iconToShow = item.icon ?? defaultIcons[item.label] ?? null;
-          return (
-            <React.Fragment key={item.label + idx}>
-              {item.dividerBefore && <Divider />}
-              <MenuItem
-                onClick={() => handleMenuItemClick(item.action)}
-                disabled={item.disable}
-                sx={item.color ? { color: item.color } : undefined}
-              >
-                {iconToShow && <ListItemIcon>{iconToShow}</ListItemIcon>}
-                <ListItemText primary={item.label} />
-              </MenuItem>
-            </React.Fragment>
+          const elements = [];
+          if (item.dividerBefore) {
+            elements.push(<Divider key={`divider-${idx}`} />);
+          }
+          elements.push(
+            <MenuItem
+              key={item.label + idx}
+              onClick={() => handleMenuItemClick(item.action)}
+              disabled={item.disable}
+              sx={item.color ? { color: item.color } : undefined}
+            >
+              {iconToShow && <ListItemIcon>{iconToShow}</ListItemIcon>}
+              <ListItemText primary={item.label} />
+            </MenuItem>
           );
+          return elements;
         })}
       </Menu>
     );
