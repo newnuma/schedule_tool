@@ -9,6 +9,7 @@ import {
   Theme,
   Divider,
 } from "@mui/material";
+import Button from "@mui/material/Button";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useFilterContext } from "../../context/FilterContext";
 
@@ -27,7 +28,7 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
   onChange,
   sx,
 }) => {
-  const { filters } = useFilterContext();
+  const { filters, clearFilters } = useFilterContext();
 
   // フィルター適用数をカウント（複数pageKey対応）
   const activeFilterCount = React.useMemo(() => {
@@ -63,6 +64,12 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
     } else {
       setLocalExpanded(newExpanded);
     }
+  };
+
+  // Reset handler: clear all filters for provided pageKey(s)
+  const handleReset = () => {
+    const keys = Array.isArray(pageKey) ? pageKey : [pageKey];
+    keys.forEach(k => clearFilters(k));
   };
 
   return (
@@ -167,6 +174,18 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
               )}
             </React.Fragment>
           ))}
+
+          {/* Reset Button Row */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleReset}
+              disabled={activeFilterCount === 0}
+            >
+              Reset
+            </Button>
+          </Box>
         </AccordionDetails>
       </Accordion>
     </Box>

@@ -44,6 +44,13 @@ const DropdownFilter = <T,>({ pageKey, data, property, label, hideTitle = false 
     setDropdownFilter(pageKey, propertyKey, value ? [value] : []);
   };
 
+  // データ更新等で現在の選択値が候補に存在しなくなった場合は自動的に解除
+  React.useEffect(() => {
+    if (currentSelectedValue && !availableOptions.includes(String(currentSelectedValue))) {
+      setDropdownFilter(pageKey, propertyKey, []);
+    }
+  }, [availableOptions, currentSelectedValue, pageKey, propertyKey, setDropdownFilter]);
+
   return (
     <Box sx={{ margin: "8px 0" }}>
       {!hideTitle && (

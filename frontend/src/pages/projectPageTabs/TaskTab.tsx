@@ -27,9 +27,10 @@ const TaskTab: React.FC<TaskTabProps> = ({ phases, assets, tasks, people, isEdit
   // CollapsibleFilterPanel展開状態管理
   const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   const { getFilteredData, filters } = useFilterContext();
-  // Split pageKeys by target: items vs groups
-  const itemsPageKey = "project.tasks:items";   // date range etc. for items
-  const groupsPageKey = "project.tasks:groups"; // group-level filter (asset type)
+  // Split pageKeys by target: items vs groups (scope by subproject)
+  const keyPrefix = `project:${selectedSubprojectId ?? 'none'}`;
+  const itemsPageKey = `${keyPrefix}:tasks:items`;   // date range etc. for items
+  const groupsPageKey = `${keyPrefix}:tasks:groups`; // group-level filter (asset type)
   const { openForm } = useFormContext();
   const { handleDeleteAsset, handleDeleteTask } = useEntityCrud(); 
 

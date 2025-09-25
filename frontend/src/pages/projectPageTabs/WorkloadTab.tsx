@@ -29,7 +29,8 @@ interface WorkloadTabProps {
 const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, personWorkloads, pmmWorkloads, people, workCategories, currentSubproject, isEditMode }) => {
   const { filters, setDropdownFilter, getFilteredData, setDateRangeFilter } = useFilterContext();
   const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set());
-  const assetFilterKey = "workload:asset";
+  // Scope filter key by subproject so filters don't leak across subprojects
+  const assetFilterKey = `workload:${currentSubproject?.id ?? 'none'}:asset`;
   const { addPersonWorkloads, addPMMWorkloads, setLoading } = useAppContext();
   const { openForm } = useFormContext();
   const { openDialog } = useDialogContext();

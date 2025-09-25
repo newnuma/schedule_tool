@@ -49,6 +49,16 @@ const CheckboxFilter = <T,>({ pageKey, data, property, label, hideTitle = false 
     setDropdownFilter(pageKey, propertyKey, newValues);
   };
 
+  // データ更新等で現在の選択値群に候補外の値が含まれる場合は自動的に除去
+  React.useEffect(() => {
+    if (!currentSelectedValues || currentSelectedValues.length === 0) return;
+    const normalized = new Set(availableOptions.map(String));
+    const cleaned = currentSelectedValues.filter((v: string) => normalized.has(String(v)));
+    if (cleaned.length !== currentSelectedValues.length) {
+      setDropdownFilter(pageKey, propertyKey, cleaned);
+    }
+  }, [availableOptions, currentSelectedValues, pageKey, propertyKey, setDropdownFilter]);
+
   return (
     <Box sx={{ margin: "8px 0" }}>
       <FormControl component="fieldset" size="small">

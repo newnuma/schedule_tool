@@ -29,9 +29,10 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   // CollapsibleFilterPanel展開状態管理
   const [filterPanelExpanded, setFilterPanelExpanded] = React.useState(false);
   const { getFilteredData } = useFilterContext();
-  // Split pageKeys by target: items vs groups
-  const itemsPageKey = "project.assets:items";   // date range + status for items
-  const groupsPageKey = "project.assets:groups"; // type for groups
+  // Split pageKeys by target: items vs groups (scope by subproject)
+  const keyPrefix = `project:${selectedSubprojectId ?? 'none'}`;
+  const itemsPageKey = `${keyPrefix}:assets:items`;   // date range + status for items
+  const groupsPageKey = `${keyPrefix}:assets:groups`; // type for groups
   const { openForm } = useFormContext();
   const { handleDeleteAsset } = useEntityCrud(); 
   const { openDialog } = useDialogContext();
