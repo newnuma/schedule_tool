@@ -42,6 +42,15 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
   const end = new Date();
   end.setMonth(end.getMonth() + 2);
 
+  // pendingMenu: 右クリック時の一時情報を保持し、データ更新時に最新情報でmenuStateを更新
+  const [pendingMenu, setPendingMenu] = React.useState<{
+    anchorEl: HTMLElement | null;
+    open: boolean;
+    itemName?: string;
+    itemId?: number | string;
+    itemType?: 'asset' | 'phase' | 'milestone';
+  } | null>(null);
+
   // ContextMenuの状態管理
   const [menuState, setMenuState] = React.useState<{
     anchorEl: HTMLElement | null;
@@ -63,31 +72,47 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
     event.stopPropagation();
     // idのprefixで種別判定
     let itemType: 'asset' | 'phase' | 'milestone' = 'asset';
-    let assetObj: IAsset | undefined = undefined;
-    let phaseObj: IPhase | undefined = undefined;
-    let milestoneTaskObj: IMilestoneTask | undefined = undefined;
     if (typeof itemId === 'string' && itemId.startsWith('phase-')) {
       itemType = 'phase';
-      const phaseId = Number(itemId.replace('phase-', ''));
-      phaseObj = phases.find(p => p.id === phaseId);
     } else if (typeof itemId === 'string' && itemId.startsWith('ms-')) {
       itemType = 'milestone';
-      const msId = Number(itemId.replace('ms-', ''));
-      milestoneTaskObj = milestoneTasks.find(ms => ms.id === msId);
-    } else {
-      // Asset: idが数値 or 数値文字列
-      assetObj = assets.find(a => a.id === Number(itemId));
     }
-    setMenuState({
+    setPendingMenu({
       anchorEl: event.target as HTMLElement,
       open: true,
       itemName,
-      asset: assetObj,
-      phase: phaseObj,
-      milestoneTask: milestoneTaskObj,
+      itemId,
       itemType,
     });
   };
+
+  // assets, phases, milestoneTasksが更新された時、pendingMenuがあれば最新の情報でmenuStateを更新
+  React.useEffect(() => {
+    if (pendingMenu && pendingMenu.itemId !== undefined) {
+      let assetObj: IAsset | undefined = undefined;
+      let phaseObj: IPhase | undefined = undefined;
+      let milestoneTaskObj: IMilestoneTask | undefined = undefined;
+      if (pendingMenu.itemType === 'phase') {
+        const phaseId = Number(String(pendingMenu.itemId).replace('phase-', ''));
+        phaseObj = phases.find(p => p.id === phaseId);
+      } else if (pendingMenu.itemType === 'milestone') {
+        const msId = Number(String(pendingMenu.itemId).replace('ms-', ''));
+        milestoneTaskObj = milestoneTasks.find(ms => ms.id === msId);
+      } else {
+        assetObj = assets.find(a => a.id === Number(pendingMenu.itemId));
+      }
+      setMenuState({
+        anchorEl: pendingMenu.anchorEl,
+        open: pendingMenu.open,
+        itemName: pendingMenu.itemName,
+        asset: assetObj,
+        phase: phaseObj,
+        milestoneTask: milestoneTaskObj,
+        itemType: pendingMenu.itemType,
+      });
+      setPendingMenu(null);
+    }
+  }, [assets, phases, milestoneTasks, pendingMenu]);
 
   const handleMenuClose = () => {
     setMenuState({ anchorEl: null, open: false });
