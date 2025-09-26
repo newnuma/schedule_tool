@@ -128,3 +128,7 @@ await bridgeApi.channelReady;
 const data = await bridgeApi.fetchAll();
 ```
 
+## Licenses
+
+This application includes third-party components. See `LICENSES` in the project root for third‑party license texts (e.g., vis-timeline under MIT or Apache‑2.0).
+
