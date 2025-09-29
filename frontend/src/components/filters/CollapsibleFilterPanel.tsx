@@ -64,6 +64,64 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
     };
   }, [restoreScroll]);
 
+  // サブフィルター(子Accordion)の開閉状態を制御・保持
+  const computeChildId = React.useCallback((child: React.ReactNode, index: number) => {
+    if (React.isValidElement(child) && child.key != null) return String(child.key);
+    const lbl = React.isValidElement(child) ? (child.props as any)?.label : undefined;
+    return lbl ? `lbl:${String(lbl)}` : `idx:${index}`;
+  }, []);
+  const childIds = React.useMemo(() => {
+    const ids: string[] = [];
+    React.Children.forEach(children, (child, index) => {
+      ids.push(computeChildId(child, index));
+    });
+    return ids;
+  }, [children, computeChildId]);
+
+  const expandedStorageKey = React.useMemo(() => {
+    const keys = Array.isArray(pageKey) ? pageKey.join("|") : pageKey;
+    return `collapsibleFilterPanel.expanded:${keys}`;
+  }, [pageKey]);
+
+  const [sectionsExpanded, setSectionsExpanded] = React.useState<Record<string, boolean>>(() => {
+    let initial: Record<string, boolean> = {};
+    try {
+      const raw = typeof window !== 'undefined' ? sessionStorage.getItem(expandedStorageKey) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') initial = parsed;
+      }
+    } catch {}
+    // 現在の子IDに対して未定義はデフォルト true
+    const map: Record<string, boolean> = {};
+    childIds.forEach(id => {
+      map[id] = initial[id] !== false; // undefined -> true, falseは尊重
+    });
+    return map;
+  });
+
+  // 子IDが増えたらデフォルトtrueで初期化（既存のものは保持）
+  React.useEffect(() => {
+    setSectionsExpanded(prev => {
+      const next = { ...prev } as Record<string, boolean>;
+      childIds.forEach(id => {
+        if (next[id] === undefined) next[id] = true;
+      });
+      return next;
+    });
+  }, [childIds]);
+
+  // 変更を保存
+  React.useEffect(() => {
+    try {
+      sessionStorage.setItem(expandedStorageKey, JSON.stringify(sectionsExpanded));
+    } catch {}
+  }, [sectionsExpanded, expandedStorageKey]);
+
+  const handleSectionChange = React.useCallback((id: string) => (_: any, expanded: boolean) => {
+    setSectionsExpanded(prev => ({ ...prev, [id]: expanded }));
+  }, []);
+
   // activeFilterCount は useFilterActions(pageKey) から取得
 
   const title = `Filter (${activeFilterCount})`;
@@ -210,10 +268,14 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
               scrollBehavior: 'auto',
             }}
           >
-            {React.Children.map(children, (child, index) => (
-              <React.Fragment key={index}>
-                <Accordion
-                  defaultExpanded={true}
+            {React.Children.map(children, (child, index) => {
+              const id = computeChildId(child, index);
+              const isExpanded = sectionsExpanded[id] !== false; // 未定義はtrue扱い
+              return (
+                <React.Fragment key={id}>
+                  <Accordion
+                    expanded={isExpanded}
+                    onChange={handleSectionChange(id)}
                   sx={{
                     backgroundColor: 'transparent',
                     boxShadow: 'none',
@@ -256,7 +318,8 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
                   <Divider sx={{ my: 1 }} />
                 )}
               </React.Fragment>
-            ))}
+              );
+            })}
 
             {/* Reset Button Row */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
