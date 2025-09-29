@@ -410,7 +410,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       expanded={filterPanelExpanded}
       onChange={setFilterPanelExpanded}
     >
-      <DropdownFilter
+      <CheckboxFilter
         pageKey={groupsPageKey}
         data={basicFilteredAssets}
         property="asset_type"
@@ -419,8 +419,8 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
       <CheckboxFilter
         pageKey={itemsPageKey}
         data={basicFilteredAssets}
-        property="status"
-        label="Status (Items)"
+        property="step.name"
+        label="Step (Items)"
       />
       <DateRangeFilter
         pageKey={itemsPageKey}

@@ -34,7 +34,9 @@ const CheckboxFilter = <T,>({ pageKey, data, property, label, hideTitle = false 
     const values = data
       .map(item => getByPath(item as any, propertyKey))
       .filter((v) => v !== undefined && v !== null && v !== "");
-    return Array.from(new Set(values.map(v => String(v))));
+    const unique = Array.from(new Set(values.map(v => String(v))));
+    // アルファベット順（大文字小文字を区別しない、ロケール依存）でソート
+    return unique.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   }, [data, propertyKey]);
 
   const handleChange = (value: string, checked: boolean) => {
