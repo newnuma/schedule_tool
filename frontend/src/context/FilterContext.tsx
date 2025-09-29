@@ -40,6 +40,48 @@ export const useFilterContext = () => {
   return context;
 };
 
+// 最小変更で操作系のみを提供しつつ、必要に応じて派生情報を返すフック
+export const useFilterActions = (pageKey?: string | string[]) => {
+  const ctx = useFilterContext();
+  const { setFilters, setDropdownFilter, setDateRangeFilter, clearFilters, filters } = ctx;
+
+  // filters の変更トリガーだけを露出するためのローカルバージョン
+  const [filtersVersion, setFiltersVersion] = React.useState(0);
+  React.useEffect(() => {
+    setFiltersVersion(v => v + 1);
+  }, [filters]);
+
+  const computeActiveCount = React.useCallback((keys: string | string[]) => {
+    const list = Array.isArray(keys) ? keys : [keys];
+    let total = 0;
+    list.forEach(key => {
+      const pageFilters = filters[key];
+      if (!pageFilters) return;
+      if (pageFilters.dropdown) {
+        Object.values(pageFilters.dropdown).forEach(values => {
+          if (Array.isArray(values) && values.length > 0) total++;
+        });
+      }
+      if (pageFilters.dateRange && (pageFilters.dateRange.start || pageFilters.dateRange.end)) {
+        total++;
+      }
+    });
+    return total;
+  }, [filters]);
+
+  const activeFilterCount = pageKey !== undefined ? computeActiveCount(pageKey) : undefined;
+
+  return {
+    setFilters,
+    setDropdownFilter,
+    setDateRangeFilter,
+    clearFilters,
+    // オプションの派生値
+    activeFilterCount,
+    filtersVersion,
+  } as const;
+};
+
 export const FilterProvider = ({ children }: { children: ReactNode }) => {
   const [filters, setFilters] = useState<Record<string, FilterConfig>>({});
   const getByPath = useCallback((obj: any, path?: string) => {

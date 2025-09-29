@@ -141,7 +141,7 @@ const DistributePage: React.FC = () => {
   // フィルタコンポーネント
   const Filter: React.FC = () => (
     <CollapsibleFilterPanel
-      pageKey={groupsPageKey}
+      pageKey={[groupsPageKey, itemsPageKey]}
       expanded={filterPanelExpanded}
       onChange={setFilterPanelExpanded}
     >

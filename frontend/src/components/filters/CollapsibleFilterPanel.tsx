@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import Button from "@mui/material/Button";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { useFilterContext } from "../../context/FilterContext";
+import { useFilterActions } from "../../context/FilterContext";
 
 interface CollapsibleFilterPanelProps {
   pageKey: string | string[];
@@ -28,30 +28,43 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
   onChange,
   sx,
 }) => {
-  const { filters, clearFilters } = useFilterContext();
+  const { clearFilters, activeFilterCount, filtersVersion } = useFilterActions(pageKey);
 
-  // フィルター適用数をカウント（複数pageKey対応）
-  const activeFilterCount = React.useMemo(() => {
-    const keys = Array.isArray(pageKey) ? pageKey : [pageKey];
-    let total = 0;
-    keys.forEach(key => {
-      const pageFilters = filters[key];
-      if (!pageFilters) return;
-      // Dropdown/Checkbox filters
-      if (pageFilters.dropdown) {
-        Object.values(pageFilters.dropdown).forEach(values => {
-          if (Array.isArray(values) && values.length > 0) {
-            total++;
-          }
-        });
-      }
-      // DateRange filter
-      if (pageFilters.dateRange && (pageFilters.dateRange.start || pageFilters.dateRange.end)) {
-        total++;
-      }
+  // スクロール位置の保持用
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const savedScrollTopRef = React.useRef(0);
+  const restoreScroll = React.useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollTop = savedScrollTopRef.current;
+  }, []);
+
+  // スクロール位置の保存/復元を強化
+  const storageKey = React.useMemo(() => {
+    const keys = Array.isArray(pageKey) ? pageKey.join("|") : pageKey;
+    return `collapsibleFilterPanel.scrollTop:${keys}`;
+  }, [pageKey]);
+
+  const scheduleRestore = React.useCallback(() => {
+    // 複数フレームに跨って復元（コンテンツ高さ変動やMUIトランジション対策）
+    const raf1 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(() => {
+        restoreScroll();
+        // 最後に短いタイマーでもう一度（フォールバック）
+        const to = setTimeout(restoreScroll, 30);
+        (scheduleRestore as any)._to = to;
+      });
+      (scheduleRestore as any)._raf2 = raf2;
     });
-    return total;
-  }, [filters, pageKey]);
+    (scheduleRestore as any)._raf1 = raf1;
+    return () => {
+      if ((scheduleRestore as any)._raf1) cancelAnimationFrame((scheduleRestore as any)._raf1);
+      if ((scheduleRestore as any)._raf2) cancelAnimationFrame((scheduleRestore as any)._raf2);
+      if ((scheduleRestore as any)._to) clearTimeout((scheduleRestore as any)._to);
+    };
+  }, [restoreScroll]);
+
+  // activeFilterCount は useFilterActions(pageKey) から取得
 
   const title = `Filter (${activeFilterCount})`;
   // expanded/onChangeがpropsで渡された場合は制御、なければローカルで管理
@@ -65,6 +78,63 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
       setLocalExpanded(newExpanded);
     }
   };
+
+  // フィルター変更や展開状態の変更後にスクロール位置を復元
+  React.useLayoutEffect(() => {
+    const cleanup = scheduleRestore();
+    return cleanup;
+  }, [filtersVersion, panelExpanded, scheduleRestore]);
+
+  // 初期化: セッションからスクロール位置を復元
+  React.useEffect(() => {
+    const stored = sessionStorage.getItem(storageKey);
+    if (stored) {
+      const n = Number(stored);
+      if (!Number.isNaN(n)) savedScrollTopRef.current = n;
+    }
+    // 初回描画後に復元
+    const cleanup = scheduleRestore();
+    return cleanup;
+  }, [storageKey, scheduleRestore]);
+
+  // アンマウント時や他の理由でDOMが外れる前にスクロール位置を保存
+  React.useEffect(() => {
+    return () => {
+      const el = scrollContainerRef.current;
+      if (el) savedScrollTopRef.current = el.scrollTop;
+    };
+  }, []);
+
+  // オブザーバでDOM変更/リサイズ時にも復元
+  React.useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const tryRestoreIfNeeded = () => {
+      if (!el) return;
+      // 以前の位置が0より大きく、現在0や大幅にズレた場合は復元
+      if (savedScrollTopRef.current > 0 && Math.abs(el.scrollTop - savedScrollTopRef.current) > 2) {
+        el.scrollTop = savedScrollTopRef.current;
+      }
+    };
+
+    const mo = new MutationObserver(() => {
+      // 子要素の追加/削除時
+      tryRestoreIfNeeded();
+    });
+    mo.observe(el, { childList: true, subtree: true });
+
+    const ro = new ResizeObserver(() => {
+      // コンテンツ高さの変化時
+      tryRestoreIfNeeded();
+    });
+    ro.observe(el);
+
+    return () => {
+      mo.disconnect();
+      ro.disconnect();
+    };
+  }, [panelExpanded]);
 
   // Reset handler: clear all filters for provided pageKey(s)
   const handleReset = () => {
@@ -114,8 +184,6 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
         <AccordionDetails
           sx={{
             padding: 2,
-            maxHeight: 400,
-            overflowY: 'auto',
             position: 'absolute',
             top: '100%',
             left: 0,
@@ -127,64 +195,80 @@ const CollapsibleFilterPanel: React.FC<CollapsibleFilterPanelProps> = ({
             boxShadow: 3,
           }}
         >
-          {React.Children.map(children, (child, index) => (
-            <React.Fragment key={index}>
-              <Accordion
-                defaultExpanded={true}
-                sx={{
-                  backgroundColor: 'transparent',
-                  boxShadow: 'none',
-                  border: 'none',
-                  '&:before': {
-                    display: 'none',
-                  },
-                  margin: 0,
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon />}
+          <Box
+            ref={scrollContainerRef}
+            onScroll={(e) => {
+              const el = e.currentTarget as HTMLDivElement;
+              savedScrollTopRef.current = el.scrollTop;
+              try {
+                sessionStorage.setItem(storageKey, String(savedScrollTopRef.current));
+              } catch {}
+            }}
+            sx={{
+              maxHeight: 400,
+              overflowY: 'auto',
+              scrollBehavior: 'auto',
+            }}
+          >
+            {React.Children.map(children, (child, index) => (
+              <React.Fragment key={index}>
+                <Accordion
+                  defaultExpanded={true}
                   sx={{
-                    minHeight: 32,
-                    padding: '0 8px',
-                    '&.Mui-expanded': {
+                    backgroundColor: 'transparent',
+                    boxShadow: 'none',
+                    border: 'none',
+                    '&:before': {
+                      display: 'none',
+                    },
+                    margin: 0,
+                  }}
+                >
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{
                       minHeight: 32,
-                    },
-                    '& .MuiAccordionSummary-content': {
-                      margin: '4px 0',
-                    },
-                  }}
-                >
-                  <Typography variant="body2" fontWeight="medium">
-                    {React.isValidElement(child) && (child.props as any)?.label ? (child.props as any).label : `Filter ${index + 1}`}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails
-                  sx={{
-                    padding: '8px 0',
-                  }}
-                >
-                  {React.isValidElement(child) 
-                    ? React.cloneElement(child as React.ReactElement<any>, { hideTitle: true })
-                    : child
-                  }
-                </AccordionDetails>
-              </Accordion>
-              {index < React.Children.count(children) - 1 && (
-                <Divider sx={{ my: 1 }} />
-              )}
-            </React.Fragment>
-          ))}
+                      padding: '0 8px',
+                      '&.Mui-expanded': {
+                        minHeight: 32,
+                      },
+                      '& .MuiAccordionSummary-content': {
+                        margin: '4px 0',
+                      },
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight="medium">
+                      {React.isValidElement(child) && (child.props as any)?.label ? (child.props as any).label : `Filter ${index + 1}`}
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails
+                    sx={{
+                      padding: '8px 0',
+                    }}
+                  >
+                    {React.isValidElement(child) 
+                      ? React.cloneElement(child as React.ReactElement<any>, { hideTitle: true })
+                      : child
+                    }
+                  </AccordionDetails>
+                </Accordion>
+                {index < React.Children.count(children) - 1 && (
+                  <Divider sx={{ my: 1 }} />
+                )}
+              </React.Fragment>
+            ))}
 
-          {/* Reset Button Row */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleReset}
-              disabled={activeFilterCount === 0}
-            >
-              Reset
-            </Button>
+            {/* Reset Button Row */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={handleReset}
+                disabled={activeFilterCount === 0}
+              >
+                Reset
+              </Button>
+            </Box>
           </Box>
         </AccordionDetails>
       </Accordion>
