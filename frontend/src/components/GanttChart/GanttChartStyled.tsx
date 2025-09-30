@@ -194,16 +194,16 @@ export const GanttContainer = styled(Box)<{ h: number | string }>(({ h }) => ({
   // ============================================
   // Status styles for items (wtg/ip/fin) - rgba形式に統一
   "& .vis-item.status-fin": {
-    backgroundColor: "rgba(76, 175, 80, 0.65)", // #4caf50
-    borderColor: "rgba(56, 142, 60, 0.85)",    // #388e3c
+    backgroundColor: "rgba(148, 147, 147, 0.65)", // #9e9e9e
+    borderColor: "rgba(97, 97, 97, 0.85)",   
   },
   "& .vis-item.status-ip": {
-    backgroundColor: "rgba(255, 152, 0, 0.65)", // #ff9800
-    borderColor: "rgba(245, 124, 0, 0.85)",    // #f57c00
+    backgroundColor: "rgba(76, 175, 80, 0.65)", // #4caf50
+    borderColor: "rgba(56, 142, 60, 0.85)",  
   },
   "& .vis-item.status-wtg": {
-    backgroundColor: "rgba(158, 158, 158, 0.65)", // #9e9e9e
-    borderColor: "rgba(97, 97, 97, 0.85)",       // #616161
+    backgroundColor: "rgba(255, 255, 255, 1)", // #9e9e9e
+    borderColor: "rgba(0, 0, 0, 1)",       // #616161
   },
   // 背景アイテムのスタイル（薄い色で後ろに）
   "& .vis-item.vis-background": {

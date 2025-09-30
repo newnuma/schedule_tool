@@ -113,7 +113,7 @@ export const FormProvider: React.FC<FormProviderProps> = (props) => {
     updated: Partial<T>
   ): Partial<T> => {
     if (!original) return { ...updated };
-    const patch: Record<string, any> = {};
+    const patch: Record<string, any> = {type : updated.type}; // typeは必須
     for (const key of Object.keys(updated)) {
       if (EXCLUDED_UPDATE_KEYS.has(key)) continue;
       const newVal = (updated as any)[key];

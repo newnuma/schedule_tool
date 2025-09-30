@@ -355,7 +355,7 @@ const AssetTab: React.FC<AssetTabProps> = ({ phases, assets, milestoneTasks, isE
 
       // 選択中Subprojectに紐づく MilestoneTasks（親のAsset.typeは asset_type に格納済み）
       const phaseIds = filteredPhases.map(p => p.id);
-      const assetById = new Map(assets.map(a => [a.id, a]));
+      const assetById = new Map(filteredAssets.map(a => [a.id, a]));
       const msItems = milestoneTasks
         .filter(ms => {
           const parentAsset = assetById.get(ms.asset.id);
