@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, TextField, IconButton } from "@mui/material";
+import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, TextField, IconButton, Button, CircularProgress } from "@mui/material";
 import { ExpandMore, ChevronRight } from "@mui/icons-material";
 import AddIcon from '@mui/icons-material/Add';
 import { useFilterContext } from "../../context/FilterContext";
@@ -12,7 +12,7 @@ import { useDialogContext } from "../../context/DialogContext";
 
 // 型定義
 import type { IPhase, IAsset, ITask, IForignKey, IPersonWorkload, IPMMWorkload, IPerson, IWorkCategory, ISubproject } from "../../context/AppContext";
-import { updateEntity, createEntity } from "../../api/bridgeApi";
+import { updateEntity, createEntity, exportPMMWorkloadsCSV } from "../../api/bridgeApi";
 
 interface WorkloadTabProps {
   phases: IPhase[];
@@ -34,6 +34,8 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
   const { addPersonWorkloads, addPMMWorkloads, setLoading } = useAppContext();
   const { openForm } = useFormContext();
   const { openDialog } = useDialogContext();
+  // Exporting state must be declared before any early return
+  const [exporting, setExporting] = React.useState(false);
 
   const selectedWorkCategoryName = filters[assetFilterKey]?.dropdown?.["work_category.name"]?.[0];
   const selectedWorkCategory: IForignKey = {
@@ -379,8 +381,50 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
         defaultStartWeek={0}
         defaultEndWeek={8}
       />
+      {/* Spacer to push Export button to right */}
+      <Box sx={{ flex: 1 }} />
+      <ExportButton />
     </Box>
   );
+
+  const ExportButton: React.FC = () => {
+    const handleExport = async () => {
+      if (!currentSubproject) {
+        openDialog({ title: 'Export', message: 'Please select a subproject.', okText: 'OK' });
+        return;
+      }
+      // Collect all PMM workloads for the selected subproject (send all weeks as requested)
+      const records = pmmWorkloads.filter(w => w.subproject?.id === currentSubproject.id);
+      if (!records.length) {
+        openDialog({ title: 'Export', message: 'No PMM workload data for this subproject.', okText: 'OK' });
+        return;
+      }
+      try {
+        setExporting(true);
+        const res = await exportPMMWorkloadsCSV({
+          subproject: { id: currentSubproject.id, name: currentSubproject.name },
+          records,
+        });
+        if (res && res.success) {
+          openDialog({ title: 'Export Complete', message: `Saved to:\n${res.path}`, okText: 'OK' });
+        } else {
+          const msg = (res && (res.error || res.message)) || 'Failed to export CSV.';
+          openDialog({ title: 'Export Failed', message: msg, okText: 'OK' });
+        }
+      } catch (e: any) {
+        openDialog({ title: 'Export Failed', message: e?.message || String(e), okText: 'OK' });
+      } finally {
+        setExporting(false);
+      }
+    };
+
+    const disabled = !currentSubproject || !pmmWorkloads.some(w => w.subproject?.id === currentSubproject?.id) || exporting;
+    return (
+      <Button variant="contained" color="primary" onClick={handleExport} disabled={disabled} sx={{ alignSelf: 'flex-end' }}>
+        {exporting ? <><CircularProgress size={16} sx={{ mr: 1 }} />Exporting…</> : 'Export CSV'}
+      </Button>
+    );
+  };
   const PmmWorkloadRow: React.FC = () => {
     // 週ごとの入力値を保持するローカルstate
     const [inputValues, setInputValues] = React.useState<{ [weekIso: string]: string }>({});

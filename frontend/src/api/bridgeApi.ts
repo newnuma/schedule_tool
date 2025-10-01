@@ -206,3 +206,17 @@ export function sendFilterConfig(pageKey: string, filterConfig: any) {
 export function openFlowPtUrl(assetId: number) {
   return callBridge('openFlowPtUrl', assetId);
 }
+
+// --- Export: PMM Workloads CSV ---
+export function exportPMMWorkloadsCSV(payload: {
+  subproject: { id: number; name?: string };
+  records: IPMMWorkload[];
+}) {
+  const dataStr = JSON.stringify(payload);
+  return callBridge('exportPMMWorkloadsCSV', dataStr).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.error || 'Export Error');
+    }
+    return res;
+  });
+}

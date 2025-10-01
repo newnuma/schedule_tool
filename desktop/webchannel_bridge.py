@@ -2,6 +2,7 @@
 
 from typing import Any, Tuple
 from PySide6.QtCore import QObject, Slot
+from PySide6.QtWidgets import QFileDialog
 
 import api_client
 import cache  # 追加
@@ -113,4 +114,65 @@ class DataBridge(QObject):
     # @Slot(int, result="QVariant")
     # def getSubproject(self, subproject_id: int) -> Any:  # noqa: N802
     #     return api_client.get_subproject(subproject_id)
+
+    @Slot(str, result="QVariant")
+    def exportPMMWorkloadsCSV(self, data: str) -> Any:
+        """Export PMMWorkload records to a pivoted CSV (rows=work_category, columns=week)."""
+        try:
+            payload = json.loads(data)
+            subproject = payload.get("subproject") or {}
+            records = payload.get("records") or []
+            if not subproject or not records:
+                return {"success": False, "error": "Missing subproject or records"}
+
+            # Build unique weeks in ascending order
+            weeks = sorted({r.get("week") for r in records if r.get("week")})
+
+            # Aggregate man_week by (category_name, week)
+            from collections import defaultdict
+            matrix = defaultdict(lambda: {w: 0.0 for w in weeks})
+            for r in records:
+                week = r.get("week")
+                if not week:
+                    continue
+                wc = r.get("work_category") or {}
+                name = wc.get("name") or "Unassigned"
+                try:
+                    val = float(r.get("man_week") or 0)
+                except Exception:
+                    val = 0.0
+                matrix[name][week] = matrix[name].get(week, 0.0) + val
+
+            # Sort categories by name
+            category_names = sorted(matrix.keys(), key=lambda s: (s is None, str(s)))
+
+            # Default filename
+            def _sanitize(s: str) -> str:
+                import re
+                return re.sub(r"[^\w\-_. ]", "_", s or "")
+
+            sp_name = _sanitize(subproject.get("name") or f"Subproject_{subproject.get('id')}")
+            first_w = weeks[0] if weeks else ""
+            last_w = weeks[-1] if weeks else ""
+            default_name = f"PMM_{sp_name}_{first_w}_{last_w}.csv" if weeks else f"PMM_{sp_name}.csv"
+
+            # Ask user where to save
+            path, _ = QFileDialog.getSaveFileName(None, "Save CSV", default_name, "CSV Files (*.csv)")
+            if not path:
+                return {"success": False, "error": "canceled"}
+
+            # Write CSV (utf-8-sig for Excel)
+            import csv
+            with open(path, "w", newline="", encoding="utf-8-sig") as f:
+                writer = csv.writer(f)
+                header = ["Work Category", *weeks]
+                writer.writerow(header)
+                for name in category_names:
+                    row = [name]
+                    row.extend([matrix[name].get(w, 0.0) for w in weeks])
+                    writer.writerow(row)
+
+            return {"success": True, "path": path}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
