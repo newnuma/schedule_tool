@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, TextField, IconButton, Button, CircularProgress } from "@mui/material";
+import { Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Box, TextField, IconButton, CircularProgress, Button } from "@mui/material";
 import { ExpandMore, ChevronRight } from "@mui/icons-material";
 import AddIcon from '@mui/icons-material/Add';
 import { useFilterContext } from "../../context/FilterContext";
@@ -9,10 +9,11 @@ import SearchDropdownFilter from "../../components/filters/SearchDropdownFilter"
 import ContextMenu, { ContextMenuItem } from "../../components/common/ContextMenu";
 import { useFormContext } from "../../context/FormContext";
 import { useDialogContext } from "../../context/DialogContext";
+// AddButton is not used for export menu anymore
 
 // 型定義
 import type { IPhase, IAsset, ITask, IForignKey, IPersonWorkload, IPMMWorkload, IPerson, IWorkCategory, ISubproject } from "../../context/AppContext";
-import { updateEntity, createEntity, exportPMMWorkloadsCSV } from "../../api/bridgeApi";
+import { updateEntity, createEntity, exportPMMWorkloadsXlsx } from "../../api/bridgeApi";
 
 interface WorkloadTabProps {
   phases: IPhase[];
@@ -69,8 +70,8 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
   // 週ラベル生成（DateRangeFilterの値に連動）
   const assetDr = filters[assetFilterKey]?.dateRange;
   const start = assetDr?.start;
-  const end = assetDr?.end;
   const weekIsos = useMemo(() => {
+    const end = assetDr?.end;
     if (!start || !end) return [];
     const arr: string[] = [];
     const s = new Date(start);
@@ -81,15 +82,14 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
       cur.setDate(cur.getDate() + 7);
     }
     return arr;
-  }, [start, end]);
+  }, [assetDr, start]);
   const weekLabels = useMemo(() => weekIsos.map(iso => {
     const d = new Date(iso);
     return `${d.getMonth() + 1}/${d.getDate()}`;
   }), [weekIsos]);
 
-
   // 表示データのフィルタリング
-  // Assetに対してSearchDropdownFilterとDateRangeFilterを適用 →　子要素を取得
+  // Assetに対してSearchDropdownFilterとDateRangeFilterを適用 → 子要素を取得
   const filteredAssets = useMemo(() => getFilteredData(assetFilterKey, assets), [getFilteredData, assetFilterKey, assets]);
   const filteredTasks = useMemo(() => {
     const assetIds = new Set(filteredAssets.map(a => a.id));
@@ -104,14 +104,50 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
 
   // AssetのWorkCategoryフィルターを流用してPMMWorkloadをフィルタ
   const filteredPMMW = useMemo(() => {
-    if (!selectedWorkCategory) return [];
+    if (!selectedWorkCategory) return [] as Partial<IPMMWorkload>[];
     return pmmWorkloadState.filter(w =>
       w.work_category?.id === selectedWorkCategory.id &&
       weekIsos.includes(w.week as string)
     );
   }, [pmmWorkloadState, selectedWorkCategory, weekIsos]);
 
-
+  // Single Export button (XLSX only)
+  const ExportButton: React.FC = () => {
+    const disabled = !currentSubproject || !pmmWorkloads.some(w => w.subproject?.id === currentSubproject?.id) || exporting;
+    const handleExport = async () => {
+      if (!currentSubproject) {
+        openDialog({ title: 'Export', message: 'Please select a subproject.', okText: 'OK' });
+        return;
+      }
+      const records = pmmWorkloads.filter(w => w.subproject?.id === currentSubproject.id);
+      if (!records.length) {
+        openDialog({ title: 'Export', message: 'No PMM workload data for this subproject.', okText: 'OK' });
+        return;
+      }
+      try {
+        setExporting(true);
+        const res = await exportPMMWorkloadsXlsx({
+          subproject: { id: currentSubproject.id, name: currentSubproject.name },
+          records,
+        });
+        if (res && res.success) {
+          openDialog({ title: 'Export Complete', message: `Saved to:\n${res.path}`, okText: 'OK' });
+        } else {
+          const msg = (res && (res.error || res.message)) || 'Failed to export Excel.';
+          openDialog({ title: 'Export Failed', message: msg, okText: 'OK' });
+        }
+      } catch (e: any) {
+        openDialog({ title: 'Export Failed', message: e?.message || String(e), okText: 'OK' });
+      } finally {
+        setExporting(false);
+      }
+    };
+    return (
+      <Button variant="contained" color="primary" onClick={handleExport} disabled={disabled}>
+        {exporting ? <><CircularProgress size={16} sx={{ mr: 1 }} />Exporting…</> : 'Export XLSX'}
+      </Button>
+    );
+  };
   // 展開トグル
   const toggleAssetExpansion = (assetId: number) => {
     setExpandedAssets(prev => {
@@ -404,45 +440,6 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
       <ExportButton />
     </Box>
   );
-
-  const ExportButton: React.FC = () => {
-    const handleExport = async () => {
-      if (!currentSubproject) {
-        openDialog({ title: 'Export', message: 'Please select a subproject.', okText: 'OK' });
-        return;
-      }
-      // Collect all PMM workloads for the selected subproject (send all weeks as requested)
-      const records = pmmWorkloads.filter(w => w.subproject?.id === currentSubproject.id);
-      if (!records.length) {
-        openDialog({ title: 'Export', message: 'No PMM workload data for this subproject.', okText: 'OK' });
-        return;
-      }
-      try {
-        setExporting(true);
-        const res = await exportPMMWorkloadsCSV({
-          subproject: { id: currentSubproject.id, name: currentSubproject.name },
-          records,
-        });
-        if (res && res.success) {
-          openDialog({ title: 'Export Complete', message: `Saved to:\n${res.path}`, okText: 'OK' });
-        } else {
-          const msg = (res && (res.error || res.message)) || 'Failed to export CSV.';
-          openDialog({ title: 'Export Failed', message: msg, okText: 'OK' });
-        }
-      } catch (e: any) {
-        openDialog({ title: 'Export Failed', message: e?.message || String(e), okText: 'OK' });
-      } finally {
-        setExporting(false);
-      }
-    };
-
-    const disabled = !currentSubproject || !pmmWorkloads.some(w => w.subproject?.id === currentSubproject?.id) || exporting;
-    return (
-      <Button variant="contained" color="primary" onClick={handleExport} disabled={disabled} sx={{ alignSelf: 'flex-end' }}>
-        {exporting ? <><CircularProgress size={16} sx={{ mr: 1 }} />Exporting…</> : 'Export CSV'}
-      </Button>
-    );
-  };
   const PmmWorkloadRow: React.FC = () => {
     // 週ごとの入力値を保持するローカルstate
     const [inputValues, setInputValues] = React.useState<{ [weekIso: string]: string }>({});

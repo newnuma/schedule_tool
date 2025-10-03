@@ -5,3 +5,4 @@ __pycache__/
 *.pyd
 *.cpython-313.pyc
 **/__pycache__/
+*.xlsx

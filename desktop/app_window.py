@@ -64,6 +64,12 @@ class AppWindow(QMainWindow):
 
     # ----- web debug mode -----
     def _init_web_debug_mode(self) -> None:
+        # In web debug mode we have no main window; avoid quitting when a transient
+        # dialog (like QFileDialog) closes, which would otherwise stop the event loop.
+        app = QApplication.instance()
+        if app is not None:
+            app.setQuitOnLastWindowClosed(False)
+
         port = int(self.config.get("webchannel_port", 12345))
         self.server = QWebSocketServer("Backend", QWebSocketServer.NonSecureMode)
         self.server.listen(QHostAddress.LocalHost, port)

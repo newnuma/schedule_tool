@@ -2,7 +2,7 @@
 
 from typing import Any, Tuple
 from PySide6.QtCore import QObject, Slot
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QApplication
 
 import api_client
 import cache  # 追加
@@ -117,62 +117,63 @@ class DataBridge(QObject):
 
     @Slot(str, result="QVariant")
     def exportPMMWorkloadsCSV(self, data: str) -> Any:
-        """Export PMMWorkload records to a pivoted CSV (rows=work_category, columns=week)."""
+        """Export PMMWorkload records to a pivoted CSV via pmm_export module."""
         try:
             payload = json.loads(data)
-            subproject = payload.get("subproject") or {}
             records = payload.get("records") or []
-            if not subproject or not records:
-                return {"success": False, "error": "Missing subproject or records"}
+            if not records:
+                return json.dumps({"success": False, "error": "No records"})
 
-            # Build unique weeks in ascending order
-            weeks = sorted({r.get("week") for r in records if r.get("week")})
+            # Build default filename using helper
+            import pmm_export as _pmm_export
+            default_name = _pmm_export.suggest_csv_filename(payload)
 
-            # Aggregate man_week by (category_name, week)
-            from collections import defaultdict
-            matrix = defaultdict(lambda: {w: 0.0 for w in weeks})
-            for r in records:
-                week = r.get("week")
-                if not week:
-                    continue
-                wc = r.get("work_category") or {}
-                name = wc.get("name") or "Unassigned"
-                try:
-                    val = float(r.get("man_week") or 0)
-                except Exception:
-                    val = 0.0
-                matrix[name][week] = matrix[name].get(week, 0.0) + val
-
-            # Sort categories by name
-            category_names = sorted(matrix.keys(), key=lambda s: (s is None, str(s)))
-
-            # Default filename
-            def _sanitize(s: str) -> str:
-                import re
-                return re.sub(r"[^\w\-_. ]", "_", s or "")
-
-            sp_name = _sanitize(subproject.get("name") or f"Subproject_{subproject.get('id')}")
-            first_w = weeks[0] if weeks else ""
-            last_w = weeks[-1] if weeks else ""
-            default_name = f"PMM_{sp_name}_{first_w}_{last_w}.csv" if weeks else f"PMM_{sp_name}.csv"
-
-            # Ask user where to save
-            path, _ = QFileDialog.getSaveFileName(None, "Save CSV", default_name, "CSV Files (*.csv)")
+            # Ask user where to save (non-native for stability)
+            opts = QFileDialog.Options()
+            opts |= QFileDialog.DontUseNativeDialog
+            parent = QApplication.activeWindow()
+            path, _ = QFileDialog.getSaveFileName(parent, "Save CSV", default_name, "CSV Files (*.csv)", options=opts)
             if not path:
-                return {"success": False, "error": "canceled"}
+                return json.dumps({"success": False, "error": "canceled"})
 
-            # Write CSV (utf-8-sig for Excel)
-            import csv
-            with open(path, "w", newline="", encoding="utf-8-sig") as f:
-                writer = csv.writer(f)
-                header = ["Work Category", *weeks]
-                writer.writerow(header)
-                for name in category_names:
-                    row = [name]
-                    row.extend([matrix[name].get(w, 0.0) for w in weeks])
-                    writer.writerow(row)
-
-            return {"success": True, "path": path}
+            # Delegate writing
+            result = _pmm_export.export_pmm_workloads_to_csv(payload, path)
+            return json.dumps(result, ensure_ascii=False)
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            import traceback
+            traceback.print_exc()
+            return json.dumps({"success": False, "error": str(e)})
+
+    @Slot(str, result="QVariant")
+    def exportPMMWorkloadsXlsx(self, data: str) -> Any:
+        """Export PMM Workloads into a copied Excel template via pmm_export module."""
+        try:
+            payload = json.loads(data)
+            if not payload or not payload.get("records"):
+                return json.dumps({"success": False, "error": "No records"})
+
+            # Determine template path from repo root: ../pmm_sample.xlsx relative to this file
+            import os
+            here = os.path.dirname(os.path.abspath(__file__))
+            template_path = os.path.join(os.path.dirname(here), "pmm_sample.xlsx")
+
+            # Ask where to save
+            import pmm_export as _pmm_export
+            suggested = _pmm_export.suggest_xlsx_filename(payload)
+
+            # Ask where to save (non-native for stability)
+            opts = QFileDialog.Options()
+            opts |= QFileDialog.DontUseNativeDialog
+            parent = QApplication.activeWindow()
+            save_path, _ = QFileDialog.getSaveFileName(parent, "Save Excel", suggested, "Excel Files (*.xlsx)", options=opts)
+            if not save_path:
+                return json.dumps({"success": False, "error": "canceled"})
+
+            # Call exporter
+            result = _pmm_export.export_pmm_workloads_to_xlsx(payload, template_path, save_path)
+            return json.dumps(result, ensure_ascii=False)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return json.dumps({"success": False, "error": str(e)})
 

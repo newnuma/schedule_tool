@@ -220,3 +220,17 @@ export function exportPMMWorkloadsCSV(payload: {
     return res;
   });
 }
+
+// --- Export: PMM Workloads XLSX (using template) ---
+export function exportPMMWorkloadsXlsx(payload: {
+  subproject: { id: number; name?: string };
+  records: IPMMWorkload[];
+}) {
+  const dataStr = JSON.stringify(payload);
+  return callBridge('exportPMMWorkloadsXlsx', dataStr).then((res) => {
+    if (res && res.error) {
+      throw new Error(res.error || 'Export Error');
+    }
+    return res;
+  });
+}

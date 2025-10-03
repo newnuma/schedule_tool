@@ -7,9 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/desktop/app_window.py",
             "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/venv/bin/python"
-            }
+            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe"
         },
         {
             "name": "DesktopApp (web_debug mode)",
@@ -17,8 +15,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/desktop/app_window.py",
             "console": "integratedTerminal",
+            "python": "${workspaceFolder}\\venv\\Scripts\\python.exe",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/venv/bin/python",
                 "APP_MODE": "web_debug"  // または config.json で mode: web_debug にする場合は不要
             }
         },
