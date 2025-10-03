@@ -130,6 +130,7 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
           subproject: { id: currentSubproject.id, name: currentSubproject.name },
           records,
         });
+        console.log("exportPMMWorkloadsXlsx res:", res, res.success);
         if (res && res.success) {
           openDialog({ title: 'Export Complete', message: `Saved to:\n${res.path}`, okText: 'OK' });
         } else {

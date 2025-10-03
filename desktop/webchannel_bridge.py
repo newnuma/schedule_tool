@@ -122,27 +122,26 @@ class DataBridge(QObject):
             payload = json.loads(data)
             records = payload.get("records") or []
             if not records:
-                return json.dumps({"success": False, "error": "No records"})
+                return {"success": False, "error": "No records"}
 
             # Build default filename using helper
             import pmm_export as _pmm_export
             default_name = _pmm_export.suggest_csv_filename(payload)
 
-            # Ask user where to save (non-native for stability)
+            # Ask user where to save (use native dialog for familiar OS UI)
             opts = QFileDialog.Options()
-            opts |= QFileDialog.DontUseNativeDialog
             parent = QApplication.activeWindow()
             path, _ = QFileDialog.getSaveFileName(parent, "Save CSV", default_name, "CSV Files (*.csv)", options=opts)
             if not path:
-                return json.dumps({"success": False, "error": "canceled"})
+                return {"success": False, "error": "canceled"}
 
             # Delegate writing
             result = _pmm_export.export_pmm_workloads_to_csv(payload, path)
-            return json.dumps(result, ensure_ascii=False)
+            return result
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return json.dumps({"success": False, "error": str(e)})
+            return {"success": False, "error": str(e)}
 
     @Slot(str, result="QVariant")
     def exportPMMWorkloadsXlsx(self, data: str) -> Any:
@@ -150,7 +149,7 @@ class DataBridge(QObject):
         try:
             payload = json.loads(data)
             if not payload or not payload.get("records"):
-                return json.dumps({"success": False, "error": "No records"})
+                return {"success": False, "error": "No records"}
 
             # Determine template path from repo root: ../pmm_sample.xlsx relative to this file
             import os
@@ -161,19 +160,18 @@ class DataBridge(QObject):
             import pmm_export as _pmm_export
             suggested = _pmm_export.suggest_xlsx_filename(payload)
 
-            # Ask where to save (non-native for stability)
+            # Ask where to save (use native dialog for familiar OS UI)
             opts = QFileDialog.Options()
-            opts |= QFileDialog.DontUseNativeDialog
             parent = QApplication.activeWindow()
             save_path, _ = QFileDialog.getSaveFileName(parent, "Save Excel", suggested, "Excel Files (*.xlsx)", options=opts)
             if not save_path:
-                return json.dumps({"success": False, "error": "canceled"})
+                return {"success": False, "error": "canceled"}
 
             # Call exporter
             result = _pmm_export.export_pmm_workloads_to_xlsx(payload, template_path, save_path)
-            return json.dumps(result, ensure_ascii=False)
+            return result
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return json.dumps({"success": False, "error": str(e)})
+            return {"success": False, "error": str(e)}
 
