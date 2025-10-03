@@ -185,13 +185,31 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
         if (result.id) {
           addPersonWorkloads([result]);
         }
-      }).finally();
+      }).catch((error) => { 
+      // Reset PersonWorkloadState to match personWorkloads when update fails
+      setPersonWorkloadState(personWorkloads.map(w => ({ ...w })));
+      openDialog({
+        title: "Update Failed",
+        message: `Failed to update Workload.\n${error.message}`,
+      });
+      console.error('Failed to update entity:', error);
+      })
+      .finally();
     } else {
       createEntity(edit).then((result) => {
         if (result.id) {
           addPersonWorkloads([result]);
         }
-      }).finally();
+      }).catch((error) => {
+      // Reset PersonWorkloadState to match personWorkloads when create fails
+      setPersonWorkloadState(personWorkloads.map(w => ({ ...w })));
+      openDialog({
+        title: "Create Failed",
+        message: `Failed to create Workload.\n${error.message}`,
+      });
+      console.error('Failed to create entity:', error);
+      })
+      .finally();
     }
   };
   // PMMWorkload送信
