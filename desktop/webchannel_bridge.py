@@ -148,8 +148,9 @@ class DataBridge(QObject):
         """Export PMM Workloads into a copied Excel template via pmm_export module."""
         try:
             payload = json.loads(data)
-            if not payload or not payload.get("records"):
-                return {"success": False, "error": "No records"}
+            # Allow export if either records or phases are provided
+            if not payload or not (payload.get("records") or payload.get("phases")):
+                return {"success": False, "error": "No records or phases"}
 
             # Determine template path from repo root: ../pmm_sample.xlsx relative to this file
             import os

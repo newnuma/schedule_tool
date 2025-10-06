@@ -129,6 +129,7 @@ const WorkloadTab: React.FC<WorkloadTabProps> = ({ phases, assets, tasks, person
         const res = await exportPMMWorkloadsXlsx({
           subproject: { id: currentSubproject.id, name: currentSubproject.name },
           records,
+          phases: phases.filter(p => p.subproject?.id === currentSubproject.id),
         });
         console.log("exportPMMWorkloadsXlsx res:", res, res.success);
         if (res && res.success) {

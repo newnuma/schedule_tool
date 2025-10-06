@@ -225,6 +225,7 @@ export function exportPMMWorkloadsCSV(payload: {
 export function exportPMMWorkloadsXlsx(payload: {
   subproject: { id: number; name?: string };
   records: IPMMWorkload[];
+  phases?: IPhase[];
 }) {
   const dataStr = JSON.stringify(payload);
   return callBridge('exportPMMWorkloadsXlsx', dataStr).then((res) => {

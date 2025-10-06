@@ -9,7 +9,7 @@ Requirements: openpyxl
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Tuple, List
 import datetime as dt
 import os
 import csv
@@ -25,8 +25,16 @@ def _week_diff(base: dt.date, target: dt.date) -> int:
     return delta.days // 7
 
 
-def _aggregate(records: Iterable[dict]) -> Tuple[Dict[Tuple[str, str], float], dt.date]:
-    """Aggregate man_week by (category_name, week) and return earliest week date.
+def _to_monday(d: dt.date) -> dt.date:
+    return d - dt.timedelta(days=d.weekday())
+
+
+def _aggregate(records: Iterable[dict], phases: Iterable[dict] | None = None) -> Tuple[Dict[Tuple[str, str], float], dt.date]:
+    """Aggregate man_week by (category_name, week) and return earliest week (Monday).
+
+    earliest is the minimum of:
+      - PMM workload weeks (already Mondays)
+      - Phase end_date normalized to Monday
 
     Returns:
         (agg, earliest_date)
@@ -49,6 +57,20 @@ def _aggregate(records: Iterable[dict]) -> Tuple[Dict[Tuple[str, str], float], d
             fval = 0.0
         key = (name, week)
         agg[key] = agg.get(key, 0.0) + fval
+
+    # Consider phases' end_date as well
+    if phases:
+        for p in phases:
+            end_iso = p.get("end_date")
+            if not end_iso:
+                continue
+            try:
+                end_date = dt.date.fromisoformat(end_iso)
+            except Exception:
+                continue
+            end_monday = _to_monday(end_date)
+            if earliest is None or end_monday < earliest:
+                earliest = end_monday
     if earliest is None:
         # Default to today Monday if no records
         today = dt.date.today()
@@ -78,7 +100,8 @@ def export_pmm_workloads_to_xlsx(
             return {"success": False, "error": f"Template not found: {template_path}"}
 
         records = (payload or {}).get("records") or []
-        agg, earliest = _aggregate(records)
+        phases: List[dict] = (payload or {}).get("phases") or []
+        agg, earliest = _aggregate(records, phases)
 
         # Load template and save to new path after modifications
         wb = openpyxl.load_workbook(template_path)
@@ -107,6 +130,22 @@ def export_pmm_workloads_to_xlsx(
             col = 2 + col_offset  # B=2
             # Write number into the target cell
             ws.cell(row=row, column=col).value = float(value)
+
+        # Write phases into rows 3 (milestone=True) and 4 (milestone=False)
+        if phases:
+            for p in phases:
+                name = p.get("name")
+                end_iso = p.get("end_date")
+                if not name or not end_iso:
+                    continue
+                try:
+                    end_date = dt.date.fromisoformat(end_iso)
+                except Exception:
+                    continue
+                col_offset = _week_diff(earliest, _to_monday(end_date))
+                col = 2 + col_offset  # B=2
+                row = 3 if bool(p.get("milestone")) else 4
+                ws.cell(row=row, column=col).value = str(name)
 
         # Save as new file
         # Ensure directory exists
