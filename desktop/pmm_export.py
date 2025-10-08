@@ -150,8 +150,26 @@ def export_pmm_workloads_to_xlsx(
         # Save as new file
         # Ensure directory exists
         os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
-        wb.save(save_path)
-        # Explicitly close workbook to release file handle
+        try:
+            wb.save(save_path)
+        except PermissionError:
+            # Common on Windows if the file is open in Excel
+            try:
+                wb.close()
+            except Exception:
+                pass
+            return {
+                "success": False,
+                "error": "The file is currently open and cannot be written. Please close the file and try again.",
+            }
+        except Exception as e:
+            # Ensure the workbook is closed before bubbling up
+            try:
+                wb.close()
+            except Exception:
+                pass
+            return {"success": False, "error": str(e)}
+        # Explicitly close workbook to release file handle on success
         try:
             wb.close()
         except Exception:
@@ -215,14 +233,20 @@ def export_pmm_workloads_to_csv(payload: dict, save_path: str) -> Dict[str, Any]
         category_names = sorted(matrix.keys(), key=lambda s: (s is None, str(s)))
 
         os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
-        with open(save_path, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.writer(f)
-            header = ["Work Category", *weeks]
-            writer.writerow(header)
-            for name in category_names:
-                row = [name]
-                row.extend([matrix[name].get(w, 0.0) for w in weeks])
-                writer.writerow(row)
+        try:
+            with open(save_path, "w", newline="", encoding="utf-8-sig") as f:
+                writer = csv.writer(f)
+                header = ["Work Category", *weeks]
+                writer.writerow(header)
+                for name in category_names:
+                    row = [name]
+                    row.extend([matrix[name].get(w, 0.0) for w in weeks])
+                    writer.writerow(row)
+        except PermissionError:
+            return {
+                "success": False,
+                "error": "The file is currently open and cannot be written. Please close the file and try again.",
+            }
         return {"success": True, "path": save_path}
     except Exception as e:
         return {"success": False, "error": str(e)}

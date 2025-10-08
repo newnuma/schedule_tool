@@ -1,7 +1,7 @@
 """Bridge definitions for Qt WebChannel communication."""
 
 from typing import Any, Tuple
-from PySide6.QtCore import QObject, Slot
+from PySide6.QtCore import QObject, Slot, QStandardPaths
 from PySide6.QtWidgets import QFileDialog, QApplication
 
 import api_client
@@ -131,7 +131,11 @@ class DataBridge(QObject):
             # Ask user where to save (use native dialog for familiar OS UI)
             opts = QFileDialog.Options()
             parent = QApplication.activeWindow()
-            path, _ = QFileDialog.getSaveFileName(parent, "Save CSV", default_name, "CSV Files (*.csv)", options=opts)
+            # Default to user's Downloads folder with suggested file name
+            import os
+            downloads = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation) or os.path.expanduser("~/Downloads")
+            initial = os.path.join(downloads, default_name) if downloads else default_name
+            path, _ = QFileDialog.getSaveFileName(parent, "Save CSV", initial, "CSV Files (*.csv)", options=opts)
             if not path:
                 return {"success": False, "error": "canceled"}
 
@@ -164,7 +168,10 @@ class DataBridge(QObject):
             # Ask where to save (use native dialog for familiar OS UI)
             opts = QFileDialog.Options()
             parent = QApplication.activeWindow()
-            save_path, _ = QFileDialog.getSaveFileName(parent, "Save Excel", suggested, "Excel Files (*.xlsx)", options=opts)
+            # Default to user's Downloads folder with suggested file name
+            downloads = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation) or os.path.expanduser("~/Downloads")
+            initial = os.path.join(downloads, suggested) if downloads else suggested
+            save_path, _ = QFileDialog.getSaveFileName(parent, "Save Excel", initial, "Excel Files (*.xlsx)", options=opts)
             if not save_path:
                 return {"success": False, "error": "canceled"}
 
