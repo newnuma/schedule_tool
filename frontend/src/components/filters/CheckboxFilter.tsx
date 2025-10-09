@@ -54,6 +54,10 @@ const CheckboxFilter = <T,>({ pageKey, data, property, label, hideTitle = false 
   // データ更新等で現在の選択値群に候補外の値が含まれる場合は自動的に除去
   React.useEffect(() => {
     if (!currentSelectedValues || currentSelectedValues.length === 0) return;
+    // Guard: Avoid cleaning before options are ready (e.g., data not loaded yet).
+    // If we run cleanup with empty options, we'd incorrectly clear cached selections
+    // and effectively disable the filter. Wait until we actually have options.
+    if (!availableOptions || availableOptions.length === 0) return;
     const normalized = new Set(availableOptions.map(String));
     const cleaned = currentSelectedValues.filter((v: string) => normalized.has(String(v)));
     if (cleaned.length !== currentSelectedValues.length) {

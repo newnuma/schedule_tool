@@ -141,6 +141,7 @@ export const FilterProvider = ({ children }: { children: ReactNode }) => {
       ...prev,
       [pageKey]: defaultFilterConfig,
     }));
+    sendFilterConfig(pageKey, defaultFilterConfig);
   }, []);
 
   // データのフィルタリング実行
