@@ -163,12 +163,22 @@ def export_pmm_workloads_to_xlsx(
             ws_list_name = "4QV2"
             if ws_list_name in wb.sheetnames:
                 ws_list = wb[ws_list_name]
-                if ws_list.max_row and ws_list.max_row >= 2:
-                    for r_idx in range(2, ws_list.max_row + 1):
-                        for c_idx in range(1, 8):  # A..G
-                            ws_list.cell(row=r_idx, column=c_idx).value = None
             else:
-                ws_list = wb.create_sheet(title=ws_list_name)
+                # To preserve formatting, require a preformatted sheet in the template
+                raise RuntimeError("Template sheet '4QV2' not found. Please add it to the template to preserve formatting.")
+
+            # Capture prototype styles from header or first data row to replicate formatting
+            proto_row_idx = 2 if ws_list.max_row and ws_list.max_row >= 2 else 1
+            proto_styles: List[Tuple[Any, Any, Any, Any, Any, Any]] = []
+            for c_idx in range(1, 8):
+                cell = ws_list.cell(row=proto_row_idx, column=c_idx)
+                proto_styles.append((cell.font, cell.fill, cell.border, cell.alignment, cell.number_format, cell.protection))
+
+            # Clear only values in data rows (keep styles)
+            if ws_list.max_row and ws_list.max_row >= 2:
+                for r_idx in range(2, ws_list.max_row + 1):
+                    for c_idx in range(1, 8):  # A..G
+                        ws_list.cell(row=r_idx, column=c_idx).value = None
 
             # Pre-compute phase windows based on end_date order
             phase_windows: List[Tuple[dt.date, dt.date, str]] = []
@@ -199,8 +209,28 @@ def export_pmm_workloads_to_xlsx(
             except Exception:
                 phase_windows = []
 
+            # Sort records by work_category then by week (ascending)
+            def _rec_wc_name(rec: dict) -> str:
+                wc = rec.get("work_category")
+                if wc is None:
+                    wc = rec.get("work_cotegory")
+                if isinstance(wc, dict):
+                    return wc.get("name") or "Unassigned"
+                return wc or "Unassigned"
+
+            def _rec_week_date(rec: dict) -> dt.date:
+                w = rec.get("week")
+                if not w:
+                    return dt.date.max
+                try:
+                    return _to_date(w)
+                except Exception:
+                    return dt.date.max
+
+            sorted_records = sorted(records, key=lambda rec: (_rec_wc_name(rec), _rec_week_date(rec)))
+
             row_idx = 2
-            for r in records:
+            for r in sorted_records:
                 name = r.get("name")
                 wc = r.get("work_category")
                 # Fallback for potential key typo
@@ -237,13 +267,26 @@ def export_pmm_workloads_to_xlsx(
                     except Exception:
                         pass
 
-                # ws_list.cell(row=row_idx, column=1).value = name
-                ws_list.cell(row=row_idx, column=2).value = wc_name
-                ws_list.cell(row=row_idx, column=3).value = mw
-                ws_list.cell(row=row_idx, column=4).value = year_val
-                ws_list.cell(row=row_idx, column=5).value = month_val
-                ws_list.cell(row=row_idx, column=6).value = weeknum_val
-                ws_list.cell(row=row_idx, column=7).value = phase_name
+                # Write values
+                vals = [name, wc_name, mw, year_val, month_val, weeknum_val, phase_name]
+                for c_idx, val in enumerate(vals, start=1):
+                    cell = ws_list.cell(row=row_idx, column=c_idx)
+                    cell.value = val
+                    # Apply prototype formatting if available
+                    if 1 <= c_idx <= len(proto_styles):
+                        font, fill, border, alignment, number_format, protection = proto_styles[c_idx - 1]
+                        if font is not None:
+                            cell.font = font
+                        if fill is not None:
+                            cell.fill = fill
+                        if border is not None:
+                            cell.border = border
+                        if alignment is not None:
+                            cell.alignment = alignment
+                        if number_format is not None:
+                            cell.number_format = number_format
+                        if protection is not None:
+                            cell.protection = protection
                 row_idx += 1
         except Exception:
             pass
