@@ -105,7 +105,17 @@ def export_pmm_workloads_to_xlsx(
 
         # Load template and save to new path after modifications
         wb = openpyxl.load_workbook(template_path)
-        ws = wb.active
+        # Prefer an existing sheet named "Manpower Sheet"; otherwise rename active
+        desired_sheet_name = "Manpower Sheet"
+        if desired_sheet_name in wb.sheetnames:
+            ws = wb[desired_sheet_name]
+        else:
+            ws = wb.active
+            try:
+                ws.title = desired_sheet_name
+            except Exception:
+                # If renaming fails, continue using active sheet
+                pass
 
         # Set B2 to earliest date (as a date cell). Excel will propagate via formulas.
         ws.cell(row=2, column=2).value = earliest
@@ -146,6 +156,97 @@ def export_pmm_workloads_to_xlsx(
                 col = 2 + col_offset  # B=2
                 row = 3 if bool(p.get("milestone")) else 4
                 ws.cell(row=row, column=col).value = str(name)
+
+        
+        # Create or reuse a sheet named "4QV2" to tabulate raw records
+        try:
+            ws_list_name = "4QV2"
+            if ws_list_name in wb.sheetnames:
+                ws_list = wb[ws_list_name]
+                if ws_list.max_row and ws_list.max_row >= 2:
+                    for r_idx in range(2, ws_list.max_row + 1):
+                        for c_idx in range(1, 8):  # A..G
+                            ws_list.cell(row=r_idx, column=c_idx).value = None
+            else:
+                ws_list = wb.create_sheet(title=ws_list_name)
+
+            # Pre-compute phase windows based on end_date order
+            phase_windows: List[Tuple[dt.date, dt.date, str]] = []
+            try:
+                # collect phases with valid end_date
+                _phs = []
+                for p in phases or []:
+                    # Exclude milestones from phase windows
+                    if bool(p.get("milestone")):
+                        continue
+                    end_iso = p.get("end_date")
+                    name = p.get("name")
+                    if not end_iso or not name:
+                        continue
+                    try:
+                        end_dt = dt.date.fromisoformat(end_iso)
+                    except Exception:
+                        continue
+                    _phs.append((end_dt, str(name)))
+                # sort by end_date asc
+                _phs.sort(key=lambda x: x[0])
+                # build windows [prev_end+1, end]
+                prev_end: dt.date | None = None
+                for end_dt, nm in _phs:
+                    start_dt = (prev_end + dt.timedelta(days=1)) if prev_end else dt.date.min
+                    phase_windows.append((start_dt, end_dt, nm))
+                    prev_end = end_dt
+            except Exception:
+                phase_windows = []
+
+            row_idx = 2
+            for r in records:
+                name = r.get("name")
+                wc = r.get("work_category")
+                # Fallback for potential key typo
+                if wc is None:
+                    wc = r.get("work_cotegory")
+                if isinstance(wc, dict):
+                    wc_name = wc.get("name")
+                else:
+                    wc_name = wc
+                try:
+                    mw = float(r.get("man_week") or 0)
+                except Exception:
+                    mw = 0.0
+                week_iso = r.get("week")
+                year_val = None
+                month_val = None
+                weeknum_val = None
+                phase_name = None
+                if week_iso:
+                    try:
+                        wdate = _to_date(week_iso)
+                        year_val = wdate.year
+                        month_val = wdate.month
+                        # Use ISO week number (equivalent to Excel WEEKNUM with return_type=21)
+                        try:
+                            weeknum_val = wdate.isocalendar().week  # type: ignore[attr-defined]
+                        except Exception:
+                            weeknum_val = wdate.isocalendar()[1]
+                        # find matching phase window: start <= date <= end
+                        for (s_dt, e_dt, nm) in phase_windows:
+                            if s_dt <= wdate <= e_dt:
+                                phase_name = nm
+                                break
+                    except Exception:
+                        pass
+
+                # ws_list.cell(row=row_idx, column=1).value = name
+                ws_list.cell(row=row_idx, column=2).value = wc_name
+                ws_list.cell(row=row_idx, column=3).value = mw
+                ws_list.cell(row=row_idx, column=4).value = year_val
+                ws_list.cell(row=row_idx, column=5).value = month_val
+                ws_list.cell(row=row_idx, column=6).value = weeknum_val
+                ws_list.cell(row=row_idx, column=7).value = phase_name
+                row_idx += 1
+        except Exception:
+            pass
 
         # Save as new file
         # Ensure directory exists
