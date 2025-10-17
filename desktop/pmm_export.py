@@ -209,7 +209,7 @@ def export_pmm_workloads_to_xlsx(
             except Exception:
                 phase_windows = []
 
-            # Sort records by work_category then by week (ascending)
+            # Sort records by work_category using Manpower Sheet order (name_to_row), then by week (ascending)
             def _rec_wc_name(rec: dict) -> str:
                 wc = rec.get("work_category")
                 if wc is None:
@@ -227,7 +227,12 @@ def export_pmm_workloads_to_xlsx(
                 except Exception:
                     return dt.date.max
 
-            sorted_records = sorted(records, key=lambda rec: (_rec_wc_name(rec), _rec_week_date(rec)))
+            def _rec_wc_row(rec: dict) -> int:
+                nm = _rec_wc_name(rec)
+                # Place unknown categories at the end
+                return name_to_row.get(nm, 10**9)
+
+            sorted_records = sorted(records, key=lambda rec: (_rec_wc_row(rec), _rec_week_date(rec), _rec_wc_name(rec)))
 
             row_idx = 2
             for r in sorted_records:
